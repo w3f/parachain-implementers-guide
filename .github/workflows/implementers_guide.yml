@@ -28,14 +28,9 @@ jobs:
 
     - run: |
         mdbook build .tmp_polkadot/roadmap/implementors-guide/
-        cp -R .tmp_polkadot/roadmap/implementors-guide/book/ docs/
 
-    - name: Commit changes
-      uses: EndBug/add-and-commit@v4
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
       with:
-        author_name: gh-workflow
-        author_email: gh-workflow
-        message: "Update newest Implementer's Guide changes"
-        add: "website/static/implementers-guide"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: .tmp_polkadot/roadmap/implementors-guide/
