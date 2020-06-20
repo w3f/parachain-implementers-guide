@@ -163,7 +163,7 @@
 </ol>
 <h2><a class="header" href="#entry-points" id="entry-points">Entry Points</a></h2>
 <ul>
-<li><code>inclusion</code>: This entry-point accepts two parameters: <a href="../types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> and <a href="../type-definitions.html#backed-candidate"><code>BackedCandidates</code></a>.
+<li><code>inclusion</code>: This entry-point accepts two parameters: <a href="../types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> and <a href="../types/backing.html#backed-candidate"><code>BackedCandidates</code></a>.
 <ol>
 <li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it, and add timed-out cores to the free cores, annotated with <code>FreedReason::TimedOut</code>.</li>

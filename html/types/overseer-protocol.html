@@ -170,7 +170,7 @@
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
 <h2><a class="header" href="#all-messages" id="all-messages">All Messages</a></h2>
 <blockquote>
-<p>TODO [now]</p>
+<p>TODO (now)</p>
 </blockquote>
 <h2><a class="header" href="#availability-distribution-message" id="availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
@@ -306,11 +306,11 @@ enum NetworkBridgeEvent {
   /// this message should be dispatched with all of them, in arbitrary order.
   ///
   /// This variant is also used when our own validity checks disagree with others'.
-  CandidateValidityDisagreement(CandidateReceipt, Vec&lt;SignedStatement&gt;),
+  CandidateValidityDisagreement(CandidateReceipt, Vec&lt;SignedFullStatement&gt;),
   /// I've noticed a peer contradicting itself about a particular candidate
-  SelfContradiction(CandidateReceipt, SignedStatement, SignedStatement),
+  SelfContradiction(CandidateReceipt, SignedFullStatement, SignedFullStatement),
   /// This peer has seconded more than one parachain candidate for this relay parent head
-  DoubleVote(CandidateReceipt, SignedStatement, SignedStatement),
+  DoubleVote(CandidateReceipt, SignedFullStatement, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -372,7 +372,7 @@ enum RuntimeApiMessage {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#statement-distribution-message" id="statement-distribution-message">Statement Distribution Message</a></h2>
-<p>The Statement Distribution subsystem distributes signed statements from validators to other validators.
+<p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
@@ -385,7 +385,7 @@ It receives updates from the network bridge and signed statements to share with 
 	///
 	/// The statement distribution subsystem assumes that the statement should be correctly
 	/// signed.
-	Share(Hash, SignedStatement),
+	Share(Hash, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>

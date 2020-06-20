@@ -918,7 +918,7 @@ CurrentSessionIndex: SessionIndex;
 </ol>
 <h2><a class="header" href="#entry-points-1" id="entry-points-1">Entry Points</a></h2>
 <ul>
-<li><code>inclusion</code>: This entry-point accepts two parameters: <a href="runtime/../types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> and <a href="runtime/../type-definitions.html#backed-candidate"><code>BackedCandidates</code></a>.
+<li><code>inclusion</code>: This entry-point accepts two parameters: <a href="runtime/../types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> and <a href="runtime/../types/backing.html#backed-candidate"><code>BackedCandidates</code></a>.
 <ol>
 <li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it, and add timed-out cores to the free cores, annotated with <code>FreedReason::TimedOut</code>.</li>
@@ -1061,7 +1061,7 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 +--------------+      +------------------+    +--------------------+
 
 </code></pre>
-<p>The overseer determines work to do based on block import events and block finalization events. It does this by keeping track of the set of relay-parents for which work is currently being done. This is known as the &quot;active leaves&quot; set. It determines an initial set of active leaves on startup based on the data on-disk, and uses events about blockchain import to update the active leaves. Updates lead to <a href="node/../types.overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork</code> and <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork</code> being sent according to new relay-parents, as well as relay-parents to stop considering. Block import events inform the overseer of leaves that no longer need to be built on, now that they have children, and inform us to begin building on those children. Block finalization events inform us when we can stop focusing on blocks that appear to have been orphaned.</p>
+<p>The overseer determines work to do based on block import events and block finalization events. It does this by keeping track of the set of relay-parents for which work is currently being done. This is known as the &quot;active leaves&quot; set. It determines an initial set of active leaves on startup based on the data on-disk, and uses events about blockchain import to update the active leaves. Updates lead to <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork</code> and <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork</code> being sent according to new relay-parents, as well as relay-parents to stop considering. Block import events inform the overseer of leaves that no longer need to be built on, now that they have children, and inform us to begin building on those children. Block finalization events inform us when we can stop focusing on blocks that appear to have been orphaned.</p>
 <p>The overseer's logic can be described with these functions:</p>
 <h2><a class="header" href="#on-startup" id="on-startup">On Startup</a></h2>
 <ul>
@@ -1132,7 +1132,7 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <p>New parablock candidates may arrive from a potentially unbounded set of collators. This subsystem chooses either 0 or 1 of them per relay parent to second. If it chooses to second a candidate, it sends an appropriate message to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to generate an appropriate <a href="node/backing/../../types/backing.html#statement-type"><code>Statement</code></a>.</p>
 <p>In the event that a parablock candidate proves invalid, this subsystem will receive a message back from the Candidate Backing subsystem indicating so. If that parablock candidate originated from a collator, this subsystem will blacklist that collator. If that parablock candidate originated from a peer, this subsystem generates a report for the <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration subsystem</a>.</p>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
-<p>Input: <a href="node/backing/../../types/overseer-protocol#candidate-selection-message"><code>CandidateSelectionMessage</code></a></p>
+<p>Input: <a href="node/backing/../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></p>
 <p>Output:</p>
 <ul>
 <li>Validation requests to Validation subsystem</li>
@@ -1264,9 +1264,9 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <p>And respect this data-dependency order from our peers by respecting their views. This subsystem is responsible for checking message signatures.</p>
 <p>The Statement Distribution subsystem sends statements to peer nodes and detects double-voting by validators. When validators conflict with each other or themselves, the Misbehavior Arbitration system is notified.</p>
 <h2><a class="header" href="#peer-receipt-state-machine" id="peer-receipt-state-machine">Peer Receipt State Machine</a></h2>
-<p>There is a very simple state machine which governs which messages we are willing to receive from peers. Not depicted in the state machine: on initial receipt of any <a href="node/backing/../../types/backing.html#signed-statement-type"><code>SignedStatement</code></a>, validate that the provided signature does in fact sign the included data. Note that each individual parablock candidate gets its own instance of this state machine; it is perfectly legal to receive a <code>Valid(X)</code> before a <code>Seconded(Y)</code>, as long as a <code>Seconded(X)</code> has been received.</p>
-<p>A: Initial State. Receive <code>SignedStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing, proceed to B. Receive any other <code>SignedStatement</code> variant: drop it.</p>
-<p>B: Receive any <code>SignedStatement</code>: check signature, forward to Candidate Backing. Receive <code>OverseerMessage::StopWork</code>: proceed to C.</p>
+<p>There is a very simple state machine which governs which messages we are willing to receive from peers. Not depicted in the state machine: on initial receipt of any <a href="node/backing/../../types/backing.html#signed-statement-type"><code>SignedFullStatement</code></a>, validate that the provided signature does in fact sign the included data. Note that each individual parablock candidate gets its own instance of this state machine; it is perfectly legal to receive a <code>Valid(X)</code> before a <code>Seconded(Y)</code>, as long as a <code>Seconded(X)</code> has been received.</p>
+<p>A: Initial State. Receive <code>SignedFullStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing, proceed to B. Receive any other <code>SignedFullStatement</code> variant: drop it.</p>
+<p>B: Receive any <code>SignedFullStatement</code>: check signature, forward to Candidate Backing. Receive <code>OverseerMessage::StopWork</code>: proceed to C.</p>
 <p>C: Receive any message for this block: drop it.</p>
 <h2><a class="header" href="#peer-knowledge-tracking" id="peer-knowledge-tracking">Peer Knowledge Tracking</a></h2>
 <p>The peer receipt state machine implies that for parsimony of network resources, we should model the knowledge of our peers, and help them out. For example, let's consider a case with peers A, B, and C, validators X and Y, and candidate M. A sends us a <code>Statement::Second(M)</code> signed by X. We've double-checked it, and it's valid. While we're checking it, we receive a copy of X's <code>Statement::Second(M)</code> from <code>B</code>, along with a <code>Statement::Valid(M)</code> signed by Y.</p>
@@ -1318,7 +1318,7 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
 <h2><a class="header" href="#protocol-5" id="protocol-5">Protocol</a></h2>
 <p><code>ProtocolId</code>: <code>b&quot;bitd&quot;</code></p>
-<p>Input: <a href="node/availability/../../overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a>
+<p>Input: <a href="node/availability/../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a>
 Output:</p>
 <ul>
 <li><code>NetworkBridge::RegisterEventProducer(ProtocolId)</code></li>
@@ -1618,7 +1618,7 @@ struct GlobalValidationSchedule {
 <li>Assume that the candidate pending availability on this para at the onset of the relay-parent is timed-out.</li>
 </ol>
 <p>This choice can also be expressed as a choice of which parent head of the para will be built on - either optimistically on the candidate pending availability or pessimistically on the one that is surely included.</p>
-<p>Para validation happens optimistically before the block is authored, so it is not possible to predict with 100% accuracy what will happen in the earlier phase of the <a href="types//runtime/inclusioninherent.html"><code>InclusionInherent</code></a> module where new availability bitfields and availability timeouts are processed. This is what will eventually define whether a candidate can be backed within a specific relay-chain block.</p>
+<p>Para validation happens optimistically before the block is authored, so it is not possible to predict with 100% accuracy what will happen in the earlier phase of the <a href="types/../runtime/inclusioninherent.html"><code>InclusionInherent</code></a> module where new availability bitfields and availability timeouts are processed. This is what will eventually define whether a candidate can be backed within a specific relay-chain block.</p>
 <blockquote>
 <p>TODO: determine if balance/fees are even needed here.</p>
 </blockquote>
@@ -1708,6 +1708,29 @@ pub struct CandidateCommitments {
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h2><a class="header" href="#signed-wrapper" id="signed-wrapper">Signed Wrapper</a></h2>
+<p>There are a few distinct types which we desire to sign, and validate the signatures of. Instead of duplicating this work, we extract a signed wrapper.</p>
+<pre><code class="language-rust ignore">/// A signed type which encapsulates the common desire to sign some data and validate a signature.
+///
+/// Note that the internal fields are not public; they are all accessable by immutable getters.
+/// This reduces the chance that they are accidentally mutated, invalidating the signature.
+struct Signed&lt;Payload, RealPayload=Payload&gt; {
+    /// The payload is part of the signed data. The rest is the signing context,
+    /// which is known both at signing and at validation.
+    payload: Payload,
+    /// The index of the validator signing this statement.
+    validator_index: ValidatorIndex,
+    /// The signature by the validator of the signed payload.
+    signature: ValidatorSignature,
+}
+
+impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;Payload, RealPayload&gt; {
+    fn sign(payload: Payload, context: SigningContext, index: ValidatorIndex, key: ValidatorPair) -&gt; Signed&lt;Payload, RealPayload&gt; { ... }
+    fn validate(&amp;self, context: SigningContext, key: ValidatorId) -&gt; bool { ... }
+}
+</code></pre>
+<p>Note the presence of the <a href="types/../types/candidate.html#signing-context"><code>SigningContext</code></a> in the signatures of the <code>sign</code> and <code>validate</code> methods. To ensure cryptographic security, the actual signed payload is always the SCALE encoding of <code>(payload.into(), signing_context)</code>. Including the signing context prevents replay attacks.</p>
+<p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
 <h2><a class="header" href="#statement-type" id="statement-type">Statement Type</a></h2>
 <p>The <a href="types/../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -1727,27 +1750,37 @@ enum Statement {
   /// A statement about the invalidity of a candidate.
   Invalid(Hash),
 }
-<span class="boring">}
-</span></code></pre></pre>
-<h2><a class="header" href="#signed-statement-type" id="signed-statement-type">Signed Statement Type</a></h2>
-<p>A statement, the identifier of a validator, and a signature.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
-</span><span class="boring">fn main() {
-</span>/// A signed statement.
-struct SignedStatement {
-  /// The index of the validator signing this statement.
-  validator_index: ValidatorIndex,
-  /// The statement itself.
-  statement: Statement,
-  /// The signature by the validator on the signing payload.
-  signature: ValidatorSignature
+
+/// A statement about the validity of a parachain candidate.
+///
+/// This variant should only be used in the production of `SignedStatement`s. The only difference between
+/// this enum and `Statement` is that the `Seconded` variant contains a `Hash` instead of a `CandidateReceipt`.
+/// The rationale behind the difference is that the signature should always be on the hash instead of the
+/// full data, as this lowers the requirement for checking while retaining necessary cryptographic properties
+enum CompactStatement {
+  /// A statement about a new candidate being seconded by a validator. This is an implicit validity vote.
+  Seconded(Hash),
+  /// A statement about the validity of a candidate, based on candidate's hash.
+  Valid(Hash),
+  /// A statement about the invalidity of a candidate.
+  Invalid(Hash),
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>The actual signed payload will be the SCALE encoding of <code>(compact_statement, signing_context)</code> where
-<code>compact_statement</code> is a tweak of the <a href="types/backing.html#statement"><code>Statement</code></a> enum where all variants, including <code>Seconded</code>, contain only the hash of the candidate, and the <code>signing_context</code> is a <a href="types/../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
-<p>This prevents against replay attacks and allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement in situations where the hash is known.</p>
+<p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
+<h2><a class="header" href="#signed-statement-type" id="signed-statement-type">Signed Statement Type</a></h2>
+<p>A statement which has been <a href="types/backing.html#signed-wrapper">cryptographically signed</a> by a validator.</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// A signed statement, containing the abridged candidate receipt in the `Seconded` variant.
+pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
+
+/// A signed statement, containing only the hash.
+pub type SignedStatement = Signed&lt;CompactStatement&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2><a class="header" href="#backed-candidate" id="backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="types/candidate.html#abridgedcandidatereceipt"><code>AbridgedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -1771,20 +1804,15 @@ struct BackedCandidates(Vec&lt;BackedCandidate&gt;); // sorted by para-id.
 <p>One of the key roles of validators is to ensure availability of all data necessary to validate
 candidates for the duration of a challenge period. This is done via an erasure-coding of the data to keep available.</p>
 <h2><a class="header" href="#signed-availability-bitfield" id="signed-availability-bitfield">Signed Availability Bitfield</a></h2>
-<p>A bitfield signed by a particular validator about the availability of pending candidates.</p>
+<p>A bitfield <a href="types/backing.html#signed-wrapper">signed</a> by a particular validator about the availability of pending candidates.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
-</span>struct SignedAvailabilityBitfield {
-  validator_index: ValidatorIndex,
-  bitfield: Bitvec,
-  signature: ValidatorSignature,
-}
+</span>pub type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
 
 struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted by validator index, ascending
 <span class="boring">}
 </span></code></pre></pre>
-<p>The signed payload is the SCALE encoding of the tuple <code>(bitfield, signing_context)</code> where <code>signing_context</code> is a <a href="types/../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
 <h2><a class="header" href="#proof-of-validity" id="proof-of-validity">Proof-of-Validity</a></h2>
 <p>Often referred to as PoV, this is a type-safe wrapper around bytes (<code>Vec&lt;u8&gt;</code>) when referring to data that acts as a stateless-client proof of validity of a candidate, when used as input to the validation function of the para.</p>
 <pre><pre class="playpen"><code class="language-rust">
@@ -1816,7 +1844,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
 <h2><a class="header" href="#all-messages" id="all-messages">All Messages</a></h2>
 <blockquote>
-<p>TODO [now]</p>
+<p>TODO (now)</p>
 </blockquote>
 <h2><a class="header" href="#availability-distribution-message" id="availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
@@ -1952,11 +1980,11 @@ enum NetworkBridgeEvent {
   /// this message should be dispatched with all of them, in arbitrary order.
   ///
   /// This variant is also used when our own validity checks disagree with others'.
-  CandidateValidityDisagreement(CandidateReceipt, Vec&lt;SignedStatement&gt;),
+  CandidateValidityDisagreement(CandidateReceipt, Vec&lt;SignedFullStatement&gt;),
   /// I've noticed a peer contradicting itself about a particular candidate
-  SelfContradiction(CandidateReceipt, SignedStatement, SignedStatement),
+  SelfContradiction(CandidateReceipt, SignedFullStatement, SignedFullStatement),
   /// This peer has seconded more than one parachain candidate for this relay parent head
-  DoubleVote(CandidateReceipt, SignedStatement, SignedStatement),
+  DoubleVote(CandidateReceipt, SignedFullStatement, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2018,7 +2046,7 @@ enum RuntimeApiMessage {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#statement-distribution-message" id="statement-distribution-message">Statement Distribution Message</a></h2>
-<p>The Statement Distribution subsystem distributes signed statements from validators to other validators.
+<p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
@@ -2031,7 +2059,7 @@ It receives updates from the network bridge and signed statements to share with 
 	///
 	/// The statement distribution subsystem assumes that the statement should be correctly
 	/// signed.
-	Share(Hash, SignedStatement),
+	Share(Hash, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2175,7 +2203,7 @@ struct UpwardMessage {
 <li>Validator: Specially-selected node in the network who is responsible for validating parachain blocks and issuing attestations about their validity.</li>
 <li>Validation Function: A piece of Wasm code that describes the state-transition function of a parachain.</li>
 </ul>
-<p>Also of use is the <a href="https://substrate.dev/docs/en/overview/glossary">Substrate Glossary</a>.</p>
+<p>Also of use is the <a href="https://substrate.dev/docs/en/knowledgebase/getting-started/glossary">Substrate Glossary</a>.</p>
 <h1><a class="header" href="#further-reading" id="further-reading">Further Reading</a></h1>
 <ul>
 <li>Polkadot Wiki on Consensus: <a href="https://wiki.polkadot.network/docs/en/learn-consensus">https://wiki.polkadot.network/docs/en/learn-consensus</a></li>
