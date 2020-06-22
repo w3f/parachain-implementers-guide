@@ -807,7 +807,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 
 struct CandidatePendingAvailability {
   core: CoreIndex, // availability core
-  receipt: AbridgedCandidateReceipt,
+  receipt: CandidateReceipt,
   availability_votes: Bitfield, // one bit per validator.
   relay_parent_number: BlockNumber, // number of the relay-parent.
   backed_in_number: BlockNumber,
@@ -822,6 +822,8 @@ struct CandidatePendingAvailability {
 bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
 /// Candidates pending availability.
 PendingAvailability: map ParaId =&gt; CandidatePendingAvailability;
+/// The commitments of candidates pending availability, by ParaId.
+PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 
 /// The current validators, by their parachain session keys.
 Validators: Vec&lt;ValidatorId&gt;;
@@ -830,9 +832,6 @@ Validators: Vec&lt;ValidatorId&gt;;
 CurrentSessionIndex: SessionIndex;
 <span class="boring">}
 </span></code></pre></pre>
-<blockquote>
-<p>TODO: <code>CandidateReceipt</code> and <code>AbridgedCandidateReceipt</code> can contain code upgrades which make them very large. the code entries should be split into a different storage map with infrequent access patterns</p>
-</blockquote>
 <h2><a class="header" href="#session-change-4" id="session-change-4">Session Change</a></h2>
 <ol>
 <li>Clear out all candidates pending availability.</li>
@@ -868,15 +867,17 @@ CurrentSessionIndex: SessionIndex;
 <li>check that there is no candidate pending availability for any scheduled <code>ParaId</code>.</li>
 <li>If the core assignment includes a specific collator, ensure the backed candidate is issued by that collator.</li>
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
-<li>Check the collator's signature on the pov block.</li>
+<li>Check the collator's signature on the candidate data.</li>
+<li>Transform each <a href="runtime/../types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> into the corresponding <a href="runtime/../types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a>, setting the commitments aside.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
 <li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
 <li>create an entry in the <code>PendingAvailability</code> map for each backed candidate with a blank <code>availability_votes</code> bitfield.</li>
+<li>create a corresponding entry in the <code>PendingAvailabilityCommitments</code> with the commitments.</li>
 <li>Return a <code>Vec&lt;CoreIndex&gt;</code> of all scheduled cores of the list of passed assignments that a candidate was successfully backed for, sorted ascending by CoreIndex.</li>
 </ol>
 </li>
 <li>
-<p><code>enact_candidate(relay_parent_number: BlockNumber, AbridgedCandidateReceipt)</code>:</p>
+<p><code>enact_candidate(relay_parent_number: BlockNumber, CommittedCandidateReceipt)</code>:</p>
 <ol>
 <li>If the receipt contains a code upgrade, Call <code>Paras::schedule_code_upgrade(para_id, code, relay_parent_number + config.validationl_upgrade_delay)</code>.</li>
 </ol>
@@ -884,7 +885,7 @@ CurrentSessionIndex: SessionIndex;
 <p>TODO: Note that this is safe as long as we never enact candidates where the relay parent is across a session boundary. In that case, which we should be careful to avoid with contextual execution, the configuration might have changed and the para may de-sync from the host's understanding of it.</p>
 </blockquote>
 <ol>
-<li>call <code>Router::queue_upward_messages</code> for each backed candidate.</li>
+<li>call <code>Router::queue_upward_messages</code> for each backed candidate, using the <a href="runtime/../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="runtime/../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
 <li>Call <code>Paras::note_new_head</code> using the <code>HeadData</code> from the receipt and <code>relay_parent_number</code>.</li>
 </ol>
 </li>
@@ -1013,7 +1014,7 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <p>No initialization routine runs for this module.</p>
 <h2><a class="header" href="#routines-4" id="routines-4">Routines</a></h2>
 <ul>
-<li><code>queue_upward_messages(AbridgedCandidateReceipt)</code>:
+<li><code>queue_upward_messages(ParaId, Vec&lt;UpwardMessage&gt;)</code>:
 <ol>
 <li>Updates <code>NeedsDispatch</code>, and enqueues upward messages into <code>RelayDispatchQueue</code> and modifies the respective entry in <code>RelayDispatchQueueSize</code>.</li>
 </ol>
@@ -1163,7 +1164,7 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <p>Once a sufficient quorum has agreed that a candidate is valid, this subsystem notifies the <a href="node/backing/../utility/provisioner.html">Provisioner</a>, which in turn engages block production mechanisms to include the parablock.</p>
 <h2><a class="header" href="#protocol-1" id="protocol-1">Protocol</a></h2>
 <p>The <a href="node/backing/candidate-selection.html">Candidate Selection subsystem</a> is the primary source of non-overseer messages into this subsystem. That subsystem generates appropriate <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code>s</a>, and passes them to this subsystem.</p>
-<p>This subsystem validates the candidates and generates an appropriate <a href="node/backing/../../types/backing.html#statement-type"><code>Statement</code></a>. All <code>Statement</code>s are then passed on to the <a href="node/backing/statement-distribution.html">Statement Distribution subsystem</a> to be gossiped to peers. When this subsystem decides that a candidate is invalid, and it was recommended to us to second by our own Candidate Selection subsystem, a message is sent to the Candidate Selection subsystem with the candidate's hash so that the collator which recommended it can be penalized.</p>
+<p>This subsystem validates the candidates and generates an appropriate <a href="node/backing/../../types/backing.html#signed-statement-type"><code>SignedStatement</code></a>. All <code>SignedStatement</code>s are then passed on to the <a href="node/backing/statement-distribution.html">Statement Distribution subsystem</a> to be gossiped to peers. All <a href="node/backing/../../types/availability.html#proof-of-validity">Proofs of Validity</a> should be distributed via the <a href="node/backing/pov-distribution.html">PoV Distribution</a> subsystem. When this subsystem decides that a candidate is invalid, and it was recommended to us to second by our own Candidate Selection subsystem, a message is sent to the Candidate Selection subsystem with the candidate's hash so that the collator which recommended it can be penalized.</p>
 <h2><a class="header" href="#functionality-1" id="functionality-1">Functionality</a></h2>
 <p>The subsystem should maintain a set of handles to Candidate Backing Jobs that are currently live, as well as the relay-parent to which they correspond.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
@@ -1255,7 +1256,7 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <h2><a class="header" href="#functionality-2" id="functionality-2">Functionality</a></h2>
 <p>Implemented as a gossip protocol. Register a network event producer on startup. Handle updates to our view and peers' views. Neighbor packets are used to inform peers which chain heads we are interested in data for.</p>
 <p>Statement Distribution is the only backing subsystem which has any notion of peer nodes, who are any full nodes on the network. Validators will also act as peer nodes.</p>
-<p>It is responsible for signing statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes, who distribute statements by validators. On receiving a signed statement from a peer, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement.</p>
+<p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement.</p>
 <p>Track equivocating validators and stop accepting information from them. Forward double-vote proofs to the double-vote reporting system. Establish a data-dependency order:</p>
 <ul>
 <li>In order to receive a <code>Seconded</code> message we have the on corresponding chain head in our view</li>
@@ -1265,7 +1266,7 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <p>The Statement Distribution subsystem sends statements to peer nodes and detects double-voting by validators. When validators conflict with each other or themselves, the Misbehavior Arbitration system is notified.</p>
 <h2><a class="header" href="#peer-receipt-state-machine" id="peer-receipt-state-machine">Peer Receipt State Machine</a></h2>
 <p>There is a very simple state machine which governs which messages we are willing to receive from peers. Not depicted in the state machine: on initial receipt of any <a href="node/backing/../../types/backing.html#signed-statement-type"><code>SignedFullStatement</code></a>, validate that the provided signature does in fact sign the included data. Note that each individual parablock candidate gets its own instance of this state machine; it is perfectly legal to receive a <code>Valid(X)</code> before a <code>Seconded(Y)</code>, as long as a <code>Seconded(X)</code> has been received.</p>
-<p>A: Initial State. Receive <code>SignedFullStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing, proceed to B. Receive any other <code>SignedFullStatement</code> variant: drop it.</p>
+<p>A: Initial State. Receive <code>SignedFullStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing and PoV Distribution, proceed to B. Receive any other <code>SignedFullStatement</code> variant: drop it.</p>
 <p>B: Receive any <code>SignedFullStatement</code>: check signature, forward to Candidate Backing. Receive <code>OverseerMessage::StopWork</code>: proceed to C.</p>
 <p>C: Receive any message for this block: drop it.</p>
 <h2><a class="header" href="#peer-knowledge-tracking" id="peer-knowledge-tracking">Peer Knowledge Tracking</a></h2>
@@ -1277,12 +1278,151 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <h1><a class="header" href="#pov-distribution" id="pov-distribution">PoV Distribution</a></h1>
 <p>This subsystem is responsible for distributing PoV blocks. For now, unified with <a href="node/backing/statement-distribution.html">Statement Distribution subsystem</a>.</p>
 <h2><a class="header" href="#protocol-3" id="protocol-3">Protocol</a></h2>
-<p>Handle requests for PoV block by candidate hash and relay-parent.</p>
+<p><code>ProtocolId</code>: <code>b&quot;povd&quot;</code></p>
+<p>Input: <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></p>
+<p>Output:</p>
+<ul>
+<li>NetworkBridge::RegisterEventProducer(<code>ProtocolId</code>)</li>
+<li>NetworkBridge::SendMessage(<code>[PeerId]</code>, <code>ProtocolId</code>, <code>Bytes</code>)</li>
+<li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
+</ul>
 <h2><a class="header" href="#functionality-3" id="functionality-3">Functionality</a></h2>
-<p>Implemented as a gossip system, where <code>PoV</code>s are not accepted unless we know a <code>Seconded</code> message.</p>
-<blockquote>
-<p>TODO: this requires a lot of cross-contamination with statement distribution even if we don't implement this as a gossip system. In a point-to-point implementation, we still have to know <em>who to ask</em>, which means tracking who's submitted <code>Seconded</code>, <code>Valid</code>, or <code>Invalid</code> statements - by validator and by peer. One approach is to have the Statement gossip system to just send us this information and then we can separate the systems from the beginning instead of combining them</p>
-</blockquote>
+<p>This network protocol is responsible for distributing <a href="node/backing/../../types/availability.html#proof-of-validity"><code>PoV</code>s</a> by gossip. Since PoVs are heavy in practice, gossip is far from the most efficient way to distribute them. In the future, this should be replaced by a better network protocol that finds validators who have validated the block and connects to them directly. This protocol is descrbied</p>
+<p>This protocol is described in terms of &quot;us&quot; and our peers, with the understanding that this is the procedure that any honest node will run. It has the following goals:</p>
+<ul>
+<li>We never have to buffer an unbounded amount of data</li>
+<li>PoVs will flow transitively across a network of honest nodes, stemming from the validators that originally seconded candidates requiring those PoVs.</li>
+</ul>
+<p>As we are gossiping, we need to track which PoVs our peers are waiting for to avoid sending them data that they are not expecting. It is not reasonable to expect our peers to buffer unexpected PoVs, just as we will not buffer unexpected PoVs. So notifying our peers about what is being awaited is key. However it is important that the notifications system is also bounded.</p>
+<p>For this, in order to avoid reaching into the internals of the <a href="node/backing/statement-distribution.html">Statement Distribution</a> Subsystem, we can rely on an expected propery of candidate backing: that each validator can only second one candidate at each chain head. So we can set a cap on the number of PoVs each peer is allowed to notify us that they are waiting for at a given relay-parent. This cap will be the number of validators at that relay-parent. And the view update mechanism of the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a> ensures that peers are only allowed to consider a certain set of relay-parents as live. So this bounding mechanism caps the amount of data we need to store per peer at any time at <code>sum({ n_validators_at_head(head) | head in view_heads })</code>. Additionally, peers should only be allowed to notify us of PoV hashes they are waiting for in the context of relay-parents in our own local view, which means that <code>n_validators_at_head</code> is implied to be <code>0</code> for relay-parents not in our own local view.</p>
+<p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>StartWork</code> and <code>StopWork</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="node/backing/../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
+<p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::ValidatorStatement variant. We can ignore anything except for <code>Seconded</code> statements.</p>
+<h2><a class="header" href="#formal-description" id="formal-description">Formal Description</a></h2>
+<p>This protocol can be implemented as a state machine with the following state:</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>struct State {
+	relay_parent_state: Map&lt;Hash, BlockBasedState&gt;,
+	peer_state: Map&lt;PeerId, PeerState&gt;,
+	our_view: View,
+}
+
+struct BlockBasedState {
+	known: Map&lt;Hash, PoV&gt;, // should be a shared PoV in practice. these things are heavy.
+	awaited: Set&lt;Hash&gt;, // awaited PoVs by blake2-256 hash.
+	fetching: Map&lt;Hash, [ResponseChannel&lt;PoV&gt;]&gt;,
+	n_validators: usize,
+}
+
+struct PeerState {
+	awaited: Map&lt;Hash, Set&lt;Hash&gt;&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We also assume the following network messages, which are sent and received by the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a></p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>enum NetworkMessage {
+	/// Notification that we are awaiting the given PoVs (by hash) against a
+	/// specific relay-parent hash.
+	Awaiting(Hash, Vec&lt;Hash&gt;),
+	/// Notification of an awaited PoV, in a given relay-parent context.
+	/// (relay_parent, pov_hash, pov)
+	SendPoV(Hash, Hash, PoV),
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Here is the logic of the state machine:</p>
+<p><em>Overseer Signals</em></p>
+<ul>
+<li>On <code>StartWork(relay_parent)</code>:
+<ul>
+<li>Get the number of validators at that relay parent by querying the <a href="node/backing/../utility/runtime-api.html">Runtime API</a> for the validators and then counting them.</li>
+<li>Create a blank entry in <code>relay_parent_state</code> under <code>relay_parent</code> with correct <code>n_validators</code> set.</li>
+</ul>
+</li>
+<li>On <code>StopWork(relay_parent)</code>:
+<ul>
+<li>Remove the entry for <code>relay_parent</code> from <code>relay_parent_state</code>.</li>
+</ul>
+</li>
+<li>On <code>Concluded</code>: conclude.</li>
+</ul>
+<p><em>PoV Distribution Messages</em></p>
+<ul>
+<li>On <code>ValidatorStatement(relay_parent, statement)</code>
+<ul>
+<li>If this is not <code>Statement::Seconded</code>, ignore.</li>
+<li>If there is an entry under <code>relay_parent</code> in <code>relay_parent_state</code>, add the <code>pov_hash</code> of the seconded Candidate's <a href="node/backing/../../types/candidate.html#candidate-descriptor"><code>CandidateDescriptor</code></a> to the <code>awaited</code> set of the entry.</li>
+<li>If the <code>pov_hash</code> was not previously awaited and there are <code>n_validators</code> or fewer entries in the <code>awaited</code> set, send <code>NetworkMessage::Awaiting(relay_parent, vec![pov_hash])</code> to all peers.</li>
+</ul>
+</li>
+<li>On <code>FetchPoV(relay_parent, descriptor, response_channel)</code>
+<ul>
+<li>If there is no entry in <code>relay_parent_state</code> under <code>relay_parent</code>, ignore.</li>
+<li>If there is a PoV under <code>descriptor.pov_hash</code> in the <code>known</code> map, send that PoV on the channel and return.</li>
+<li>Otherwise, place the <code>response_channel</code> in the <code>fetching</code> map under <code>descriptor.pov_hash</code>.</li>
+</ul>
+</li>
+<li>On <code>DistributePoV(relay_parent, descriptor, PoV)</code>
+<ul>
+<li>If there is no entry in <code>relay_parent_state</code> under <code>relay_parent</code>, ignore.</li>
+<li>Complete and remove any channels under <code>descriptor.pov_hash</code> in the <code>fetching</code> map.</li>
+<li>Send <code>NetworkMessage::SendPoV(relay_parent, descriptor.pov_hash, PoV)</code> to all peers who have the <code>descriptor.pov_hash</code> in the set under <code>relay_parent</code> in the <code>peer.awaited</code> map and remove the entry from <code>peer.awaited</code>.</li>
+<li>Note the PoV under <code>descriptor.pov_hash</code> in <code>known</code>.</li>
+</ul>
+</li>
+</ul>
+<p><em>Network Bridge Updates</em></p>
+<ul>
+<li>On <code>PeerConnected(peer_id, observed_role)</code>
+<ul>
+<li>Make a fresh entry in the <code>peer_state</code> map for the <code>peer_id</code>.</li>
+</ul>
+</li>
+<li>On `PeerDisconnected(peer_id)
+<ul>
+<li>Remove the entry for <code>peer_id</code> from the <code>peer_state</code> map.</li>
+</ul>
+</li>
+<li>On <code>PeerMessage(peer_id, bytes)</code>
+<ul>
+<li>If the bytes do not decode to a <code>NetworkMessage</code> or the <code>peer_id</code> has no entry in the <code>peer_state</code> map, report and ignore.</li>
+<li>If this is <code>NetworkMessage::Awaiting(relay_parent, pov_hashes)</code>:
+<ul>
+<li>If there is no entry under <code>peer_state.awaited</code> for the <code>relay_parent</code>, report and ignore.</li>
+<li>If <code>relay_parent</code> is not contained within <code>our_view</code>, report and ignore.</li>
+<li>Otherwise, if the <code>awaited</code> map combined with the <code>pov_hashes</code> would have more than <code>relay_parent_state[relay_parent].n_validators</code> entries, report and ignore. Note that we are leaning on the property of the network bridge that it sets our view based on <code>StartWork</code> messages.</li>
+<li>For each new <code>pov_hash</code> in <code>pov_hashes</code>, if there is a <code>pov</code> under <code>pov_hash</code> in the <code>known</code> map, send the peer a <code>NetworkMessage::SendPoV(relay_parent, pov_hash, pov)</code>.</li>
+<li>Otherwise, add the <code>pov_hash</code> to the <code>awaited</code> map</li>
+</ul>
+</li>
+<li>If this is <code>NetworkMessage::SendPoV(relay_parent, pov_hash, pov)</code>:
+<ul>
+<li>If there is no entry under <code>relay_parent</code> in <code>relay_parent_state</code> or no entry under <code>pov_hash</code> in our <code>awaited</code> map for that <code>relay_parent</code>, report and ignore.</li>
+<li>If the blake2-256 hash of the pov doesn't equal <code>pov_hash</code>, report and ignore.</li>
+<li>Complete and remove any listeners in the <code>fetching</code> map under <code>pov_hash</code>.</li>
+<li>Add to <code>known</code> map.</li>
+<li>Send <code>NetworkMessage::SendPoV(relay_parent, descriptor.pov_hash, PoV)</code> to all peers who have the <code>descriptor.pov_hash</code> in the set under <code>relay_parent</code> in the <code>peer.awaited</code> map and remove the entry from <code>peer.awaited</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>On <code>PeerViewChange(peer_id, view)</code>
+<ul>
+<li>If Peer is unknown, ignore.</li>
+<li>Ensure there is an entry under <code>relay_parent</code> for each <code>relay_parent</code> in <code>view</code> within the <code>peer.awaited</code> map, creating blank <code>awaited</code> lists as necessary.</li>
+<li>Remove all entries under <code>peer.awaited</code> that are not within <code>view</code>.</li>
+</ul>
+</li>
+<li>On <code>OurViewChange(view)</code>
+<ul>
+<li>Update <code>our_view</code> to <code>view</code></li>
+</ul>
+</li>
+</ul>
 <h1><a class="header" href="#availability-subsystems" id="availability-subsystems">Availability Subsystems</a></h1>
 <p>The availability subsystems are responsible for ensuring that Proofs of Validity of backed candidates are widely available within the validator set, without requiring every node to retain a full copy. They accomplish this by broadly distributing erasure-coded chunks of the PoV, keeping track of which validator has which chunk by means of signed bitfields. They are also responsible for reassembling a complete PoV when required, e.g. when a fisherman reports a potentially invalid block.</p>
 <h1><a class="header" href="#availability-distribution" id="availability-distribution">Availability Distribution</a></h1>
@@ -1305,7 +1445,7 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <h2><a class="header" href="#functionality-4" id="functionality-4">Functionality</a></h2>
 <p>Register on startup an event producer with  <code>NetworkBridge::RegisterEventProducer</code>.</p>
 <p>For each relay-parent in our local view update, look at all backed candidates pending availability. Distribute via gossip all erasure chunks for all candidates that we have to peers.</p>
-<p>We define an operation <code>live_candidates(relay_heads) -&gt; Set&lt;AbridgedCandidateReceipt&gt;</code> which returns a set of candidates a given set of relay chain heads that implies a set of candidates whose availability chunks should be currently gossiped. This is defined as all candidates pending availability in any of those relay-chain heads or any of their last <code>K</code> ancestors. We assume that state is not pruned within <code>K</code> blocks of the chain-head.</p>
+<p>We define an operation <code>live_candidates(relay_heads) -&gt; Set&lt;CommittedCandidateReceipt&gt;</code> which returns a set of <a href="node/availability/../../types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code>s</a> a given set of relay chain heads that implies a set of candidates whose availability chunks should be currently gossiped. This is defined as all candidates pending availability in any of those relay-chain heads or any of their last <code>K</code> ancestors. We assume that state is not pruned within <code>K</code> blocks of the chain-head.</p>
 <p>We will send any erasure-chunks that correspond to candidates in <code>live_candidates(peer_most_recent_view_update)</code>. Likewise, we only accept and forward messages pertaining to a candidate in <code>live_candidates(current_heads)</code>. Each erasure chunk should be accompanied by a merkle proof that it is committed to by the erasure trie root in the candidate receipt, and this gossip system is responsible for checking such proof.</p>
 <p>We re-attempt to send anything live to a peer upon any view update from that peer.</p>
 <p>On our view change, for all live candidates, we will check if we have the PoV by issuing a <code>QueryPoV</code> message and waiting for the response. If the query returns <code>Some</code>, we will perform the erasure-coding and distribute all messages to peers that will accept them.</p>
@@ -1545,16 +1685,31 @@ There are two types of network messages this sends and receives:</p>
 <h1><a class="header" href="#candidate-types" id="candidate-types">Candidate Types</a></h1>
 <p>Para candidates are some of the most common types, both within the runtime and on the Node-side.</p>
 <p>In a way, this entire guide is about these candidates: how they are scheduled, constructed, backed, included, and challenged.</p>
-<p>This section will describe the base candidate type, its components, and abridged counterpart.</p>
-<h2><a class="header" href="#candidatereceipt" id="candidatereceipt">CandidateReceipt</a></h2>
-<p>This is the base receipt type. The <code>GlobalValidationSchedule</code> and the <code>LocalValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the a block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#abridgedcandidatereceipt"><code>AbridgedCandidateReceipt</code></a> variant is often used instead for this reason.</p>
-<p>However, the full CandidateReceipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
+<p>This section will describe the base candidate type, its components, and variants that contain extra data.</p>
+<h2><a class="header" href="#candidate-receipt" id="candidate-receipt">Candidate Receipt</a></h2>
+<p>Much info in a <a href="types/candidate.html#full-candidate-receipt"><code>FullCandidateReceipt</code></a> is duplicated from the relay-chain state. When the corresponding relay-chain state is considered widely available, the Candidate Receipt should be favored over the <code>FullCandidateReceipt</code>.</p>
+<p>Examples of situations where the state is readily available includes within the scope of work done by subsystems working on a given relay-parent, or within the logic of the runtime importing a backed candidate.</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// A candidate-receipt.
+struct CandidateReceipt {
+	/// The descriptor of the candidate.
+	descriptor: CandidateDescriptor,
+	/// The hash of the encoded commitments made as a result of candidate execution.
+	commitments_hash: Hash,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#full-candidate-receipt" id="full-candidate-receipt">Full Candidate Receipt</a></h2>
+<p>This is the full receipt type. The <code>GlobalValidationSchedule</code> and the <code>LocalValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the a block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
+<p>However, the Full Candidate Receipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
 </span>/// All data pertaining to the execution of a para candidate.
-struct CandidateReceipt {
-	inner: AbridgedCandidateReceipt,
+struct FullCandidateReceipt {
+	inner: CandidateReceipt,
 	/// The global validation schedule.
 	global_validation: GlobalValidationSchedule,
 	/// The local validation data.
@@ -1562,36 +1717,46 @@ struct CandidateReceipt {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#abridgedcandidatereceipt" id="abridgedcandidatereceipt">AbridgedCandidateReceipt</a></h2>
-<p>Much info in a <a href="types/candidate.html#candidatereceipt"><code>CandidateReceipt</code></a> is duplicated from the relay-chain state. When the corresponding relay-chain state is considered widely available, the Abridged Candidate Receipt should be favored.</p>
-<p>Examples of situations where the state is readily available includes within the scope of work done by subsystems working on a given relay-parent, or within the logic of the runtime importing a backed candidate.</p>
+<h2><a class="header" href="#committed-candidate-receipt" id="committed-candidate-receipt">Committed Candidate Receipt</a></h2>
+<p>This is a variant of the candidate receipt which includes the commitments of the candidate receipt alongside the descriptor. This should be favored over the <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a> in situations where the candidate is not going to be executed but the actual data committed to is important. This is often the case in the backing phase.</p>
+<p>The hash of the committed candidate receipt will be the same as the corresponding <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>, because it is computed by first hashing the encoding of the commitments to form a plain <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
-</span>/// An abridged candidate-receipt.
-struct AbridgedCandidateReceipt {
+</span>/// A candidate-receipt with commitments directly included.
+struct CommittedCandidateReceipt {
+	/// The descriptor of the candidate.
+	descriptor: CandidateDescriptor,
+	/// The commitments of the candidate receipt.
+	commitments: CandidateCommitments,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#candidate-descriptor" id="candidate-descriptor">Candidate Descriptor</a></h2>
+<p>This struct is pure description of the candidate, in a lightweight format.</p>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>/// A unique descriptor of the candidate receipt.
+struct CandidateDescriptor {
 	/// The ID of the para this is a candidate for.
 	para_id: Id,
 	/// The hash of the relay-chain block this is executed in the context of.
 	relay_parent: Hash,
-	/// The head-data produced as a result of execution.
-	head_data: HeadData,
 	/// The collator's sr25519 public key.
 	collator: CollatorId,
 	/// Signature on blake2-256 of components of this receipt:
-	/// The parachain index, the relay parent, the head data, and the pov_hash.
+	/// The parachain index, the relay parent, and the pov_hash.
 	signature: CollatorSignature,
 	/// The blake2-256 hash of the pov-block.
 	pov_hash: Hash,
-	/// Commitments made as a result of validation.
-	commitments: CandidateCommitments,
 }
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#globalvalidationschedule" id="globalvalidationschedule">GlobalValidationSchedule</a></h2>
 <p>The global validation schedule comprises of information describing the global environment for para execution, as derived from a particular relay-parent. These are parameters that will apply to all parablocks executed in the context of this relay-parent.</p>
 <blockquote>
-<p>TODO: message queue watermarks (first upward messages, then XCMP channels)</p>
+<p>TODO: message queue watermarks (first downward messages, then XCMP channels)</p>
 </blockquote>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
@@ -1627,13 +1792,13 @@ struct GlobalValidationSchedule {
 </span><span class="boring">fn main() {
 </span>/// Extra data that is needed along with the other fields in a `CandidateReceipt`
 /// to fully validate the candidate. These fields are parachain-specific.
-pub struct LocalValidationData {
+struct LocalValidationData {
 	/// The parent head-data.
-	pub parent_head: HeadData,
+	parent_head: HeadData,
 	/// The balance of the parachain at the moment of validation.
-	pub balance: Balance,
+	balance: Balance,
 	/// The blake2-256 hash of the validation code used to execute the candidate.
-	pub validation_code_hash: Hash,
+	validation_code_hash: Hash,
 	/// Whether the parachain is allowed to upgrade its validation code.
 	///
 	/// This is `Some` if so, and contains the number of the minimum relay-chain
@@ -1645,7 +1810,7 @@ pub struct LocalValidationData {
 	/// height. This may be equal to the current perceived relay-chain block height, in
 	/// which case the code upgrade should be applied at the end of the signaling
 	/// block.
-	pub code_upgrade_allowed: Option&lt;BlockNumber&gt;,
+	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -1657,7 +1822,7 @@ pub struct LocalValidationData {
 </span>struct HeadData(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidatecommitments" id="candidatecommitments">CandidateCommitments</a></h2>
+<h2><a class="header" href="#candidate-commitments" id="candidate-commitments">Candidate Commitments</a></h2>
 <p>The execution and validation of parachain or parathread candidates produces a number of values which either must be committed to on the relay chain or committed to the state of the relay chain.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
@@ -1665,15 +1830,17 @@ pub struct LocalValidationData {
 </span>/// Commitments made in a `CandidateReceipt`. Many of these are outputs of validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = &quot;std&quot;, derive(Debug, Default))]
-pub struct CandidateCommitments {
+struct CandidateCommitments {
 	/// Fees paid from the chain to the relay chain validators.
-	pub fees: Balance,
+	fees: Balance,
 	/// Messages destined to be interpreted by the Relay chain itself.
-	pub upward_messages: Vec&lt;UpwardMessage&gt;,
+	upward_messages: Vec&lt;UpwardMessage&gt;,
 	/// The root of a block's erasure encoding Merkle tree.
-	pub erasure_root: Hash,
+	erasure_root: Hash,
 	/// New validation code.
-	pub new_validation_code: Option&lt;ValidationCode&gt;,
+	new_validation_code: Option&lt;ValidationCode&gt;,
+	/// The head-data produced as a result of execution.
+	head_data: HeadData,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -1744,7 +1911,7 @@ enum Statement {
   /// second only 1 candidate; this places an upper bound on the total number of candidates whose validity
   /// needs to be checked. A validator who seconds more than 1 parachain candidate per relay head is subject
   /// to slashing.
-  Seconded(CandidateReceipt),
+  Seconded(CommittedCandidateReceipt),
   /// A statement about the validity of a candidate, based on candidate's hash.
   Valid(Hash),
   /// A statement about the invalidity of a candidate.
@@ -1773,7 +1940,7 @@ enum CompactStatement {
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
-</span>/// A signed statement, containing the abridged candidate receipt in the `Seconded` variant.
+</span>/// A signed statement, containing the committed candidate receipt in the `Seconded` variant.
 pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
 
 /// A signed statement, containing only the hash.
@@ -1782,12 +1949,12 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 </span></code></pre></pre>
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2><a class="header" href="#backed-candidate" id="backed-candidate">Backed Candidate</a></h2>
-<p>An <a href="types/candidate.html#abridgedcandidatereceipt"><code>AbridgedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
+<p>An <a href="types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]
 </span><span class="boring">fn main() {
 </span>struct BackedCandidate {
-  candidate: AbridgedCandidateReceipt,
+  candidate: CommittedCandidateReceipt,
   validity_votes: Vec&lt;ValidityAttestation&gt;,
   // the indices of validators who signed the candidate within the group. There is no need to include
   // bit for any validators who are not in the group, so this is more compact.
@@ -1911,8 +2078,8 @@ enum BitfieldSigningMessage { }
   /// in a child of the given relay-parent, referenced by its hash.
   RegisterBackingWatcher(Hash, TODO),
   /// Note that the Candidate Backing subsystem should second the given candidate in the context of the
-  /// given relay-parent (ref. by hash). This candidate must be validated.
-  Second(Hash, CandidateReceipt),
+  /// given relay-parent (ref. by hash). This candidate must be validated using the provided PoV.
+  Second(Hash, CandidateReceipt, PoV),
   /// Note a peer validator's statement about a particular candidate. Disagreements about validity must be escalated
   /// to a broader check by Misbehavior Arbitration. Agreements are simply tallied until a quorum is reached.
   Statement(Statement),
@@ -1989,11 +2156,25 @@ enum NetworkBridgeEvent {
 <span class="boring">}
 </span></code></pre></pre>
 <p>If this subsystem chooses to second a parachain block, it dispatches a <code>CandidateBackingSubsystemMessage</code>.</p>
-<h2><a class="header" href="#pov-distribution-1" id="pov-distribution-1">PoV Distribution</a></h2>
-<p>Messages received by the PoV Distribution subsystem are unspecified and highly tied to gossip.</p>
-<blockquote>
-<p>TODO</p>
-</blockquote>
+<h2><a class="header" href="#pov-distribution-message" id="pov-distribution-message">PoV Distribution Message</a></h2>
+<pre><pre class="playpen"><code class="language-rust">
+<span class="boring">#![allow(unused_variables)]
+</span><span class="boring">fn main() {
+</span>enum PoVDistributionMessage {
+	/// Note a statement by a validator on a relay-parent. `Seconded` statements must always
+	/// have been passed in before `Valid` or `Invalid` statements.
+	ValidatorStatement(Hash, SignedFullStatement),
+	/// Fetch a PoV from the network.
+	/// (relay_parent, PoV-hash, Response channel).
+	FetchPoV(Hash, CandidateDescriptor, ResponseChannel&lt;PoV&gt;),
+	/// Distribute a PoV for the given relay-parent and CandidateDescriptor.
+	/// The PoV should correctly hash to the PoV hash mentioned in the CandidateDescriptor
+	DistributePoV(Hash, CandidateDescriptor, PoV),
+	/// An update from the network bridge.
+	NetworkBridgeUpdate(NetworkBridgeEvent),
+}
+<span class="boring">}
+</span></code></pre></pre>
 <h2><a class="header" href="#provisioner-message" id="provisioner-message">Provisioner Message</a></h2>
 <pre><pre class="playpen"><code class="language-rust">
 <span class="boring">#![allow(unused_variables)]

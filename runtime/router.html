@@ -167,7 +167,7 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <p>No initialization routine runs for this module.</p>
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
 <ul>
-<li><code>queue_upward_messages(AbridgedCandidateReceipt)</code>:
+<li><code>queue_upward_messages(ParaId, Vec&lt;UpwardMessage&gt;)</code>:
 <ol>
 <li>Updates <code>NeedsDispatch</code>, and enqueues upward messages into <code>RelayDispatchQueue</code> and modifies the respective entry in <code>RelayDispatchQueueSize</code>.</li>
 </ol>
