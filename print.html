@@ -235,79 +235,60 @@
 <p>TODO Diagram: Inclusion Pipeline &amp; Approval Subsystems interaction</p>
 </blockquote>
 <p>It is also important to take note of the fact that the relay-chain is extended by BABE, which is a forkful algorithm. That means that different block authors can be chosen at the same time, and may not be building on the same block parent. Furthermore, the set of validators is not fixed, nor is the set of parachains. And even with the same set of validators and parachains, the validators' assignments to parachains is flexible. This means that the architecture proposed in the next chapters must deal with the variability and multiplicity of the network state.</p>
-<pre><code class="language-text">
-   ....... Validator Group 1 ..........
-   .                                  .
-   .         (Validator 4)            .
-   .  (Validator 1) (Validator 2)     .
-   .         (Validator 5)            .
-   .                                  .
-   ..........Building on C  ...........        ........ Validator Group 2 ...........
-            +----------------------+           .                                    .
-            |    Relay Block C     |           .           (Validator 7)            .
-            +----------------------+           .    ( Validator 3) (Validator 6)    .
-                            \                  .                                    .
-                             \                 ......... Building on B  .............
-                              \
-                      +----------------------+
-                      |  Relay Block B       |
-                      +----------------------+
-                              |
-                      +----------------------+
-                      |  Relay Block A       |
-                      +----------------------+
+<pre><code class="language-dotprocess">digraph {
+	rca [label = &quot;Relay Block A&quot; shape=rectangle]
+	rcb [label = &quot;Relay Block B&quot; shape=rectangle]
+	rcc [label = &quot;Relay Block C&quot; shape=rectangle]
 
+	vg1 [label =&lt;&lt;b&gt;Validator Group 1&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 4)&lt;br/&gt;(Validator 1) (Validator 2)&lt;br/&gt;(Validator 5)&lt;/font&gt;&gt;]
+	vg2 [label =&lt;&lt;b&gt;Validator Group 2&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 7)&lt;br/&gt;(Validator 3) (Validator 6)&lt;/font&gt;&gt;]
+
+	rcb -&gt; rca
+	rcc -&gt; rcb
+
+	vg1 -&gt; rcc [label=&quot;Building on C&quot; style=dashed arrowhead=none]
+	vg2 -&gt; rcb [label=&quot;Building on B&quot; style=dashed arrowhead=none]
+}
 </code></pre>
 <p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
-<pre><code class="language-text">   ....... Validator Group 1 ..........      ........ Validator Group 2 ...........
-   .                                  .      .                                    .
-   .  (Validator 4) (Validator 1)     .      .    (Validator 7) (Validator 6)     .
-   .                                  .      .                                    .
-   .......... Building on C  ..........      ......... Building on C' .............
+<pre><code class="language-dotprocess">digraph {
+	rca [label = &quot;Relay Block A&quot; shape=rectangle]
+	rcb [label = &quot;Relay Block B&quot; shape=rectangle]
+	rcc [label = &quot;Relay Block C&quot; shape=rectangle]
+	rcc_prime [label = &quot;Relay Block C'&quot; shape=rectangle]
 
+	vg1 [label =&lt;&lt;b&gt;Validator Group 1&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 4) (Validator 1)&lt;/font&gt;&gt;]
+	vg2 [label =&lt;&lt;b&gt;Validator Group 2&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 7) (Validator 6)&lt;/font&gt;&gt;]
+	vg3 [label =&lt;&lt;b&gt;Validator Group 3&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 2) (Validator 3)&lt;br/&gt;(Validator 5)&lt;/font&gt;&gt;]
 
-   ....... Validator Group 3 ..........
-   .                                  .
-   .   (Validator 2) (Validator 3)    .
-   .        (Validator 5)             .
-   .                                  .
-   ....... Building on C and C' .......
+	rcb -&gt; rca
+	rcc -&gt; rcb
+	rcc_prime -&gt; rcb
 
-            +----------------------+         +----------------------+
-            |    Relay Block C     |         |    Relay Block C'    |
-            +----------------------+         +----------------------+
-                            \                 /
-                             \               /
-                              \             /
-                      +----------------------+
-                      |  Relay Block B       |
-                      +----------------------+
-                              |
-                      +----------------------+
-                      |  Relay Block A       |
-                      +----------------------+
+	vg1 -&gt; rcc [style=dashed arrowhead=none]
+	vg2 -&gt; rcc_prime [style=dashed arrowhead=none]
+	vg3 -&gt; rcc_prime [style=dashed arrowhead=none]
+	vg3 -&gt; rcc [style=dashed arrowhead=none]
+}
 </code></pre>
 <p>Those validators that are aware of many competing heads must be aware of the work happening on each one. They may contribute to some or a full extent on both. It is possible that due to network asynchrony two forks may grow in parallel for some time, although in the absence of an adversarial network this is unlikely in the case where there are validators who are aware of both chain heads.</p>
 <h1><a class="header" href="#architecture-overview" id="architecture-overview">Architecture Overview</a></h1>
 <p>Our Parachain Host includes a blockchain known as the relay-chain. A blockchain is a Directed Acyclic Graph (DAG) of state transitions, where every block can be considered to be the head of a linked-list (known as a &quot;chain&quot; or &quot;fork&quot;) with a cumulative state which is determined by applying the state transition of each block in turn. All paths through the DAG terminate at the Genesis Block. In fact, the blockchain is a tree, since each block can have only one parent.</p>
-<pre><code class="language-text">          +----------------+     +----------------+
-          |    Block 4     |     | Block 5        |
-          +----------------+     +----------------+
-                        \           /
-                         V         V
-                      +---------------+
-                      |    Block 3    |
-                      +---------------+
-                              |
-                              V
-                     +----------------+     +----------------+
-                     |    Block 1     |     |   Block 2      |
-                     +----------------+     +----------------+
-                                  \            /
-                                   V          V
-                                +----------------+
-                                |    Genesis     |
-                                +----------------+
+<pre><code class="language-dotprocess">digraph {
+	node [shape=box];
+    genesis [label = Genesis]
+	b1 [label = &quot;Block 1&quot;]
+	b2 [label = &quot;Block 2&quot;]
+	b3 [label = &quot;Block 3&quot;]
+	b4 [label = &quot;Block 4&quot;]
+	b5 [label = &quot;Block 5&quot;]
+
+	b5 -&gt; b3
+	b4 -&gt; b3
+	b3 -&gt; b1
+	b2 -&gt; genesis
+	b1 -&gt; genesis
+}
 </code></pre>
 <p>A blockchain network is comprised of nodes. These nodes each have a view of many different forks of a blockchain and must decide which forks to follow and what actions to take based on the forks of the chain that they are aware of.</p>
 <p>So in specifying an architecture to carry out the functionality of a Parachain Host, we have to answer two categories of questions:</p>
@@ -317,25 +298,15 @@
 </ol>
 <p>The first category of questions will be addressed by the Runtime, which defines the state-transition logic of the chain. Runtime logic only has to focus on the perspective of one chain, as each state has only a single parent state.</p>
 <p>The second category of questions addressed by Node-side behavior. Node-side behavior defines all activities that a node undertakes, given its view of the blockchain/block-DAG. Node-side behavior can take into account all or many of the forks of the blockchain, and only conditionally undertake certain activities based on which forks it is aware of, as well as the state of the head of those forks.</p>
-<pre><code class="language-text">
-                     __________________________________
-                    /                                  \
-                    |            Runtime               |
-                    |                                  |
-                    \_________(Runtime API )___________/
-                                |       ^
-                                V       |
-               +----------------------------------------------+
-               |                                              |
-               |                   Node                       |
-               |                                              |
-               |                                              |
-               +----------------------------------------------+
-                                   +  +
-                                   |  |
-               --------------------+  +------------------------
-                                 Transport
-               ------------------------------------------------
+<pre><code class="language-dotprocess">digraph G {
+    Runtime [shape=box]
+    &quot;Node&quot; [shape=box margin=0.5]
+    Transport [shape=rectangle width=5]
+
+    Runtime -&gt; &quot;Node&quot; [dir=both label=&quot;Runtime API&quot;]
+
+    &quot;Node&quot; -&gt; Transport [penwidth=1]
+}
 
 </code></pre>
 <p>It is also helpful to divide Node-side behavior into two further categories: Networking and Core. Networking behaviors relate to how information is distributed between nodes. Core behaviors relate to internal work that a specific node does. These two categories of behavior often interact, but can be heavily abstracted from each other. Core behaviors care that information is distributed and received, but not the internal details of how distribution and receipt function. Networking behaviors act on requests for distribution or fetching of information, but are not concerned with how the information is used afterwards. This allows us to create clean boundaries between Core and Networking activities, improving the modularity of the code.</p>
