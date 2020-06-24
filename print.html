@@ -7,12 +7,19 @@
         
         <meta name="robots" content="noindex" />
         
+        
+
+
+        <!-- Custom HTML head -->
+        
+
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
+        <link rel="icon" href="favicon.svg">
         <link rel="shortcut icon" href="favicon.png">
         <link rel="stylesheet" href="css/variables.css">
         <link rel="stylesheet" href="css/general.css">
@@ -21,8 +28,9 @@
 
         <!-- Fonts -->
         <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
-        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="highlight.css">
@@ -38,7 +46,7 @@
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
             var path_to_root = "";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -376,8 +384,8 @@
 <p>Although option 3 is the most comprehensive, it runs counter to our goal of simplicity. Option 1 means requiring the runtime to do redundant work at all sessions and will also mean, like option 3, that designing things in such a way that initialization can be rolled back and reapplied under the new environment. That leaves option 2, although it is a &quot;nuclear&quot; option in a way and requires us to constrain the parachain host to only run in full runtimes with a certain order of operations.</p>
 <p>So the other role of the initializer module is to forward session change notifications to modules in the initialization order, throwing an unrecoverable error if the notification is received after initialization. Session change is the point at which the <a href="runtime/configuration.html">Configuration Module</a> updates the configuration. Most of the other modules will handle changes in the configuration during their session change operation, so the initializer should provide both the old and new configuration to all the other
 modules alongside the session change notification. This means that a session change notification should consist of the following data:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SessionChangeNotification {
  // The new validators in the session.
@@ -402,8 +410,8 @@ TODO Diagram: order of runtime operations (initialization, session change)</p>
 <h1><a class="header" href="#initializer-module" id="initializer-module">Initializer Module</a></h1>
 <p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described above: accepting and forwarding session change notifications.</p>
 <h2><a class="header" href="#storage" id="storage">Storage</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>HasInitialized: bool
 <span class="boring">}
@@ -431,8 +439,8 @@ Otherwise, forward the session change notification to other modules in initializ
 <p>The configuration that we will be tracking is the <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> struct.</p>
 <h2><a class="header" href="#storage-1" id="storage-1">Storage</a></h2>
 <p>The configuration module is responsible for two main pieces of storage.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The current configuration to be used.
 Configuration: HostConfiguration;
@@ -443,8 +451,8 @@ PendingConfiguration: Option&lt;HostConfiguration&gt;;
 <h2><a class="header" href="#session-change-1" id="session-change-1">Session change</a></h2>
 <p>The session change routine for the Configuration module is simple. If the <code>PendingConfiguration</code> is <code>Some</code>, take its value and set <code>Configuration</code> to be equal to it. Reset <code>PendingConfiguration</code> to <code>None</code>.</p>
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Get the host configuration.
 pub fn configuration() -&gt; HostConfiguration {
@@ -468,8 +476,8 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
 <p>It's also responsible for managing parachain validation code upgrades as well as maintaining availability of old parachain code and its pruning.</p>
 <h2><a class="header" href="#storage-2" id="storage-2">Storage</a></h2>
 <p>Utility structs:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// the two key times necessary to track for every code replacement.
 pub struct ReplacementTimes {
@@ -514,8 +522,8 @@ struct ParaGenesisArgs {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage layout:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All parachains. Ordered ascending by ParaId. Parathreads are not included.
 Parachains: Vec&lt;ParaId&gt;,
@@ -656,8 +664,8 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 <p>Cores are treated as an ordered list of cores and are typically referred to by their index in that list.</p>
 <h2><a class="header" href="#storage-3" id="storage-3">Storage</a></h2>
 <p>Utility structs:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// A claim on authoring the next block for a given parathread.
 struct ParathreadClaim(ParaId, CollatorId);
@@ -705,8 +713,8 @@ enum FreedReason {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage layout:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All the validator groups. One for each core.
 ValidatorGroups: Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;;
@@ -797,8 +805,8 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
 <h2><a class="header" href="#storage-4" id="storage-4">Storage</a></h2>
 <p>Helper structs:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct AvailabilityBitfield {
   bitfield: BitVec, // one bit per core.
@@ -815,8 +823,8 @@ struct CandidatePendingAvailability {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage Layout:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The latest bitfield for each validator, referred to by index.
 bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
@@ -891,8 +899,8 @@ CurrentSessionIndex: SessionIndex;
 </li>
 <li>
 <p><code>collect_pending</code>:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>  fn collect_pending(f: impl Fn(CoreIndex, BlockNumber) -&gt; bool) -&gt; Vec&lt;u32&gt; {
     // sweep through all paras pending availability. if the predicate returns true, when given the core index and
@@ -907,8 +915,8 @@ CurrentSessionIndex: SessionIndex;
 <p>This module is responsible for all the logic carried by the <code>Inclusion</code> entry-point. This entry-point is mandatory, in that it must be invoked exactly once within every block, and it is also &quot;inherent&quot;, in that it is provided with no origin by the block author. The data within it carries its own authentication. If any of the steps within fails, the entry-point is considered as having failed and the block will be invalid.</p>
 <p>This module does not have the same initialization/finalization concerns as the others, as it only requires that entry points be triggered after all modules have initialized and that finalization happens after entry points are triggered. Both of these are assumptions we have already made about the runtime's order of operations, so this module doesn't need to be initialized or finalized by the <code>Initializer</code>.</p>
 <h2><a class="header" href="#storage-5" id="storage-5">Storage</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>Included: Option&lt;()&gt;,
 <span class="boring">}
@@ -1195,8 +1203,8 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <li>If the local key exists, extract the parachain head and validation function for the parachain the local key is assigned to.</li>
 </ul>
 <h3><a class="header" href="#on-receiving-new-signed-statement" id="on-receiving-new-signed-statement">On Receiving New Signed Statement</a></h3>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>if let Statement::Seconded(candidate) = signed.statement {
   if candidate is unknown and in local assignment {
@@ -1209,8 +1217,8 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h3><a class="header" href="#spawning-validation-work" id="spawning-validation-work">Spawning Validation Work</a></h3>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn spawn_validation_work(candidate, parachain head, validation function) {
   asynchronously {
@@ -1299,8 +1307,8 @@ Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)<
 <p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::ValidatorStatement variant. We can ignore anything except for <code>Seconded</code> statements.</p>
 <h2><a class="header" href="#formal-description" id="formal-description">Formal Description</a></h2>
 <p>This protocol can be implemented as a state machine with the following state:</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
 	relay_parent_state: Map&lt;Hash, BlockBasedState&gt;,
@@ -1321,8 +1329,8 @@ struct PeerState {
 <span class="boring">}
 </span></code></pre></pre>
 <p>We also assume the following network messages, which are sent and received by the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a></p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum NetworkMessage {
 	/// Notification that we are awaiting the given PoVs (by hash) against a
@@ -1689,8 +1697,8 @@ There are two types of network messages this sends and receives:</p>
 <h2><a class="header" href="#candidate-receipt" id="candidate-receipt">Candidate Receipt</a></h2>
 <p>Much info in a <a href="types/candidate.html#full-candidate-receipt"><code>FullCandidateReceipt</code></a> is duplicated from the relay-chain state. When the corresponding relay-chain state is considered widely available, the Candidate Receipt should be favored over the <code>FullCandidateReceipt</code>.</p>
 <p>Examples of situations where the state is readily available includes within the scope of work done by subsystems working on a given relay-parent, or within the logic of the runtime importing a backed candidate.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A candidate-receipt.
 struct CandidateReceipt {
@@ -1704,8 +1712,8 @@ struct CandidateReceipt {
 <h2><a class="header" href="#full-candidate-receipt" id="full-candidate-receipt">Full Candidate Receipt</a></h2>
 <p>This is the full receipt type. The <code>GlobalValidationSchedule</code> and the <code>LocalValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the a block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
 <p>However, the Full Candidate Receipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All data pertaining to the execution of a para candidate.
 struct FullCandidateReceipt {
@@ -1720,8 +1728,8 @@ struct FullCandidateReceipt {
 <h2><a class="header" href="#committed-candidate-receipt" id="committed-candidate-receipt">Committed Candidate Receipt</a></h2>
 <p>This is a variant of the candidate receipt which includes the commitments of the candidate receipt alongside the descriptor. This should be favored over the <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a> in situations where the candidate is not going to be executed but the actual data committed to is important. This is often the case in the backing phase.</p>
 <p>The hash of the committed candidate receipt will be the same as the corresponding <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>, because it is computed by first hashing the encoding of the commitments to form a plain <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A candidate-receipt with commitments directly included.
 struct CommittedCandidateReceipt {
@@ -1734,8 +1742,8 @@ struct CommittedCandidateReceipt {
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-descriptor" id="candidate-descriptor">Candidate Descriptor</a></h2>
 <p>This struct is pure description of the candidate, in a lightweight format.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A unique descriptor of the candidate receipt.
 struct CandidateDescriptor {
@@ -1758,8 +1766,8 @@ struct CandidateDescriptor {
 <blockquote>
 <p>TODO: message queue watermarks (first downward messages, then XCMP channels)</p>
 </blockquote>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Extra data that is needed along with the other fields in a `CandidateReceipt`
 /// to fully validate the candidate.
@@ -1787,8 +1795,8 @@ struct GlobalValidationSchedule {
 <blockquote>
 <p>TODO: determine if balance/fees are even needed here.</p>
 </blockquote>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Extra data that is needed along with the other fields in a `CandidateReceipt`
 /// to fully validate the candidate. These fields are parachain-specific.
@@ -1816,16 +1824,16 @@ struct LocalValidationData {
 </span></code></pre></pre>
 <h2><a class="header" href="#headdata" id="headdata">HeadData</a></h2>
 <p>Head data is a type-safe abstraction around bytes (<code>Vec&lt;u8&gt;</code>) for the purposes of representing heads of parachains or parathreads.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct HeadData(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-commitments" id="candidate-commitments">Candidate Commitments</a></h2>
 <p>The execution and validation of parachain or parathread candidates produces a number of values which either must be committed to on the relay chain or committed to the state of the relay chain.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Commitments made in a `CandidateReceipt`. Many of these are outputs of validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -1846,8 +1854,8 @@ struct CandidateCommitments {
 </span></code></pre></pre>
 <h2><a class="header" href="#signing-context" id="signing-context">Signing Context</a></h2>
 <p>This struct provides context to signatures by combining with various payloads to localize the signature to a particular session index and relay-chain hash. Having these fields included in the signature makes misbehavior attribution much simpler.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SigningContext {
 	/// The relay-chain block hash this signature is in the context of.
@@ -1862,8 +1870,8 @@ struct CandidateCommitments {
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
 <h2><a class="header" href="#validity-attestation" id="validity-attestation">Validity Attestation</a></h2>
 <p>An attestation of validity for a candidate, used as part of a backing. Both the <code>Seconded</code> and <code>Valid</code> statements are considered attestations of validity. This structure is only useful where the candidate referenced is apparent.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidityAttestation {
   /// Implicit validity attestation by issuing.
@@ -1900,8 +1908,8 @@ impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;
 <p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
 <h2><a class="header" href="#statement-type" id="statement-type">Statement Type</a></h2>
 <p>The <a href="types/../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about the validity of a parachain candidate.
 enum Statement {
@@ -1937,8 +1945,8 @@ enum CompactStatement {
 <p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
 <h2><a class="header" href="#signed-statement-type" id="signed-statement-type">Signed Statement Type</a></h2>
 <p>A statement which has been <a href="types/backing.html#signed-wrapper">cryptographically signed</a> by a validator.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A signed statement, containing the committed candidate receipt in the `Seconded` variant.
 pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
@@ -1950,8 +1958,8 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2><a class="header" href="#backed-candidate" id="backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct BackedCandidate {
   candidate: CommittedCandidateReceipt,
@@ -1972,8 +1980,8 @@ struct BackedCandidates(Vec&lt;BackedCandidate&gt;); // sorted by para-id.
 candidates for the duration of a challenge period. This is done via an erasure-coding of the data to keep available.</p>
 <h2><a class="header" href="#signed-availability-bitfield" id="signed-availability-bitfield">Signed Availability Bitfield</a></h2>
 <p>A bitfield <a href="types/backing.html#signed-wrapper">signed</a> by a particular validator about the availability of pending candidates.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
 
@@ -1982,8 +1990,8 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#proof-of-validity" id="proof-of-validity">Proof-of-Validity</a></h2>
 <p>Often referred to as PoV, this is a type-safe wrapper around bytes (<code>Vec&lt;u8&gt;</code>) when referring to data that acts as a stateless-client proof of validity of a candidate, when used as input to the validation function of the para.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PoV(Vec&lt;u8&gt;);
 <span class="boring">}
@@ -1992,8 +2000,8 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
 <h2><a class="header" href="#overseer-signal" id="overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
   /// Signal to start work localized to the relay-parent hash.
@@ -2015,8 +2023,8 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </blockquote>
 <h2><a class="header" href="#availability-distribution-message" id="availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionMessage {
 	/// Distribute an availability chunk to other validators.
@@ -2031,8 +2039,8 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#availability-store-message" id="availability-store-message">Availability Store Message</a></h2>
 <p>Messages to and from the availability store.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
 	/// Query the PoV of a candidate by hash.
@@ -2048,8 +2056,8 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#bitfield-distribution-message" id="bitfield-distribution-message">Bitfield Distribution Message</a></h2>
 <p>Messages received by the bitfield distribution subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum BitfieldDistributionMessage {
 	/// Distribute a bitfield signed by a validator to other validators.
@@ -2062,16 +2070,16 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#bitfield-signing-message" id="bitfield-signing-message">Bitfield Signing Message</a></h2>
 <p>Currently, the bitfield signing subsystem receives no specific messages.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 enum BitfieldSigningMessage { }
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-backing-message" id="candidate-backing-message">Candidate Backing Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateBackingMessage {
   /// Registers a stream listener for updates to the set of backable candidates that could be backed
@@ -2088,8 +2096,8 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-selection-message" id="candidate-selection-message">Candidate Selection Message</a></h2>
 <p>These messages are sent to the <a href="types/../node/backing/candidate-selection.html">Candidate Selection subsystem</a> as a means of providing feedback on its outputs.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
   /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
@@ -2100,8 +2108,8 @@ enum BitfieldSigningMessage { }
 <h2><a class="header" href="#network-bridge-message" id="network-bridge-message">Network Bridge Message</a></h2>
 <p>Messages received by the network bridge. This subsystem is invoked by others to manipulate access
 to the low-level networking code.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum NetworkBridgeMessage {
 	/// Register an event producer with the network bridge. This should be done early and cannot
@@ -2116,8 +2124,8 @@ to the low-level networking code.</p>
 </span></code></pre></pre>
 <h2><a class="header" href="#network-bridge-update" id="network-bridge-update">Network Bridge Update</a></h2>
 <p>These updates are posted from the <a href="types/../node/utility/network-bridge.html">Network Bridge Subsystem</a> to other subsystems based on registered listeners.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct View(Vec&lt;Hash&gt;); // Up to `N` (5?) chain heads.
 
@@ -2135,8 +2143,8 @@ enum NetworkBridgeEvent {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum MisbehaviorReport {
   /// These validator nodes disagree on this candidate's validity, please figure it out
@@ -2157,8 +2165,8 @@ enum NetworkBridgeEvent {
 </span></code></pre></pre>
 <p>If this subsystem chooses to second a parachain block, it dispatches a <code>CandidateBackingSubsystemMessage</code>.</p>
 <h2><a class="header" href="#pov-distribution-message" id="pov-distribution-message">PoV Distribution Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum PoVDistributionMessage {
 	/// Note a statement by a validator on a relay-parent. `Seconded` statements must always
@@ -2176,8 +2184,8 @@ enum NetworkBridgeEvent {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#provisioner-message" id="provisioner-message">Provisioner Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// This data becomes intrinsics or extrinsics which should be included in a future relay chain block.
 enum ProvisionableData {
@@ -2206,8 +2214,8 @@ enum ProvisionerMessage {
 <h2><a class="header" href="#runtime-api-message" id="runtime-api-message">Runtime API Message</a></h2>
 <p>The Runtime API subsystem is responsible for providing an interface to the state of the chain's runtime.</p>
 <p>Other subsystems query this data by sending these messages.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RuntimeApiRequest {
 	/// Get the current validator set.
@@ -2229,8 +2237,8 @@ enum RuntimeApiMessage {
 <h2><a class="header" href="#statement-distribution-message" id="statement-distribution-message">Statement Distribution Message</a></h2>
 <p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionMessage {
 	/// An update from the network bridge.
@@ -2246,8 +2254,8 @@ It receives updates from the network bridge and signed statements to share with 
 </span></code></pre></pre>
 <h2><a class="header" href="#validation-request-type" id="validation-request-type">Validation Request Type</a></h2>
 <p>Various modules request that the <a href="types/../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateValidationMessage {
 	/// Validate a candidate with provided parameters. Returns `Err` if an only if an internal
@@ -2261,8 +2269,8 @@ It receives updates from the network bridge and signed statements to share with 
 <p>Types used within the runtime exclusively and pervasively.</p>
 <h2><a class="header" href="#host-configuration" id="host-configuration">Host Configuration</a></h2>
 <p>The internal-to-runtime configuration of the parachain host. This is expected to be altered only by governance procedures.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct HostConfiguration {
 	/// The minimum frequency at which parachains can update their validation code.
@@ -2303,8 +2311,8 @@ It receives updates from the network bridge and signed statements to share with 
 <h1><a class="header" href="#chain" id="chain">Chain</a></h1>
 <p>Types pertaining to the relay-chain - events, structures, etc.</p>
 <h2><a class="header" href="#block-import-event" id="block-import-event">Block Import Event</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Indicates that a new block has been added to the blockchain.
 struct BlockImportEvent {
@@ -2319,8 +2327,8 @@ struct BlockImportEvent {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#block-finalization-event" id="block-finalization-event">Block Finalization Event</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Indicates that a new block has been finalized.
 struct BlockFinalizationEvent {
@@ -2417,10 +2425,10 @@ struct UpwardMessage {
         
 
         
-        
+
         
         <script type="text/javascript">
-            window.playpen_copyable = true;
+            window.playground_copyable = true;
         </script>
         
 

@@ -5,12 +5,19 @@
         <meta charset="UTF-8">
         <title>Configuration Module - The Polkadot Parachain Host Implementers' Guide</title>
         
+        
+
+
+        <!-- Custom HTML head -->
+        
+
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
+        <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
         <link rel="stylesheet" href="../css/variables.css">
         <link rel="stylesheet" href="../css/general.css">
@@ -19,8 +26,9 @@
 
         <!-- Fonts -->
         <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
-        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="../highlight.css">
@@ -36,7 +44,7 @@
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -152,8 +160,8 @@
 <p>The configuration that we will be tracking is the <a href="../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> struct.</p>
 <h2><a class="header" href="#storage" id="storage">Storage</a></h2>
 <p>The configuration module is responsible for two main pieces of storage.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The current configuration to be used.
 Configuration: HostConfiguration;
@@ -164,8 +172,8 @@ PendingConfiguration: Option&lt;HostConfiguration&gt;;
 <h2><a class="header" href="#session-change" id="session-change">Session change</a></h2>
 <p>The session change routine for the Configuration module is simple. If the <code>PendingConfiguration</code> is <code>Some</code>, take its value and set <code>Configuration</code> to be equal to it. Reset <code>PendingConfiguration</code> to <code>None</code>.</p>
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Get the host configuration.
 pub fn configuration() -&gt; HostConfiguration {
@@ -227,10 +235,10 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
         
 
         
-        
+
         
         <script type="text/javascript">
-            window.playpen_copyable = true;
+            window.playground_copyable = true;
         </script>
         
 

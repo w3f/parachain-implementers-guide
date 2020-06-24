@@ -5,12 +5,19 @@
         <meta charset="UTF-8">
         <title>Overseer and Subsystem Protocol - The Polkadot Parachain Host Implementers' Guide</title>
         
+        
+
+
+        <!-- Custom HTML head -->
+        
+
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
+        <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
         <link rel="stylesheet" href="../css/variables.css">
         <link rel="stylesheet" href="../css/general.css">
@@ -19,8 +26,9 @@
 
         <!-- Fonts -->
         <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
-        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="../highlight.css">
@@ -36,7 +44,7 @@
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -151,8 +159,8 @@
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
 <h2><a class="header" href="#overseer-signal" id="overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
   /// Signal to start work localized to the relay-parent hash.
@@ -174,8 +182,8 @@
 </blockquote>
 <h2><a class="header" href="#availability-distribution-message" id="availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionMessage {
 	/// Distribute an availability chunk to other validators.
@@ -190,8 +198,8 @@
 </span></code></pre></pre>
 <h2><a class="header" href="#availability-store-message" id="availability-store-message">Availability Store Message</a></h2>
 <p>Messages to and from the availability store.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
 	/// Query the PoV of a candidate by hash.
@@ -207,8 +215,8 @@
 </span></code></pre></pre>
 <h2><a class="header" href="#bitfield-distribution-message" id="bitfield-distribution-message">Bitfield Distribution Message</a></h2>
 <p>Messages received by the bitfield distribution subsystem.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum BitfieldDistributionMessage {
 	/// Distribute a bitfield signed by a validator to other validators.
@@ -221,16 +229,16 @@
 </span></code></pre></pre>
 <h2><a class="header" href="#bitfield-signing-message" id="bitfield-signing-message">Bitfield Signing Message</a></h2>
 <p>Currently, the bitfield signing subsystem receives no specific messages.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 enum BitfieldSigningMessage { }
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-backing-message" id="candidate-backing-message">Candidate Backing Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateBackingMessage {
   /// Registers a stream listener for updates to the set of backable candidates that could be backed
@@ -247,8 +255,8 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2><a class="header" href="#candidate-selection-message" id="candidate-selection-message">Candidate Selection Message</a></h2>
 <p>These messages are sent to the <a href="../node/backing/candidate-selection.html">Candidate Selection subsystem</a> as a means of providing feedback on its outputs.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
   /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
@@ -259,8 +267,8 @@ enum BitfieldSigningMessage { }
 <h2><a class="header" href="#network-bridge-message" id="network-bridge-message">Network Bridge Message</a></h2>
 <p>Messages received by the network bridge. This subsystem is invoked by others to manipulate access
 to the low-level networking code.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum NetworkBridgeMessage {
 	/// Register an event producer with the network bridge. This should be done early and cannot
@@ -275,8 +283,8 @@ to the low-level networking code.</p>
 </span></code></pre></pre>
 <h2><a class="header" href="#network-bridge-update" id="network-bridge-update">Network Bridge Update</a></h2>
 <p>These updates are posted from the <a href="../node/utility/network-bridge.html">Network Bridge Subsystem</a> to other subsystems based on registered listeners.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct View(Vec&lt;Hash&gt;); // Up to `N` (5?) chain heads.
 
@@ -294,8 +302,8 @@ enum NetworkBridgeEvent {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum MisbehaviorReport {
   /// These validator nodes disagree on this candidate's validity, please figure it out
@@ -316,8 +324,8 @@ enum NetworkBridgeEvent {
 </span></code></pre></pre>
 <p>If this subsystem chooses to second a parachain block, it dispatches a <code>CandidateBackingSubsystemMessage</code>.</p>
 <h2><a class="header" href="#pov-distribution-message" id="pov-distribution-message">PoV Distribution Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum PoVDistributionMessage {
 	/// Note a statement by a validator on a relay-parent. `Seconded` statements must always
@@ -335,8 +343,8 @@ enum NetworkBridgeEvent {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#provisioner-message" id="provisioner-message">Provisioner Message</a></h2>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// This data becomes intrinsics or extrinsics which should be included in a future relay chain block.
 enum ProvisionableData {
@@ -365,8 +373,8 @@ enum ProvisionerMessage {
 <h2><a class="header" href="#runtime-api-message" id="runtime-api-message">Runtime API Message</a></h2>
 <p>The Runtime API subsystem is responsible for providing an interface to the state of the chain's runtime.</p>
 <p>Other subsystems query this data by sending these messages.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RuntimeApiRequest {
 	/// Get the current validator set.
@@ -388,8 +396,8 @@ enum RuntimeApiMessage {
 <h2><a class="header" href="#statement-distribution-message" id="statement-distribution-message">Statement Distribution Message</a></h2>
 <p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionMessage {
 	/// An update from the network bridge.
@@ -405,8 +413,8 @@ It receives updates from the network bridge and signed statements to share with 
 </span></code></pre></pre>
 <h2><a class="header" href="#validation-request-type" id="validation-request-type">Validation Request Type</a></h2>
 <p>Various modules request that the <a href="../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateValidationMessage {
 	/// Validate a candidate with provided parameters. Returns `Err` if an only if an internal
@@ -459,10 +467,10 @@ It receives updates from the network bridge and signed statements to share with 
         
 
         
-        
+
         
         <script type="text/javascript">
-            window.playpen_copyable = true;
+            window.playground_copyable = true;
         </script>
         
 

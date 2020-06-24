@@ -5,12 +5,19 @@
         <meta charset="UTF-8">
         <title>Backing - The Polkadot Parachain Host Implementers' Guide</title>
         
+        
+
+
+        <!-- Custom HTML head -->
+        
+
 
         <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff" />
 
+        <link rel="icon" href="../favicon.svg">
         <link rel="shortcut icon" href="../favicon.png">
         <link rel="stylesheet" href="../css/variables.css">
         <link rel="stylesheet" href="../css/general.css">
@@ -19,8 +26,9 @@
 
         <!-- Fonts -->
         <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
-        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
 
         <!-- Highlight.js Stylesheets -->
         <link rel="stylesheet" href="../highlight.css">
@@ -36,7 +44,7 @@
         <!-- Provide site root to javascript -->
         <script type="text/javascript">
             var path_to_root = "../";
-            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "light";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
         </script>
 
         <!-- Work around some values being stored in localStorage wrapped in quotes -->
@@ -152,8 +160,8 @@
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
 <h2><a class="header" href="#validity-attestation" id="validity-attestation">Validity Attestation</a></h2>
 <p>An attestation of validity for a candidate, used as part of a backing. Both the <code>Seconded</code> and <code>Valid</code> statements are considered attestations of validity. This structure is only useful where the candidate referenced is apparent.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidityAttestation {
   /// Implicit validity attestation by issuing.
@@ -190,8 +198,8 @@ impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;
 <p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
 <h2><a class="header" href="#statement-type" id="statement-type">Statement Type</a></h2>
 <p>The <a href="../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about the validity of a parachain candidate.
 enum Statement {
@@ -227,8 +235,8 @@ enum CompactStatement {
 <p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
 <h2><a class="header" href="#signed-statement-type" id="signed-statement-type">Signed Statement Type</a></h2>
 <p>A statement which has been <a href="#signed-wrapper">cryptographically signed</a> by a validator.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A signed statement, containing the committed candidate receipt in the `Seconded` variant.
 pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
@@ -240,8 +248,8 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2><a class="header" href="#backed-candidate" id="backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
-<pre><pre class="playpen"><code class="language-rust">
-<span class="boring">#![allow(unused_variables)]
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct BackedCandidate {
   candidate: CommittedCandidateReceipt,
@@ -300,10 +308,10 @@ struct BackedCandidates(Vec&lt;BackedCandidate&gt;); // sorted by para-id.
         
 
         
-        
+
         
         <script type="text/javascript">
-            window.playpen_copyable = true;
+            window.playground_copyable = true;
         </script>
         
 
