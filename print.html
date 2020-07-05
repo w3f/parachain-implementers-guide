@@ -1583,6 +1583,9 @@ If not running as a validator, do nothing.</p>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a>. Backed candidates come from the <a href="node/utility/../backing/candidate-backing.html">Candidate Backing subsystem</a>, signed bitfields come from the <a href="node/utility/../availability/bitfield-distribution.html">Bitfield Distribution subsystem</a>, and misbehavior reports and disputes come from the <a href="node/utility/misbehavior-arbitration.html">Misbehavior Arbitration subsystem</a>.</p>
 <p>At initialization, this subsystem has no outputs. Block authors can send a <code>ProvisionerMessage::RequestBlockAuthorshipData</code>, which includes a channel over which provisionable data can be sent. All appropriate provisionable data will then be sent over this channel, as it is received.</p>
 <p>Note that block authors must re-send a <code>ProvisionerMessage::RequestBlockAuthorshipData</code> for each relay parent they are interested in receiving provisionable data for.</p>
+<h2><a class="header" href="#block-production" id="block-production">Block Production</a></h2>
+<p>When a validator is selected by BABE to author a block, it becomes a block producer. The provisioner is the subsystem best suited to choosing which specific backed candidates and availability bitfields should be assembled into the block. To engage this functionality, a <code>ProvisionerMessage::RequestInherentData</code> is sent; the response is a set of non-conflicting candidates and the appropriate bitfields. Non-conflicting generally means that there are never two distinct parachain candidates included for the same parachain.</p>
+<p>One might ask: given <code>ProvisionerMessage::RequestInherentData</code>, what's the point of <code>ProvisionerMessage::RequestBlockAuthorshipData</code>? The answer is that the block authorship data includes more information than is present in the inherent data; disputes, for example.</p>
 <h2><a class="header" href="#functionality-11" id="functionality-11">Functionality</a></h2>
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3><a class="header" href="#on-overseer-signal-1" id="on-overseer-signal-1">On Overseer Signal</a></h3>
@@ -2170,6 +2173,11 @@ enum ProvisionableData {
   Dispute(Hash, Signature),
 }
 
+/// This data needs to make its way from the provisioner into the InherentData.
+///
+/// There, it is used to construct the InclusionInherent.
+type ProvisionerInherentData = (SignedAvailabilityBitfields, Vec&lt;BackedCandidate&gt;);
+
 /// Message to the Provisioner.
 ///
 /// In all cases, the Hash is that of the relay parent.
@@ -2177,6 +2185,12 @@ enum ProvisionerMessage {
   /// This message allows potential block authors to be kept updated with all new authorship data
   /// as it becomes available.
   RequestBlockAuthorshipData(Hash, Sender&lt;ProvisionableData&gt;),
+  /// This message allows external subsystems to request the set of bitfields and backed candidates
+  /// associated with a particular potential block hash.
+  ///
+  /// This is expected to be used by a proposer, to inject that information into the InherentData
+  /// where it can be assembled into the InclusionInherent.
+  RequestInherentData(Hash, oneshot::Sender&lt;ProvisionerInherentData&gt;),
   /// This data should become part of a relay chain block
   ProvisionableData(ProvisionableData),
 }
