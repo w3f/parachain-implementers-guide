@@ -32,11 +32,11 @@ jobs:
         sh -s -- --git Michael-F-Bryan/mdbook-linkcheck
 
     - run: |
-        mdbook build .tmp_polkadot/roadmap/implementors-guide/
+        mdbook build .tmp_polkadot/roadmap/implementers-guide/
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: .tmp_polkadot/roadmap/implementors-guide/book/html/
+        publish_dir: .tmp_polkadot/roadmap/implementers-guide/book/html/
 
