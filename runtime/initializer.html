@@ -156,16 +156,22 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#initializer-module" id="initializer-module">Initializer Module</a></h1>
-<p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described above: accepting and forwarding session change notifications.</p>
+<p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described in the overview of the runtime: accepting and forwarding session change notifications.</p>
 <h2><a class="header" href="#storage" id="storage">Storage</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>HasInitialized: bool
+</span>HasInitialized: bool;
+// buffered session changes along with the block number at which they should be applied.
+//
+// typically this will be empty or one element long. ordered ascending by BlockNumber and insertion
+// order.
+BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#initialization" id="initialization">Initialization</a></h2>
-<p>The other modules are initialized in this order:</p>
+<p>Before initializing modules, remove all changes from the <code>BufferedSessionChanges</code> with number less than or equal to the current block number, and apply the last one. The session change is applied to all modules in the same order as initialization.</p>
+<p>The other parachains modules are initialized in this order:</p>
 <ol>
 <li>Configuration</li>
 <li>Paras</li>
@@ -177,8 +183,7 @@
 <p>The <a href="configuration.html">Configuration Module</a> is first, since all other modules need to operate under the same configuration as each other. It would lead to inconsistency if, for example, the scheduler ran first and then the configuration was updated before the Inclusion module.</p>
 <p>Set <code>HasInitialized</code> to true.</p>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
-<p>If <code>HasInitialized</code> is true, throw an unrecoverable error (panic).
-Otherwise, forward the session change notification to other modules in initialization order.</p>
+<p>Store the session change information in <code>BufferedSessionChange</code> along with the block number at which it was submitted, plus one. Although the expected operational parameters of the block authorship system should prevent more than one change from being buffered at any time, it may occur. Regardless, we always need to track the block number at which the session change can be applied so as to remain flexible over session change notifications being issued before or after initialization of the current block.</p>
 <h2><a class="header" href="#finalization" id="finalization">Finalization</a></h2>
 <p>Finalization order is less important in this case than initialization order, so we finalize the modules in the reverse order from initialization.</p>
 <p>Set <code>HasInitialized</code> to false.</p>
