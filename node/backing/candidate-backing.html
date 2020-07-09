@@ -161,18 +161,30 @@
 <p>Note that though the candidate backing subsystem attempts to produce as many backable candidates as possible, it does <em>not</em> attempt to choose a single authoritative one. The choice of which actually gets included is ultimately up to the block author, by whatever metrics it may use; those are opaque to this subsystem.</p>
 <p>Once a sufficient quorum has agreed that a candidate is valid, this subsystem notifies the <a href="../utility/provisioner.html">Provisioner</a>, which in turn engages block production mechanisms to include the parablock.</p>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
-<p>The <a href="candidate-selection.html">Candidate Selection subsystem</a> is the primary source of non-overseer messages into this subsystem. That subsystem generates appropriate <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code>s</a>, and passes them to this subsystem.</p>
-<p>This subsystem validates the candidates and generates an appropriate <a href="../../types/backing.html#signed-statement-type"><code>SignedStatement</code></a>. All <code>SignedStatement</code>s are then passed on to the <a href="statement-distribution.html">Statement Distribution subsystem</a> to be gossiped to peers. All <a href="../../types/availability.html#proof-of-validity">Proofs of Validity</a> should be distributed via the <a href="pov-distribution.html">PoV Distribution</a> subsystem. When this subsystem decides that a candidate is invalid, and it was recommended to us to second by our own Candidate Selection subsystem, a message is sent to the Candidate Selection subsystem with the candidate's hash so that the collator which recommended it can be penalized.</p>
+<p>Input: <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a></p>
+<p>Output:</p>
+<ul>
+<li><a href="../../types/overseer-protocol.html#validation-request-type"><code>CandidateValidationMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a></li>
+</ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<p>The <a href="candidate-selection.html">Candidate Selection</a> subsystem is the primary source of non-overseer messages into this subsystem. That subsystem generates appropriate <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code>s</a> and passes them to this subsystem.</p>
+<p>This subsystem requests validation from the <a href="../utility/candidate-validation.html">Candidate Validation</a> and generates an appropriate <a href="../../types/backing.html#statement-type"><code>Statement</code></a>. All <code>Statement</code>s are then passed on to the <a href="statement-distribution.html">Statement Distribution</a> subsystem to be gossiped to peers. When <a href="../utility/candidate-validation.html">Candidate Validation</a> decides that a candidate is invalid, and it was recommended to us to second by our own <a href="candidate-selection.html">Candidate Selection</a> subsystem, a message is sent to the <a href="candidate-selection.html">Candidate Selection</a> subsystem with the candidate's hash so that the collator which recommended it can be penalized.</p>
 <p>The subsystem should maintain a set of handles to Candidate Backing Jobs that are currently live, as well as the relay-parent to which they correspond.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
 <ul>
 <li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork(relay_parent)</code>, spawn a Candidate Backing Job with the given relay parent, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
 <li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork(relay_parent)</code>, cease the Candidate Backing Job under that relay parent, if any.</li>
 </ul>
-<h3><a class="header" href="#on-candidatebackingmessage" id="on-candidatebackingmessage">On <code>CandidateBackingMessage</code></a></h3>
+<h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
-<li>If the message corresponds to a particular relay-parent, forward the message to the Candidate Backing Job for that relay-parent, if any is live.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::GetBackedCandidates</code>, get all backable candidates from the statement table and send them back.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the <code>PoVDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
 </ul>
 <blockquote>
 <p>big TODO: &quot;contextual execution&quot;</p>
@@ -188,25 +200,38 @@
 <p>The goal of a Candidate Backing Job is to produce as many backable candidates as possible. This is done via signed <a href="../../types/backing.html#statement-type"><code>Statement</code>s</a> by validators. If a candidate receives a majority of supporting Statements from the Parachain Validators currently assigned, then that candidate is considered backable.</p>
 <h3><a class="header" href="#on-startup" id="on-startup">On Startup</a></h3>
 <ul>
-<li>Fetch current validator set, validator -&gt; parachain assignments from runtime API.</li>
+<li>Fetch current validator set, validator -&gt; parachain assignments from <a href="../utility/runtime-api.html"><code>Runtime API</code></a> subsystem using <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::Validators</code></a> and <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::ValidatorGroups</code></a></li>
 <li>Determine if the node controls a key in the current validator set. Call this the local key if so.</li>
-<li>If the local key exists, extract the parachain head and validation function for the parachain the local key is assigned to.</li>
+<li>If the local key exists, extract the parachain head and validation function from the <a href="../utility/runtime-api.html"><code>Runtime API</code></a> for the parachain the local key is assigned to by issuing a <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::Validators</code></a></li>
+<li>Issue a <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::SigningContext</code></a> message to get a context that will later be used upon signing.</li>
 </ul>
-<h3><a class="header" href="#on-receiving-new-signed-statement" id="on-receiving-new-signed-statement">On Receiving New Signed Statement</a></h3>
+<h3><a class="header" href="#on-receiving-new-candidate-backing-message" id="on-receiving-new-candidate-backing-message">On Receiving New Candidate Backing Message</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>if let Statement::Seconded(candidate) = signed.statement {
-  if candidate is unknown and in local assignment {
-    spawn_validation_work(candidate, parachain head, validation function)
+</span>match msg {
+  CetBackedCandidates(hash, tx) =&gt; {
+    // Send back a set of backable candidates.
+  }
+  CandidateBackingMessage::Second(hash, candidate) =&gt; {
+    if candidate is unknown and in local assignment {
+      spawn_validation_work(candidate, parachain head, validation function)
+    }
+  }
+  CandidateBackingMessage::Statement(hash, statement) =&gt; {
+    // count to the votes on this candidate
+	if let Statement::Seconded(candidate) = statement {
+	  if candidate.parachain_id == our_assignment {
+	    spawn_validation_work(candidate, parachain head, validation function)
+	  }
+	}
   }
 }
-
-// add `Seconded` statements and `Valid` statements to a quorum. If quorum reaches validator-group
-// majority, send a `BlockAuthorshipProvisioning::BackableCandidate(relay_parent, Candidate, Backing)` message.
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#spawning-validation-work" id="spawning-validation-work">Spawning Validation Work</a></h3>
+<p>Add <code>Seconded</code> statements and <code>Valid</code> statements to a quorum. If quorum reaches validator-group majority, send a <a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a><code>::ProvisionableData(ProvisionableData::BackedCandidate(BackedCandidate))</code> message.
+<code>Invalid</code> statements that conflict with already witnessed <code>Seconded</code> and <code>Valid</code> statements for the given candidate, statements that are double-votes, self-contradictions and so on, should result in issuing a <a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a><code>::MisbehaviorReport</code> message for each newly detected case of this kind.</p>
+<h3><a class="header" href="#validating-candidates" id="validating-candidates">Validating Candidates.</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -214,8 +239,7 @@
   asynchronously {
     let pov = (fetch pov block).await
 
-    // dispatched to sub-process (OS process) pool.
-    let valid = validate_candidate(candidate, validation function, parachain head, pov).await;
+    let valid = (validate pov block).await;
     if valid {
       // make PoV available for later distribution. Send data to the availability store to keep.
       // sign and dispatch `valid` statement to network if we have not seconded the given candidate.
@@ -228,15 +252,12 @@
 </span></code></pre></pre>
 <h3><a class="header" href="#fetch-pov-block" id="fetch-pov-block">Fetch Pov Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
-Dispatch a <code>PovFetchSubsystemMessage(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
-<h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
-<ul>
-<li>If the message is a <code>CandidateBackingMessage::RegisterBackingWatcher</code>, register the watcher and trigger it each time a new candidate is backable. Also trigger it once initially if there are any backable candidates at the time of receipt.</li>
-<li>If the message is a <code>CandidateBackingMessage::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
-</ul>
-<blockquote>
-<p>TODO: send statements to Statement Distribution subsystem, handle shutdown signal from candidate backing subsystem</p>
-</blockquote>
+Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FecthPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
+<h3><a class="header" href="#validate-pov-block" id="validate-pov-block">Validate PoV Block</a></h3>
+<p>Create a <code>(sender, receiver)</code> pair.
+Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
+<h3><a class="header" href="#distribute-signed-statemnet" id="distribute-signed-statemnet">Distribute Signed Statemnet</a></h3>
+<p>Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>StatementDistributionMessage</code></a><code>::Share(relay_parent, SignedFullStatement)</code>.</p>
 
                     </main>
 
