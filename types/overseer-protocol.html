@@ -246,6 +246,7 @@ enum BitfieldSigningMessage { }
   GetBackedCandidates(Hash, ResponseChannel&lt;Vec&lt;NewBackedCandidate&gt;&gt;),
   /// Note that the Candidate Backing subsystem should second the given candidate in the context of the
   /// given relay-parent (ref. by hash). This candidate must be validated using the provided PoV.
+  /// The PoV is expected to match the `pov_hash` in the descriptor.
   Second(Hash, CandidateReceipt, PoV),
   /// Note a peer validator's statement about a particular candidate. Disagreements about validity must be escalated
   /// to a broader check by Misbehavior Arbitration. Agreements are simply tallied until a quorum is reached.
@@ -437,31 +438,43 @@ It receives updates from the network bridge and signed statements to share with 
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#validation-request-type" id="validation-request-type">Validation Request Type</a></h2>
-<p>Various modules request that the <a href="../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message</p>
+<p>Various modules request that the <a href="../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message. It returns <a href="candidate.html#validationoutputs"><code>ValidationOutputs</code></a> for successful validation.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span>
 <span class="boring">fn main() {
 </span>/// Result of the validation of the candidate.
 enum ValidationResult {
-	/// Candidate is valid.
-	Valid,
+	/// Candidate is valid, and here are the outputs. In practice, this should be a shared type
+	/// so that validation caching can be done.
+	Valid(ValidationOutputs),
 	/// Candidate is invalid.
 	Invalid,
 }
 
+/// Messages issued to the candidate validation subsystem.
+///
+/// ## Validation Requests
+///
+/// Validation requests made to the subsystem should return an error only on internal error.
+/// Otherwise, they should return either `Ok(ValidationResult::Valid(_))` or `Ok(ValidationResult::Invalid)`.
 enum CandidateValidationMessage {
-	/// Validate a candidate with provided parameters. Returns `Err` if an only if an internal
-	/// error is encountered.
-	/// In case no internal error was encontered it returns a tuple containing the result of
-	/// validation and `GlobalValidationSchedule` and `LocalValidationData` structures that
-	/// may be used by the caller to make the candidate available.
-	/// A bad candidate will return `Ok((ValidationResult::Invalid, _, _)`, while a good one will
-	/// return `Ok((ValidationResult::Valid, _, _))`.
-	Validate(
-		Hash, CandidateReceipt, HeadData, PoV, ResponseChannel&lt;
-			Result&lt;(ValidationResult, GlobalValidationSchedule, LocalValidationData)&gt;
-		&gt;),
+	/// Validate a candidate with provided parameters. This will implicitly attempt to gather the
+	/// `OmittedValidationData` and `ValidationCode` from the runtime API of the chain,
+	/// based on the `relay_parent` of the `CandidateDescriptor`.
+	/// If there is no state available which can provide this data, an error is returned.
+	ValidateFromChainState(CandidateDescriptor, PoV, ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;),
+
+	/// Validate a candidate with provided parameters. Explicitly provide the `OmittedValidationData`
+	/// and `ValidationCode` so this can do full validation without needing to access the state of
+	/// the relay-chain.
+	ValidateFromExhaustive(
+		OmittedValidationData,
+		ValidationCode,
+		CandidateDescriptor,
+		PoV,
+		ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;,
+	),
 }
 <span class="boring">}
 </span></code></pre></pre>

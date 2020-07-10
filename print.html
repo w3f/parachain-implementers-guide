@@ -1690,7 +1690,8 @@ There are two types of network messages this sends and receives:</p>
 <h1><a class="header" href="#type-definitions" id="type-definitions">Type Definitions</a></h1>
 <p>This section of the guide provides type definitions of various categories.</p>
 <h1><a class="header" href="#candidate-types" id="candidate-types">Candidate Types</a></h1>
-<p>Para candidates are some of the most common types, both within the runtime and on the Node-side.</p>
+<p>Para candidates are some of the most common types, both within the runtime and on the Node-side.
+Candidates are the fundamental datatype for advancing parachains and parathreads, encapsulating the collator's signature, the context of the parablock, the commitments to the output, and a commitment to the data which proves it valid.</p>
 <p>In a way, this entire guide is about these candidates: how they are scheduled, constructed, backed, included, and challenged.</p>
 <p>This section will describe the base candidate type, its components, and variants that contain extra data.</p>
 <h2><a class="header" href="#candidate-receipt" id="candidate-receipt">Candidate Receipt</a></h2>
@@ -1864,6 +1865,27 @@ struct CandidateCommitments {
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h2><a class="header" href="#validation-outputs" id="validation-outputs">Validation Outputs</a></h2>
+<p>This struct encapsulates the outputs of candidate validation.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ValidationOutputs {
+	/// The head-data produced by validation.
+	head_data: HeadData,
+	/// The global validation schedule.
+	global_validation_schedule: GlobalValidationSchedule,
+	/// The local validation data.
+	local_validation_data: LocalValidationData,
+	/// Upwards messages to the relay chain.
+	upwards_messages: Vec&lt;UpwardsMessage&gt;,
+	/// Fees paid to the validators of the relay-chain.
+	fees: Balance,
+	/// The new validation code submitted by the execution, if any.
+	new_validation_code: Option&lt;ValidationCode&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
 <h1><a class="header" href="#backing-types" id="backing-types">Backing Types</a></h1>
 <p><a href="types/candidate.html">Candidates</a> go through many phases before being considered included in a fork of the relay chain and eventually accepted.</p>
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
@@ -1982,7 +2004,7 @@ candidates for the duration of a challenge period. This is done via an erasure-c
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>pub type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
+</span>type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
 
 struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted by validator index, ascending
 <span class="boring">}
@@ -1993,6 +2015,51 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PoV(Vec&lt;u8&gt;);
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#omitted-validation-data" id="omitted-validation-data">Omitted Validation Data</a></h2>
+<p>Validation data that is often omitted from types describing candidates as it can be derived from the relay-parent of the candidate. However, with the expectation of state pruning, these are best kept available elsewhere as well.</p>
+<p>This contains the <a href="types/candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> and <a href="types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct OmittedValidationData {
+    /// The global validation schedule.
+    global_validation: GlobalValidationSchedule,
+    /// The local validation data.
+    local_validation: LocalValidationData,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#available-data" id="available-data">Available Data</a></h2>
+<p>This is the data we want to keep available for each <a href="types/candidate.html">candidate</a> included in the relay chain.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct AvailableData {
+    /// The Proof-of-Validation of the candidate.
+    pov: PoV,
+    /// The omitted validation data.
+    omitted_validation: OmittedValidationData,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<blockquote>
+<p>TODO: With XCMP, we also need to keep available the outgoing messages as a result of para-validation.</p>
+</blockquote>
+<h2><a class="header" href="#erasure-chunk" id="erasure-chunk">Erasure Chunk</a></h2>
+<p>The <a href="types/availability.html#availabledata"><code>AvailableData</code></a> is split up into an erasure-coding as part of the availability process. Each validator gets a chunk. This describes one of those chunks, along with its proof against a merkle root hash, which should be apparent from context, and is the <code>erasure_root</code> field of a <a href="types/candidate.html#candidatedescriptor"><code>CandidateDescriptor</code></a>.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ErasureChunk {
+    /// The erasure-encoded chunk of data belonging to the candidate block.
+    chunk: Vec&lt;u8&gt;,
+    /// The index of this erasure-encoded chunk of data.
+    index: u32,
+    /// Proof for this chunk's branch in the Merkle tree.
+    proof: Vec&lt;Vec&lt;u8&gt;&gt;,
+}
 <span class="boring">}
 </span></code></pre></pre>
 <h1><a class="header" href="#overseer-protocol" id="overseer-protocol">Overseer Protocol</a></h1>
@@ -2086,6 +2153,7 @@ enum BitfieldSigningMessage { }
   GetBackedCandidates(Hash, ResponseChannel&lt;Vec&lt;NewBackedCandidate&gt;&gt;),
   /// Note that the Candidate Backing subsystem should second the given candidate in the context of the
   /// given relay-parent (ref. by hash). This candidate must be validated using the provided PoV.
+  /// The PoV is expected to match the `pov_hash` in the descriptor.
   Second(Hash, CandidateReceipt, PoV),
   /// Note a peer validator's statement about a particular candidate. Disagreements about validity must be escalated
   /// to a broader check by Misbehavior Arbitration. Agreements are simply tallied until a quorum is reached.
@@ -2277,31 +2345,43 @@ It receives updates from the network bridge and signed statements to share with 
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#validation-request-type" id="validation-request-type">Validation Request Type</a></h2>
-<p>Various modules request that the <a href="types/../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message</p>
+<p>Various modules request that the <a href="types/../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message. It returns <a href="types/candidate.html#validationoutputs"><code>ValidationOutputs</code></a> for successful validation.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span>
 <span class="boring">fn main() {
 </span>/// Result of the validation of the candidate.
 enum ValidationResult {
-	/// Candidate is valid.
-	Valid,
+	/// Candidate is valid, and here are the outputs. In practice, this should be a shared type
+	/// so that validation caching can be done.
+	Valid(ValidationOutputs),
 	/// Candidate is invalid.
 	Invalid,
 }
 
+/// Messages issued to the candidate validation subsystem.
+///
+/// ## Validation Requests
+///
+/// Validation requests made to the subsystem should return an error only on internal error.
+/// Otherwise, they should return either `Ok(ValidationResult::Valid(_))` or `Ok(ValidationResult::Invalid)`.
 enum CandidateValidationMessage {
-	/// Validate a candidate with provided parameters. Returns `Err` if an only if an internal
-	/// error is encountered.
-	/// In case no internal error was encontered it returns a tuple containing the result of
-	/// validation and `GlobalValidationSchedule` and `LocalValidationData` structures that
-	/// may be used by the caller to make the candidate available.
-	/// A bad candidate will return `Ok((ValidationResult::Invalid, _, _)`, while a good one will
-	/// return `Ok((ValidationResult::Valid, _, _))`.
-	Validate(
-		Hash, CandidateReceipt, HeadData, PoV, ResponseChannel&lt;
-			Result&lt;(ValidationResult, GlobalValidationSchedule, LocalValidationData)&gt;
-		&gt;),
+	/// Validate a candidate with provided parameters. This will implicitly attempt to gather the
+	/// `OmittedValidationData` and `ValidationCode` from the runtime API of the chain,
+	/// based on the `relay_parent` of the `CandidateDescriptor`.
+	/// If there is no state available which can provide this data, an error is returned.
+	ValidateFromChainState(CandidateDescriptor, PoV, ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;),
+
+	/// Validate a candidate with provided parameters. Explicitly provide the `OmittedValidationData`
+	/// and `ValidationCode` so this can do full validation without needing to access the state of
+	/// the relay-chain.
+	ValidateFromExhaustive(
+		OmittedValidationData,
+		ValidationCode,
+		CandidateDescriptor,
+		PoV,
+		ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;,
+	),
 }
 <span class="boring">}
 </span></code></pre></pre>

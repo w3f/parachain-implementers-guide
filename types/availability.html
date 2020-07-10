@@ -163,7 +163,7 @@ candidates for the duration of a challenge period. This is done via an erasure-c
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>pub type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
+</span>type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
 
 struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted by validator index, ascending
 <span class="boring">}
@@ -174,6 +174,51 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PoV(Vec&lt;u8&gt;);
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#omitted-validation-data" id="omitted-validation-data">Omitted Validation Data</a></h2>
+<p>Validation data that is often omitted from types describing candidates as it can be derived from the relay-parent of the candidate. However, with the expectation of state pruning, these are best kept available elsewhere as well.</p>
+<p>This contains the <a href="candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> and <a href="candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct OmittedValidationData {
+    /// The global validation schedule.
+    global_validation: GlobalValidationSchedule,
+    /// The local validation data.
+    local_validation: LocalValidationData,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#available-data" id="available-data">Available Data</a></h2>
+<p>This is the data we want to keep available for each <a href="candidate.html">candidate</a> included in the relay chain.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct AvailableData {
+    /// The Proof-of-Validation of the candidate.
+    pov: PoV,
+    /// The omitted validation data.
+    omitted_validation: OmittedValidationData,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<blockquote>
+<p>TODO: With XCMP, we also need to keep available the outgoing messages as a result of para-validation.</p>
+</blockquote>
+<h2><a class="header" href="#erasure-chunk" id="erasure-chunk">Erasure Chunk</a></h2>
+<p>The <a href="#availabledata"><code>AvailableData</code></a> is split up into an erasure-coding as part of the availability process. Each validator gets a chunk. This describes one of those chunks, along with its proof against a merkle root hash, which should be apparent from context, and is the <code>erasure_root</code> field of a <a href="candidate.html#candidatedescriptor"><code>CandidateDescriptor</code></a>.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ErasureChunk {
+    /// The erasure-encoded chunk of data belonging to the candidate block.
+    chunk: Vec&lt;u8&gt;,
+    /// The index of this erasure-encoded chunk of data.
+    index: u32,
+    /// Proof for this chunk's branch in the Merkle tree.
+    proof: Vec&lt;Vec&lt;u8&gt;&gt;,
+}
 <span class="boring">}
 </span></code></pre></pre>
 

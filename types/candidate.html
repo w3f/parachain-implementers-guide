@@ -156,7 +156,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#candidate-types" id="candidate-types">Candidate Types</a></h1>
-<p>Para candidates are some of the most common types, both within the runtime and on the Node-side.</p>
+<p>Para candidates are some of the most common types, both within the runtime and on the Node-side.
+Candidates are the fundamental datatype for advancing parachains and parathreads, encapsulating the collator's signature, the context of the parablock, the commitments to the output, and a commitment to the data which proves it valid.</p>
 <p>In a way, this entire guide is about these candidates: how they are scheduled, constructed, backed, included, and challenged.</p>
 <p>This section will describe the base candidate type, its components, and variants that contain extra data.</p>
 <h2><a class="header" href="#candidate-receipt" id="candidate-receipt">Candidate Receipt</a></h2>
@@ -327,6 +328,27 @@ struct CandidateCommitments {
 	parent_hash: Hash,
 	/// The session index this signature is in the context of.
 	session_index: SessionIndex,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#validation-outputs" id="validation-outputs">Validation Outputs</a></h2>
+<p>This struct encapsulates the outputs of candidate validation.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ValidationOutputs {
+	/// The head-data produced by validation.
+	head_data: HeadData,
+	/// The global validation schedule.
+	global_validation_schedule: GlobalValidationSchedule,
+	/// The local validation data.
+	local_validation_data: LocalValidationData,
+	/// Upwards messages to the relay chain.
+	upwards_messages: Vec&lt;UpwardsMessage&gt;,
+	/// Fees paid to the validators of the relay-chain.
+	fees: Balance,
+	/// The new validation code submitted by the execution, if any.
+	new_validation_code: Option&lt;ValidationCode&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
