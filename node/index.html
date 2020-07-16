@@ -165,6 +165,16 @@
 <p>The architecture of the node-side behavior aims to embody the Rust principles of ownership and message-passing to create clean, isolatable code. Each resource should have a single owner, with minimal sharing where unavoidable.</p>
 <p>Many operations that need to be carried out involve the network, which is asynchronous. This asynchrony affects all core subsystems that rely on the network as well. The approach of hierarchical state machines is well-suited to this kind of environment.</p>
 <p>We introduce a hierarchy of state machines consisting of an overseer supervising subsystems, where Subsystems can contain their own internal hierarchy of jobs. This is elaborated on in the next section on Subsystems.</p>
+<h2><a class="header" href="#assumptions" id="assumptions">Assumptions</a></h2>
+<p>The Node-side code comes with a set of assumptions that we build upon. These assumptions encompass most of the fundamental blockchain functionality.</p>
+<p>We assume the following constraints regarding provided basic functionality:</p>
+<ul>
+<li>The underlying <strong>consensus</strong> algorithm, whether it is BABE or SASSAFRAS is implemented.</li>
+<li>There is a <strong>chain synchronization</strong> protocol which will search for and download the longest available chains at all times.</li>
+<li>The <strong>state</strong> of all blocks at the head of the chain is available. There may be <strong>state pruning</strong> such that state of the last <code>k</code> blocks behind the last finalized block are is available, as well as the state of all their descendents. This assumption implies that the state of all active leaves and their last <code>k</code> ancestors are all available. The underlying implementation is expected to support <code>k</code> of a few hundred blocks, but we reduce this to a very conservative <code>k=5</code> for our purposes.</li>
+<li>There is an underlying <strong>networking</strong> framework which provides <strong>peer discovery</strong> services which will provide us with peers and will not create &quot;loopback&quot; connections to our own node. The number of peers we will have is assumed to be bounded at 1000.</li>
+<li>There is a <strong>transaction pool</strong> and a <strong>transaction propagation</strong> mechanism which maintains a set of current transactions and distributes to connected peers. Current transactions are those which are not outdated relative to some &quot;best&quot; fork of the chain, which is part of the active heads, and have not been included in the best fork.</li>
+</ul>
 
                     </main>
 
