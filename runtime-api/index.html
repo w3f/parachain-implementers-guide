@@ -1,0 +1,405 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Runtime APIs - The Polkadot Parachain Host Implementers' Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">Preamble</a></li><li class="chapter-item expanded "><a href="../whence-parachains.html"><strong aria-hidden="true">1.</strong> Whence Parachains</a></li><li class="chapter-item expanded "><a href="../parachains-overview.html"><strong aria-hidden="true">2.</strong> Parachains Overview</a></li><li class="chapter-item expanded "><a href="../architecture.html"><strong aria-hidden="true">3.</strong> Architecture Overview</a></li><li class="chapter-item expanded "><a href="../runtime/index.html"><strong aria-hidden="true">4.</strong> Runtime Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../runtime/initializer.html"><strong aria-hidden="true">4.1.</strong> Initializer Module</a></li><li class="chapter-item expanded "><a href="../runtime/configuration.html"><strong aria-hidden="true">4.2.</strong> Configuration Module</a></li><li class="chapter-item expanded "><a href="../runtime/paras.html"><strong aria-hidden="true">4.3.</strong> Paras Module</a></li><li class="chapter-item expanded "><a href="../runtime/scheduler.html"><strong aria-hidden="true">4.4.</strong> Scheduler Module</a></li><li class="chapter-item expanded "><a href="../runtime/inclusion.html"><strong aria-hidden="true">4.5.</strong> Inclusion Module</a></li><li class="chapter-item expanded "><a href="../runtime/inclusioninherent.html"><strong aria-hidden="true">4.6.</strong> InclusionInherent Module</a></li><li class="chapter-item expanded "><a href="../runtime/validity.html"><strong aria-hidden="true">4.7.</strong> Validity Module</a></li><li class="chapter-item expanded "><a href="../runtime/router.html"><strong aria-hidden="true">4.8.</strong> Router Module</a></li></ol></li><li class="chapter-item expanded "><a href="../runtime-api/index.html" class="active"><strong aria-hidden="true">5.</strong> Runtime APIs</a></li><li class="chapter-item expanded "><a href="../node/index.html"><strong aria-hidden="true">6.</strong> Node Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../node/subsystems-and-jobs.html"><strong aria-hidden="true">6.1.</strong> Subsystems and Jobs</a></li><li class="chapter-item expanded "><a href="../node/overseer.html"><strong aria-hidden="true">6.2.</strong> Overseer</a></li><li class="chapter-item expanded "><a href="../node/backing/index.html"><strong aria-hidden="true">6.3.</strong> Backing Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../node/backing/candidate-selection.html"><strong aria-hidden="true">6.3.1.</strong> Candidate Selection</a></li><li class="chapter-item expanded "><a href="../node/backing/candidate-backing.html"><strong aria-hidden="true">6.3.2.</strong> Candidate Backing</a></li><li class="chapter-item expanded "><a href="../node/backing/statement-distribution.html"><strong aria-hidden="true">6.3.3.</strong> Statement Distribution</a></li><li class="chapter-item expanded "><a href="../node/backing/pov-distribution.html"><strong aria-hidden="true">6.3.4.</strong> PoV Distribution</a></li></ol></li><li class="chapter-item expanded "><a href="../node/availability/index.html"><strong aria-hidden="true">6.4.</strong> Availability Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../node/availability/availability-distribution.html"><strong aria-hidden="true">6.4.1.</strong> Availability Distribution</a></li><li class="chapter-item expanded "><a href="../node/availability/bitfield-distribution.html"><strong aria-hidden="true">6.4.2.</strong> Bitfield Distribution</a></li><li class="chapter-item expanded "><a href="../node/availability/bitfield-signing.html"><strong aria-hidden="true">6.4.3.</strong> Bitfield Signing</a></li></ol></li><li class="chapter-item expanded "><a href="../node/collators/index.html"><strong aria-hidden="true">6.5.</strong> Collators</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../node/collators/collation-generation.html"><strong aria-hidden="true">6.5.1.</strong> Collation Generation</a></li><li class="chapter-item expanded "><a href="../node/collators/collation-distribution.html"><strong aria-hidden="true">6.5.2.</strong> Collation Distribution</a></li></ol></li><li class="chapter-item expanded "><a href="../node/validity/index.html"><strong aria-hidden="true">6.6.</strong> Validity</a></li><li class="chapter-item expanded "><a href="../node/utility/index.html"><strong aria-hidden="true">6.7.</strong> Utility Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../node/utility/availability-store.html"><strong aria-hidden="true">6.7.1.</strong> Availability Store</a></li><li class="chapter-item expanded "><a href="../node/utility/candidate-validation.html"><strong aria-hidden="true">6.7.2.</strong> Candidate Validation</a></li><li class="chapter-item expanded "><a href="../node/utility/provisioner.html"><strong aria-hidden="true">6.7.3.</strong> Provisioner</a></li><li class="chapter-item expanded "><a href="../node/utility/network-bridge.html"><strong aria-hidden="true">6.7.4.</strong> Network Bridge</a></li><li class="chapter-item expanded "><a href="../node/utility/misbehavior-arbitration.html"><strong aria-hidden="true">6.7.5.</strong> Misbehavior Arbitration</a></li><li class="chapter-item expanded "><a href="../node/utility/peer-set-manager.html"><strong aria-hidden="true">6.7.6.</strong> Peer Set Manager</a></li><li class="chapter-item expanded "><a href="../node/utility/runtime-api.html"><strong aria-hidden="true">6.7.7.</strong> Runtime API Requests</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../types/index.html"><strong aria-hidden="true">7.</strong> Data Structures and Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../types/candidate.html"><strong aria-hidden="true">7.1.</strong> Candidate</a></li><li class="chapter-item expanded "><a href="../types/backing.html"><strong aria-hidden="true">7.2.</strong> Backing</a></li><li class="chapter-item expanded "><a href="../types/availability.html"><strong aria-hidden="true">7.3.</strong> Availability</a></li><li class="chapter-item expanded "><a href="../types/overseer-protocol.html"><strong aria-hidden="true">7.4.</strong> Overseer and Subsystem Protocol</a></li><li class="chapter-item expanded "><a href="../types/runtime.html"><strong aria-hidden="true">7.5.</strong> Runtime</a></li><li class="chapter-item expanded "><a href="../types/chain.html"><strong aria-hidden="true">7.6.</strong> Chain</a></li><li class="chapter-item expanded "><a href="../types/messages.html"><strong aria-hidden="true">7.7.</strong> Messages</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html">Glossary</a></li><li class="chapter-item expanded affix "><a href="../further-reading.html">Further Reading</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">The Polkadot Parachain Host Implementers' Guide</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#runtime-apis" id="runtime-apis">Runtime APIs</a></h1>
+<p>Runtime APIs are the means by which the node-side code extracts information from the state of the runtime.</p>
+<p>Every block in the relay-chain contains a <em>state root</em> which is the root hash of a state trie encapsulating all storage of runtime modules after execution of the block. This is a cryptographic commitment to a unique state. We use the terminology of accessing the <em>state at</em> a block to refer accessing the state referred to by the state root of that block.</p>
+<p>Although Runtime APIs are often used for simple storage access, they are actually empowered to do arbitrary computation. The implementation of the Runtime APIs lives within the Runtime as Wasm code and exposes extern functions that can be invoked with arguments and have a return value. Runtime APIs have access to a variety of host functions, which are contextual functions provided by the Wasm execution context, that allow it to carry out many different types of behaviors.</p>
+<p>Abilities provided by host functions includes:</p>
+<ul>
+<li>State Access</li>
+<li>Offchain-DB Access</li>
+<li>Submitting transactions to the transaction queue</li>
+<li>Optimized versions of cryptographic functions</li>
+<li>More</li>
+</ul>
+<p>So it is clear that Runtime APIs are a versatile and powerful tool to leverage the state of the chain. In general, we will use Runtime APIs for these purposes:</p>
+<ul>
+<li>Access of a storage item</li>
+<li>Access of a bundle of related storage items</li>
+<li>Deriving a value from storage based on arguments</li>
+<li>Submitting misbehavior reports</li>
+</ul>
+<p>More broadly, we have the goal of using Runtime APIs to write Node-side code that fulfills the requirements set by the Runtime. In particular, the constraints set forth by the <a href="../runtime/scheduler.html">Scheduler</a> and <a href="../runtime/inclusion.html">Inclusion</a> modules. These modules are responsible for advancing paras with a two-phase protocol where validators are first chosen to validate and back a candidate and then required to ensure availability of referenced data. In the second phase, validators are meant to attest to those para-candidates that they have their availability chunk for. As the Node-side code needs to generate the inputs into these two phases, the runtime API needs to transmit information from the runtime that is aware of the Availability Cores model instantiated by the Scheduler and Inclusion modules.</p>
+<p>Node-side code is also responsible for detecting and reporting misbehavior performed by other validators, and the set of Runtime APIs needs to provide methods for observing live disputes and submitting reports as transactions.</p>
+<p>The next sections will contain information on specific runtime APIs. The format is this:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Fetch the value of the runtime API at the block.
+///
+/// Definitionally, the `at` parameter cannot be any block that is not in the chain.
+/// Thus the return value is unconditional. However, for in-practice implementations
+/// it may be possible to provide an `at` parameter as a hash, which may not refer to a
+/// valid block or one which implements the runtime API. In those cases it would be
+/// best for the implementation to return an error indicating the failure mode.
+fn some_runtime_api(at: Block, arg1: Type1, arg2: Type2, ...) -&gt; ReturnValue;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#validators" id="validators">Validators</a></h2>
+<p>Yields the validator-set at the state of a given block. This validator set is always the one responsible for backing parachains in the child of the provided block.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn validators(at: Block) -&gt; Vec&lt;ValidatorId&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#validator-groups" id="validator-groups">Validator Groups</a></h2>
+<p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A helper data-type for tracking validator-group rotations.
+struct GroupRotationInfo {
+	session_start_block: BlockNumber,
+	group_rotation_frequency: BlockNumber,
+	now: BlockNumber,
+}
+
+impl GroupRotationInfo {
+	/// Returns the index of the group needed to validate the core at the given index,
+	/// assuming the given amount of cores/groups.
+	fn group_for_core(core_index: usize, cores: usize) -&gt; usize;
+}
+
+/// Returns the validator groups and rotation info localized based on the block whose state
+/// this is invoked on. Note that `now` in the `GroupRotationInfo` should be the successor of
+/// the number of the block.
+fn validator_groups(at: Block) -&gt; (Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, GroupRotationInfo);
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#availability-cores" id="availability-cores">Availability Cores</a></h2>
+<p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn availability_cores(at: Block) -&gt; Vec&lt;CoreState&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<p>This is all the information that a validator needs about scheduling for the current block. It includes all information on <a href="../runtime/scheduler.html">Scheduler</a> core-assignments and <a href="../runtime/inclusion.html">Inclusion</a> state of blocks occupying availability cores. It includes data necessary to determine not only which paras are assigned now, but which cores are likely to become freed after processing bitfields, and exactly which bitfields would be necessary to make them so.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct OccupiedCore {
+	/// The ID of the para occupying the core.
+	para: ParaId,
+	/// If this core is freed by availability, this is the assignment that is next up on this
+	/// core, if any. None if there is nothing queued for this core.
+	next_up_on_available: Option&lt;ScheduledCore&gt;,
+	/// The relay-chain block number this began occupying the core at.
+	occupied_since: BlockNumber,
+	/// The relay-chain block this will time-out at, if any.
+	time_out_at: BlockNumber,
+	/// If this core is freed by being timed-out, this is the assignment that is next up on this
+	/// core. None if there is nothing queued for this core or there is no possibility of timing
+	/// out.
+	next_up_on_time_out: Option&lt;ScheduledCore&gt;,
+	/// A bitfield with 1 bit for each validator in the set. `1` bits mean that the corresponding
+	/// validators has attested to availability on-chain. A 2/3+ majority of `1` bits means that
+	/// this will be available.
+	availability: Bitfield,
+}
+
+struct ScheduledCore {
+	/// The ID of a para scheduled.
+	para: ParaId,
+	/// The collator required to author the block, if any.
+	collator: Option&lt;CollatorId&gt;,
+}
+
+enum CoreState {
+	/// The core is currently occupied.
+	Occupied(OccupiedCore),
+	/// The core is currently free, with a para scheduled and given the opportunity
+	/// to occupy.
+	///
+	/// If a particular Collator is required to author this block, that is also present in this
+	/// variant.
+	Scheduled(ScheduledCore),
+	/// The core is currently free and there is nothing scheduled. This can be the case for parathread
+	/// cores when there are no parathread blocks queued. Parachain cores will never be left idle.
+	Free,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#global-validation-schedule" id="global-validation-schedule">Global Validation Schedule</a></h2>
+<p>Yields the <a href="../types/candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> at the state of a given block. This applies to all para candidates with the relay-parent equal to that block.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn global_validation_schedule(at: Block) -&gt; GlobalValidationSchedule;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#local-validation-data" id="local-validation-data">Local Validation Data</a></h2>
+<p>Yields the <a href="../types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a> for the given <a href="../types/candidate.html#paraid"><code>ParaId</code></a> along with an assumption that should be used if the para currently occupies a core: whether the candidate occupying that core should be assumed to have been made available and included or timed out and discarded, along with a third option to assert that the core was not occupied. This choice affects everything from the parent head-data, the validation code, and the state of message-queues. Typically, users will take the assumption that either the core was free or that the occupying candidate was included, as timeouts are expected only in adversarial circumstances and even so, only in a small minority of blocks directly following validator set rotations.</p>
+<p>The documentation of <a href="../types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a> has more information on this dichotomy.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// An assumption being made about the state of an occupied core.
+enum OccupiedCoreAssumption {
+	/// The candidate occupying the core was made available and included to free the core.
+	Included,
+	/// The candidate occupying the core timed out and freed the core without advancing the para.
+	TimedOut,
+	/// The core was not occupied to begin with.
+	Free,
+}
+
+/// Returns the local validation data for the given para and occupied core assumption.
+///
+/// Returns `None` if either the para is not registered or the assumption is `Freed`
+/// and the para already occupies a core.
+fn local_validation_data(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;LocalValidationData&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#session-index" id="session-index">Session Index</a></h2>
+<p>Get the session index that is expected at the child of a block.</p>
+<p>In the <a href="../runtime/initializer.html"><code>Initializer</code></a> module, session changes are buffered by one block. The session index of the child of any relay block is always predictable by that block's state.</p>
+<p>This session index can be used to derive a <a href="../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Returns the session index expected at a child of the block.
+fn session_index_for_child(at: Block) -&gt; SessionIndex;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#validation-code" id="validation-code">Validation Code</a></h2>
+<p>Fetch the validation code used by a para, making the given <code>OccupiedCoreAssumption</code>.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn validation_code(at: Block, ParaId, OccupiedCoreAssumption) -&gt; ValidationCode;
+<span class="boring">}
+</span></code></pre></pre>
+<h2><a class="header" href="#candidate-pending-availability" id="candidate-pending-availability">Candidate Pending Availability</a></h2>
+<p>Get the receipt of a candidate pending availability. This returns <code>Some</code> for any paras assigned to occupied cores in <code>availability_cores</code> and <code>None</code> otherwise.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn candidate_pending_availability(at: Block, ParaId) -&gt; Option&lt;CommittedCandidateReceipt&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../runtime/router.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../node/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../runtime/router.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../node/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
