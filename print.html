@@ -784,7 +784,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 
 struct CandidatePendingAvailability {
   core: CoreIndex, // availability core
-  receipt: CandidateReceipt,
+  descriptor: CandidateDescriptor,
   availability_votes: Bitfield, // one bit per validator.
   relay_parent_number: BlockNumber, // number of the relay-parent.
   backed_in_number: BlockNumber,
@@ -845,7 +845,6 @@ CurrentSessionIndex: SessionIndex;
 <li>If the core assignment includes a specific collator, ensure the backed candidate is issued by that collator.</li>
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
 <li>Check the collator's signature on the candidate data.</li>
-<li>Transform each <a href="runtime/../types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> into the corresponding <a href="runtime/../types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a>, setting the commitments aside.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
 <li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
 <li>create an entry in the <code>PendingAvailability</code> map for each backed candidate with a blank <code>availability_votes</code> bitfield.</li>
@@ -873,7 +872,7 @@ CurrentSessionIndex: SessionIndex;
 </span><span class="boring">fn main() {
 </span>  fn collect_pending(f: impl Fn(CoreIndex, BlockNumber) -&gt; bool) -&gt; Vec&lt;u32&gt; {
     // sweep through all paras pending availability. if the predicate returns true, when given the core index and
-    // the block number the candidate has been pending availability since, then clean up the corresponding storage for that candidate.
+    // the block number the candidate has been pending availability since, then clean up the corresponding storage for that candidate and the commitments.
     // return a vector of cleaned-up core IDs.
   }
 <span class="boring">}
