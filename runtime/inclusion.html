@@ -263,6 +263,15 @@ CurrentSessionIndex: SessionIndex;
 <span class="boring">}
 </span></code></pre></pre>
 </li>
+<li>
+<p><code>force_enact(ParaId)</code>: Forcibly enact the candidate with the given ID as though it had been deemed available by bitfields. Is a no-op if there is no candidate pending availability for this para-id. This should generally not be used but it is useful during execution of Runtime APIs, where the changes to the state are expected to be discarded directly after.</p>
+</li>
+<li>
+<p><code>candidate_pending_availability(ParaId) -&gt; Option&lt;CommittedCandidateReceipt&gt;</code>: returns the <code>CommittedCandidateReceipt</code> pending availability for the para provided, if any.</p>
+</li>
+<li>
+<p><code>pending_availability(ParaId) -&gt; Option&lt;CandidatePendingAvailability&gt;</code>: returns the metadata around the candidate pending availability for the para, if any.</p>
+</li>
 </ul>
 
                     </main>
