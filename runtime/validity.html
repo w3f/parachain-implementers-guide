@@ -188,15 +188,23 @@
 <p>There are two types of remote disputes. The first is a remote roll-up of a concluded dispute. These are simply all attestations for the block, those against it, and the result of all (secondary) approval checks. A concluded remote dispute can be resolved in a single transaction as it is an open-and-shut case of a quorum of validators disagreeing with another.</p>
 <p>The second type of remote dispute is the unconcluded dispute. An unconcluded remote dispute is started by any validator, using these things:</p>
 <ul>
-<li>A candidate</li>
-<li>The session that the candidate has appeared in.</li>
-<li>Backing for that candidate</li>
-<li>The validation code necessary for validation of the candidate.
+<li>
+<p>A candidate</p>
+</li>
+<li>
+<p>The session that the candidate has appeared in.</p>
+</li>
+<li>
+<p>Backing for that candidate</p>
+</li>
+<li>
+<p>The validation code necessary for validation of the candidate.</p>
 <blockquote>
 <p>TODO: optimize by excluding in case where code appears in <code>Paras::CurrentCode</code> of this fork of relay-chain</p>
 </blockquote>
 </li>
-<li>Secondary checks already done on that candidate, containing one or more disputes by validators. None of the disputes are required to have appeared on other chains.
+<li>
+<p>Secondary checks already done on that candidate, containing one or more disputes by validators. None of the disputes are required to have appeared on other chains.</p>
 <blockquote>
 <p>TODO: validator-dispute could be instead replaced by a fisherman w/ bond</p>
 </blockquote>

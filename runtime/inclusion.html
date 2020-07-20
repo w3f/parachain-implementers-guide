@@ -207,18 +207,32 @@ CurrentSessionIndex: SessionIndex;
 <li>
 <p><code>process_bitfields(Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
 <ol>
-<li>check that the number of bitfields and bits in each bitfield is correct.</li>
-<li>check that there are no duplicates</li>
-<li>check all validator signatures.</li>
-<li>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</li>
-<li>For each applied bit of each availability-bitfield, set the bit for the validator in the <code>CandidatePendingAvailability</code>'s <code>availability_votes</code> bitfield. Track all candidates that now have &gt;2/3 of bits set in their <code>availability_votes</code>. These candidates are now available and can be enacted.</li>
-<li>For all now-available candidates, invoke the <code>enact_candidate</code> routine with the candidate and relay-parent number.</li>
+<li>
+<p>check that the number of bitfields and bits in each bitfield is correct.</p>
+</li>
+<li>
+<p>check that there are no duplicates</p>
+</li>
+<li>
+<p>check all validator signatures.</p>
+</li>
+<li>
+<p>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</p>
+</li>
+<li>
+<p>For each applied bit of each availability-bitfield, set the bit for the validator in the <code>CandidatePendingAvailability</code>'s <code>availability_votes</code> bitfield. Track all candidates that now have &gt;2/3 of bits set in their <code>availability_votes</code>. These candidates are now available and can be enacted.</p>
+</li>
+<li>
+<p>For all now-available candidates, invoke the <code>enact_candidate</code> routine with the candidate and relay-parent number.</p>
+</li>
 <li>
 <blockquote>
 <p>TODO: pass it onwards to <code>Validity</code> module.</p>
 </blockquote>
 </li>
-<li>Return a list of freed cores consisting of the cores where candidates have become available.</li>
+<li>
+<p>Return a list of freed cores consisting of the cores where candidates have become available.</p>
+</li>
 </ol>
 </li>
 <li>

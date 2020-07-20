@@ -209,42 +209,9 @@
 <p>TODO Diagram: Inclusion Pipeline &amp; Approval Subsystems interaction</p>
 </blockquote>
 <p>It is also important to take note of the fact that the relay-chain is extended by BABE, which is a forkful algorithm. That means that different block authors can be chosen at the same time, and may not be building on the same block parent. Furthermore, the set of validators is not fixed, nor is the set of parachains. And even with the same set of validators and parachains, the validators' assignments to parachains is flexible. This means that the architecture proposed in the next chapters must deal with the variability and multiplicity of the network state.</p>
-<pre><code class="language-dotprocess">digraph {
-	rca [label = &quot;Relay Block A&quot; shape=rectangle]
-	rcb [label = &quot;Relay Block B&quot; shape=rectangle]
-	rcc [label = &quot;Relay Block C&quot; shape=rectangle]
-
-	vg1 [label =&lt;&lt;b&gt;Validator Group 1&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 4)&lt;br/&gt;(Validator 1) (Validator 2)&lt;br/&gt;(Validator 5)&lt;/font&gt;&gt;]
-	vg2 [label =&lt;&lt;b&gt;Validator Group 2&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 7)&lt;br/&gt;(Validator 3) (Validator 6)&lt;/font&gt;&gt;]
-
-	rcb -&gt; rca
-	rcc -&gt; rcb
-
-	vg1 -&gt; rcc [label=&quot;Building on C&quot; style=dashed arrowhead=none]
-	vg2 -&gt; rcb [label=&quot;Building on B&quot; style=dashed arrowhead=none]
-}
-</code></pre>
+<p><img src="parachains_overview_0.generated.svg" alt="" /></p>
 <p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
-<pre><code class="language-dotprocess">digraph {
-	rca [label = &quot;Relay Block A&quot; shape=rectangle]
-	rcb [label = &quot;Relay Block B&quot; shape=rectangle]
-	rcc [label = &quot;Relay Block C&quot; shape=rectangle]
-	rcc_prime [label = &quot;Relay Block C'&quot; shape=rectangle]
-
-	vg1 [label =&lt;&lt;b&gt;Validator Group 1&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 4) (Validator 1)&lt;/font&gt;&gt;]
-	vg2 [label =&lt;&lt;b&gt;Validator Group 2&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 7) (Validator 6)&lt;/font&gt;&gt;]
-	vg3 [label =&lt;&lt;b&gt;Validator Group 3&lt;/b&gt;&lt;br/&gt;&lt;br/&gt;&lt;font point-size=&quot;10&quot;&gt;(Validator 2) (Validator 3)&lt;br/&gt;(Validator 5)&lt;/font&gt;&gt;]
-
-	rcb -&gt; rca
-	rcc -&gt; rcb
-	rcc_prime -&gt; rcb
-
-	vg1 -&gt; rcc [style=dashed arrowhead=none]
-	vg2 -&gt; rcc_prime [style=dashed arrowhead=none]
-	vg3 -&gt; rcc_prime [style=dashed arrowhead=none]
-	vg3 -&gt; rcc [style=dashed arrowhead=none]
-}
-</code></pre>
+<p><img src="parachains_overview_1.generated.svg" alt="" /></p>
 <p>Those validators that are aware of many competing heads must be aware of the work happening on each one. They may contribute to some or a full extent on both. It is possible that due to network asynchrony two forks may grow in parallel for some time, although in the absence of an adversarial network this is unlikely in the case where there are validators who are aware of both chain heads.</p>
 
                     </main>

@@ -169,15 +169,23 @@
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>
 <ul>
-<li>Determine our validator index <code>i</code>, the set of backed candidates pending availability in <code>r</code>, and which bit of the bitfield each corresponds to.</li>
+<li>
+<p>Determine our validator index <code>i</code>, the set of backed candidates pending availability in <code>r</code>, and which bit of the bitfield each corresponds to.</p>
+</li>
 <li>
 <blockquote>
 <p>TODO: wait T time for availability distribution?</p>
 </blockquote>
 </li>
-<li>Start with an empty bitfield. For each bit in the bitfield, if there is a candidate pending availability, query the <a href="../utility/availability-store.html">Availability Store</a> for whether we have the availability chunk for our validator index.</li>
-<li>For all chunks we have, set the corresponding bit in the bitfield.</li>
-<li>Sign the bitfield and dispatch a <code>BitfieldDistribution::DistributeBitfield</code> message.</li>
+<li>
+<p>Start with an empty bitfield. For each bit in the bitfield, if there is a candidate pending availability, query the <a href="../utility/availability-store.html">Availability Store</a> for whether we have the availability chunk for our validator index.</p>
+</li>
+<li>
+<p>For all chunks we have, set the corresponding bit in the bitfield.</p>
+</li>
+<li>
+<p>Sign the bitfield and dispatch a <code>BitfieldDistribution::DistributeBitfield</code> message.</p>
+</li>
 </ul>
 
                     </main>
