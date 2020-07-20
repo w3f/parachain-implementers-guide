@@ -35,7 +35,7 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-    - run: |
+      run: |
         sudo apt install -y graphviz
         cargo install mdbook-graphviz
 
