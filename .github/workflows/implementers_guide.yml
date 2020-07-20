@@ -31,6 +31,14 @@ jobs:
         curl -LSfs https://japaric.github.io/trust/install.sh | \
         sh -s -- --git Michael-F-Bryan/mdbook-linkcheck
 
+    - name: Setup mdbook-graphviz
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - run: |
+        sudo apt install -y graphviz
+        cargo install mdbook-graphviz
+
     - run: |
         mdbook build .tmp_polkadot/roadmap/implementers-guide/
 
