@@ -31,10 +31,12 @@ jobs:
         curl -LSfs https://japaric.github.io/trust/install.sh | \
         sh -s -- --git Michael-F-Bryan/mdbook-linkcheck
 
-    - name: Setup mdbook-graphviz
+    - name: Use Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
+
+    - name: Setup mdbook-graphviz
       run: |
         sudo apt install -y graphviz
         cargo install mdbook-graphviz
