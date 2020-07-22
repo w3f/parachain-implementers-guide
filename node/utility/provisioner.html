@@ -184,8 +184,21 @@
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
 <ul>
-<li><code>StartWork</code>: spawn a Block Authorship Provisioning Job with the given relay parent, storing a bidirectional channel with that job.</li>
-<li><code>StopWork</code>: terminate the Block Authorship Provisioning Job for the given relay parent, if any.</li>
+<li><code>ActiveLeavesUpdate</code>:
+<ul>
+<li>For each <code>activated</code> head:
+<ul>
+<li>spawn a Block Authorship Provisioning Job with the given relay parent, storing a bidirectional channel with that job.</li>
+</ul>
+</li>
+<li>For each <code>deactivated</code> head:
+<ul>
+<li>terminate the Block Authorship Provisioning Job for the given relay parent, if any.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>Conclude</code>: Forward <code>Conclude</code> to all jobs, waiting a small amount of time for them to join, and then hard-exiting.</li>
 </ul>
 <h3><a class="header" href="#on-provisionermessage" id="on-provisionermessage">On <code>ProvisionerMessage</code></a></h3>
 <p>Forward the message to the appropriate Block Authorship Provisioning Job, or discard if no appropriate job is currently active.</p>

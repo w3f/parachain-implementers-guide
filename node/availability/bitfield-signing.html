@@ -164,7 +164,7 @@
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
-<p>Upon onset of a new relay-chain head with <code>StartWork</code>, launch bitfield signing job for the head. Stop the job on <code>StopWork</code>.</p>
+<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
 <h2><a class="header" href="#bitfield-signing-job" id="bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>

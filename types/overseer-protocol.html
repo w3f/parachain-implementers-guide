@@ -163,10 +163,10 @@
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
-  /// Signal to start work localized to the relay-parent hash.
-  StartWork(Hash),
-  /// Signal to stop (or phase down) work localized to the relay-parent hash.
-  StopWork(Hash),
+  /// Signal about a change in active leaves.
+  ActiveLeavesUpdate(ActiveLeavesUpdate),
+  /// Conclude all operation.
+  Conclude,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -176,6 +176,17 @@
 <li>Add a generic varint to <code>OverseerSignal</code>: <code>Message(T)</code>.</li>
 </ol>
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
+<h2><a class="header" href="#active-leaves-update" id="active-leaves-update">Active Leaves Update</a></h2>
+<p>Indicates a change in active leaves. Activated leaves should have jobs, whereas deactivated leaves should lead to winding-down of work based on those leaves.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ActiveLeavesUpdate {
+	activated: [Hash], // in practice, these should probably be a SmallVec
+	deactivated: [Hash],
+}
+<span class="boring">}
+</span></code></pre></pre>
 <h2><a class="header" href="#all-messages" id="all-messages">All Messages</a></h2>
 <blockquote>
 <p>TODO (now)</p>

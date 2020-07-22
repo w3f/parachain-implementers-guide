@@ -1212,6 +1212,7 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 <p>Most work that happens on the Node-side is related to building on top of a specific relay-chain block, which is contextually known as the &quot;relay parent&quot;. We call it the relay parent to explicitly denote that it is a block in the relay chain and not on a parachain. We refer to the parent because when we are in the process of building a new block, we don't know what that new block is going to be. The parent block is our only stable point of reference, even though it is usually only useful when it is not yet a parent but in fact a leaf of the block-DAG expected to soon become a parent (because validators are authoring on top of it). Furthermore, we are assuming a forkful blockchain-extension protocol, which means that there may be multiple possible children of the relay-parent. Even if the relay parent has multiple children blocks, the parent of those children is the same, and the context in which those children is authored should be the same. The parent block is the best and most stable reference to use for defining the scope of work items and messages, and is typically referred to by its cryptographic hash.</p>
 <p>Since this goal of determining when to start and conclude work relative to a specific relay-parent is common to most, if not all subsystems, it is logically the job of the Overseer to distribute those signals as opposed to each subsystem duplicating that effort, potentially being out of synchronization with each other. Subsystem A should be able to expect that subsystem B is working on the same relay-parents as it is. One of the Overseer's tasks is to provide this heartbeat, or synchronized rhythm, to the system.</p>
 <p>The work that subsystems spawn to be done on a specific relay-parent is known as a job. Subsystems should set up and tear down jobs according to the signals received from the overseer. Subsystems may share or cache state between jobs.</p>
+<p>Subsystems must be robust to spurious exits. The outputs of the set of subsystems as a whole comprises of signed messages and data committed to disk. Care must be taken to avoid issuing messages that are not substantiated. Since subsystems need to be safe under spurious exits, it is the expected behavior that an <code>OverseerSignal::Conclude</code> can just lead to breaking the loop and exiting directly as opposed to waiting for everything to shut down gracefully.</p>
 <h1><a class="header" href="#overseer" id="overseer">Overseer</a></h1>
 <p>The overseer is responsible for these tasks:</p>
 <ol>
@@ -1234,21 +1235,20 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 +--------------+      +------------------+    +--------------------+
 
 </code></pre>
-<p>The overseer determines work to do based on block import events and block finalization events. It does this by keeping track of the set of relay-parents for which work is currently being done. This is known as the &quot;active leaves&quot; set. It determines an initial set of active leaves on startup based on the data on-disk, and uses events about blockchain import to update the active leaves. Updates lead to <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork</code> and <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork</code> being sent according to new relay-parents, as well as relay-parents to stop considering. Block import events inform the overseer of leaves that no longer need to be built on, now that they have children, and inform us to begin building on those children. Block finalization events inform us when we can stop focusing on blocks that appear to have been orphaned.</p>
+<p>The overseer determines work to do based on block import events and block finalization events. It does this by keeping track of the set of relay-parents for which work is currently being done. This is known as the &quot;active leaves&quot; set. It determines an initial set of active leaves on startup based on the data on-disk, and uses events about blockchain import to update the active leaves. Updates lead to <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code> being sent according to new relay-parents, as well as relay-parents to stop considering. Block import events inform the overseer of leaves that no longer need to be built on, now that they have children, and inform us to begin building on those children. Block finalization events inform us when we can stop focusing on blocks that appear to have been orphaned.</p>
 <p>The overseer's logic can be described with these functions:</p>
 <h2><a class="header" href="#on-startup" id="on-startup">On Startup</a></h2>
 <ul>
 <li>Start all subsystems</li>
 <li>Determine all blocks of the blockchain that should be built on. This should typically be the head of the best fork of the chain we are aware of. Sometimes add recent forks as well.</li>
-<li>For each of these blocks, send an <code>OverseerSignal::StartWork</code> to all subsystems.</li>
+<li>Send an <code>OverseerSignal::ActiveLeavesUpdate</code> to all subsystems with <code>activated</code> containing each of these blocks.</li>
 <li>Begin listening for block import and finality events</li>
 </ul>
 <h2><a class="header" href="#on-block-import-event" id="on-block-import-event">On Block Import Event</a></h2>
 <ul>
 <li>Apply the block import event to the active leaves. A new block should lead to its addition to the active leaves set and its parent being deactivated.</li>
-<li>For any deactivated leaves send an <code>OverseerSignal::StopWork</code> message to all subsystems.</li>
-<li>For any activated leaves send an <code>OverseerSignal::StartWork</code> message to all subsystems.</li>
-<li>Ensure all <code>StartWork</code> messages are flushed before resuming activity as a message router.</li>
+<li>Send an <code>OverseerSignal::ActiveLeavesUpdate</code> message to all subsystems containing all activated and deactivated leaves.</li>
+<li>Ensure all <code>ActiveLeavesUpdate</code> messages are flushed before resuming activity as a message router.</li>
 </ul>
 <blockquote>
 <p>TODO: in the future, we may want to avoid building on too many sibling blocks at once. the notion of a &quot;preferred head&quot; among many competing sibling blocks would imply changes in our &quot;active leaves&quot; update rules here</p>
@@ -1257,7 +1257,7 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 <ul>
 <li>Note the height <code>h</code> of the newly finalized block <code>B</code>.</li>
 <li>Prune all leaves from the active leaves which have height <code>&lt;= h</code> and are not <code>B</code>.</li>
-<li>Issue <code>OverseerSignal::StopWork</code> for all deactivated leaves.</li>
+<li>Issue <code>OverseerSignal::ActiveLeavesUpdate</code> containing all deactivated leaves.</li>
 </ul>
 <h2><a class="header" href="#on-subsystem-failure" id="on-subsystem-failure">On Subsystem Failure</a></h2>
 <p>Subsystems are essential tasks meant to run as long as the node does. Subsystems can spawn ephemeral work in the form of jobs, but the subsystems themselves should not go down. If a subsystem goes down, it will be because of a critical error that should take the entire node down as well.</p>
@@ -1280,15 +1280,17 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
                              +------------------------------+
 </code></pre>
 <p>First, the subsystem that spawned a job is responsible for handling the first step of the communication. The overseer is not aware of the hierarchy of tasks within any given subsystem and is only responsible for subsystem-to-subsystem communication. So the sending subsystem must pass on the message via the overseer to the receiving subsystem, in such a way that the receiving subsystem can further address the communication to one of its internal tasks, if necessary.</p>
-<p>This communication prevents a certain class of race conditions. When the Overseer determines that it is time for subsystems to begin working on top of a particular relay-parent, it will dispatch a <code>StartWork</code> message to all subsystems to do so, and those messages will be handled asynchronously by those subsystems. Some subsystems will receive those messsages before others, and it is important that a message sent by subsystem A after receiving <code>StartWork</code> message will arrive at subsystem B after its <code>StartWork</code> message. If subsystem A maintaned an independent channel with subsystem B to communicate, it would be possible for subsystem B to handle the side message before the <code>StartWork</code> message, but it wouldn't have any logical course of action to take with the side message - leading to it being discarded or improperly handled. Well-architectured state machines should have a single source of inputs, so that is what we do here.</p>
-<p>One exception is reasonable to make for responses to requests. A request should be made via the overseer in order to ensure that it arrives after any relevant <code>StartWork</code> message. A subsystem issuing a request as a result of a <code>StartWork</code> message can safely receive the response via a side-channel for two reasons:</p>
+<p>This communication prevents a certain class of race conditions. When the Overseer determines that it is time for subsystems to begin working on top of a particular relay-parent, it will dispatch a <code>ActiveLeavesUpdate</code> message to all subsystems to do so, and those messages will be handled asynchronously by those subsystems. Some subsystems will receive those messsages before others, and it is important that a message sent by subsystem A after receiving <code>ActiveLeavesUpdate</code> message will arrive at subsystem B after its <code>ActiveLeavesUpdate</code> message. If subsystem A maintaned an independent channel with subsystem B to communicate, it would be possible for subsystem B to handle the side message before the <code>ActiveLeavesUpdate</code> message, but it wouldn't have any logical course of action to take with the side message - leading to it being discarded or improperly handled. Well-architectured state machines should have a single source of inputs, so that is what we do here.</p>
+<p>One exception is reasonable to make for responses to requests. A request should be made via the overseer in order to ensure that it arrives after any relevant <code>ActiveLeavesUpdate</code> message. A subsystem issuing a request as a result of a <code>ActiveLeavesUpdate</code> message can safely receive the response via a side-channel for two reasons:</p>
 <ol>
 <li>It's impossible for a request to be answered before it arrives, it is provable that any response to a request obeys the same ordering constraint.</li>
-<li>The request was sent as a result of handling a <code>StartWork</code> message. Then there is no possible future in which the <code>StartWork</code> message has not been handled upon the receipt of the response.</li>
+<li>The request was sent as a result of handling a <code>ActiveLeavesUpdate</code> message. Then there is no possible future in which the <code>ActiveLeavesUpdate</code> message has not been handled upon the receipt of the response.</li>
 </ol>
 <p>So as a single exception to the rule that all communication must happen via the overseer we allow the receipt of responses to requests via a side-channel, which may be established for that purpose. This simplifies any cases where the outside world desires to make a request to a subsystem, as the outside world can then establish a side-channel to receive the response on.</p>
 <p>It's important to note that the overseer is not aware of the internals of subsystems, and this extends to the jobs that they spawn. The overseer isn't aware of the existence or definition of those jobs, and is only aware of the outer subsystems with which it interacts. This gives subsystem implementations leeway to define internal jobs as they see fit, and to wrap a more complex hierarchy of state machines than having a single layer of jobs for relay-parent-based work. Likewise, subsystems aren't required to spawn jobs. Certain types of subsystems, such as those for shared storage or networking resources, won't perform block-based work but would still benefit from being on the Overseer's message bus. These subsystems can just ignore the overseer's signals for block-based work.</p>
 <p>Furthermore, the protocols by which subsystems communicate with each other should be well-defined irrespective of the implementation of the subsystem. In other words, their interface should be distinct from their implementation. This will prevent subsystems from accessing aspects of each other that are beyond the scope of the communication boundary.</p>
+<h2><a class="header" href="#on-shutdown" id="on-shutdown">On shutdown</a></h2>
+<p>Send an <code>OverseerSignal::Conclude</code> message to each subsystem and wait some time for them to conclude before hard-exiting.</p>
 <h1><a class="header" href="#backing-subsystems" id="backing-subsystems">Backing Subsystems</a></h1>
 <p>The backing subsystems, when conceived as a black box, receive an arbitrary quantity of parablock candidates and associated proofs of validity from arbitrary untrusted collators. From these, they produce a bounded quantity of backable candidates which relay chain block authors may choose to include in a subsequent block.</p>
 <p>In broad strokes, the flow operates like this:</p>
@@ -1351,8 +1353,13 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 <p>The subsystem should maintain a set of handles to Candidate Backing Jobs that are currently live, as well as the relay-parent to which they correspond.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
 <ul>
-<li>If the signal is an <a href="node/backing/../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork(relay_parent)</code>, spawn a Candidate Backing Job with the given relay parent, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
-<li>If the signal is an <a href="node/backing/../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork(relay_parent)</code>, cease the Candidate Backing Job under that relay parent, if any.</li>
+<li>If the signal is an <a href="node/backing/../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code>:
+<ul>
+<li>spawn a Candidate Backing Job for each <code>activated</code> head, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
+<li>cease the Candidate Backing Job for each <code>deactivated</code> head, if any.</li>
+</ul>
+</li>
+<li>If the signal is an <a href="node/backing/../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::Conclude</code>: Forward conclude messages to all jobs, wait a small amount of time for them to join, and then exit.</li>
 </ul>
 <h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
@@ -1498,7 +1505,7 @@ We also track how many statements we have received per peer, per candidate, and 
 <p>As we are gossiping, we need to track which PoVs our peers are waiting for to avoid sending them data that they are not expecting. It is not reasonable to expect our peers to buffer unexpected PoVs, just as we will not buffer unexpected PoVs. So notifying our peers about what is being awaited is key. However it is important that the notifications system is also bounded.</p>
 <p>For this, in order to avoid reaching into the internals of the <a href="node/backing/statement-distribution.html">Statement Distribution</a> Subsystem, we can rely on an expected propery of candidate backing: that each validator can second up to 2 candidates per chain head. This will typically be only one, because they are only supposed to issue one, but they can equivocate if they are willing to  be slashed. So we can set a cap on the number of PoVs each peer is allowed to notify us that they are waiting for at a given relay-parent. This cap will be twice the number of validators at that relay-parent. In practice, this is a very lax upper bound that can be reduced much further if desired.</p>
 <p>The view update mechanism of the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a> ensures that peers are only allowed to consider a certain set of relay-parents as live. So this bounding mechanism caps the amount of data we need to store per peer at any time at <code>sum({ 2 * n_validators_at_head(head) * sizeof(hash) for head in view_heads })</code>. Additionally, peers should only be allowed to notify us of PoV hashes they are waiting for in the context of relay-parents in our own local view, which means that <code>n_validators_at_head</code> is implied to be <code>0</code> for relay-parents not in our own local view.</p>
-<p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>StartWork</code> and <code>StopWork</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="node/backing/../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
+<p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>ActiveLeavesUpdate</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="node/backing/../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
 <p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::FetchPoV variant. Proper operation of this subsystem depends on the descriptors passed faithfully representing candidates which have been seconded by other validators.</p>
 <h2><a class="header" href="#formal-description" id="formal-description">Formal Description</a></h2>
 <p>This protocol can be implemented as a state machine with the following state:</p>
@@ -1539,18 +1546,22 @@ struct PeerState {
 <p>Here is the logic of the state machine:</p>
 <p><em>Overseer Signals</em></p>
 <ul>
-<li>On <code>StartWork(relay_parent)</code>:
+<li>On <code>ActiveLeavesUpdate(relay_parent)</code>:
+<ul>
+<li>For each relay-parent in the <code>activated</code> list:
 <ul>
 <li>Get the number of validators at that relay parent by querying the <a href="node/backing/../utility/runtime-api.html">Runtime API</a> for the validators and then counting them.</li>
 <li>Create a blank entry in <code>relay_parent_state</code> under <code>relay_parent</code> with correct <code>n_validators</code> set.</li>
 </ul>
 </li>
-<li>On <code>StopWork(relay_parent)</code>:
+<li>For each relay-parent in the <code>deactivated</code> list:
 <ul>
 <li>Remove the entry for <code>relay_parent</code> from <code>relay_parent_state</code>.</li>
 </ul>
 </li>
-<li>On <code>Concluded</code>: conclude.</li>
+</ul>
+</li>
+<li>On <code>Conclude</code>: conclude.</li>
 </ul>
 <p><em>PoV Distribution Messages</em></p>
 <ul>
@@ -1590,7 +1601,7 @@ struct PeerState {
 <ul>
 <li>If there is no entry under <code>peer_state.awaited</code> for the <code>relay_parent</code>, report and ignore.</li>
 <li>If <code>relay_parent</code> is not contained within <code>our_view</code>, report and ignore.</li>
-<li>Otherwise, if the peer's <code>awaited</code> map combined with the <code>pov_hashes</code> would have more than <code> 2 * relay_parent_state[relay_parent].n_validators</code> entries, report and ignore. Note that we are leaning on the property of the network bridge that it sets our view based on <code>StartWork</code> messages.</li>
+<li>Otherwise, if the peer's <code>awaited</code> map combined with the <code>pov_hashes</code> would have more than <code> 2 * relay_parent_state[relay_parent].n_validators</code> entries, report and ignore. Note that we are leaning on the property of the network bridge that it sets our view based on <code>activated</code> heads in <code>ActiveLeavesUpdate</code> signals.</li>
 <li>For each new <code>pov_hash</code> in <code>pov_hashes</code>, if there is a <code>pov</code> under <code>pov_hash</code> in the <code>known</code> map, send the peer a <code>NetworkMessage::SendPoV(relay_parent, pov_hash, pov)</code>.</li>
 <li>Otherwise, add the <code>pov_hash</code> to the <code>awaited</code> map</li>
 </ul>
@@ -1676,7 +1687,7 @@ Output:</p>
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
 <h2><a class="header" href="#functionality-6" id="functionality-6">Functionality</a></h2>
-<p>Upon onset of a new relay-chain head with <code>StartWork</code>, launch bitfield signing job for the head. Stop the job on <code>StopWork</code>.</p>
+<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
 <h2><a class="header" href="#bitfield-signing-job" id="bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>
@@ -1743,7 +1754,8 @@ If not running as a validator, do nothing.</p>
 <h2><a class="header" href="#protocol-9" id="protocol-9">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <h2><a class="header" href="#functionality-9" id="functionality-9">Functionality</a></h2>
-<p>On <code>StartWork</code>:</p>
+<p>On <code>ActiveLeavesUpdate</code>:</p>
+<p>For each head in the <code>activated</code> list:</p>
 <ul>
 <li>Note any new candidates backed in the block. Update pruning records for any stored <code>PoVBlock</code>s.</li>
 <li>Note any newly-included candidates backed in the block. Update pruning records for any stored availability chunks.</li>
@@ -1826,8 +1838,21 @@ If not running as a validator, do nothing.</p>
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3><a class="header" href="#on-overseer-signal-1" id="on-overseer-signal-1">On Overseer Signal</a></h3>
 <ul>
-<li><code>StartWork</code>: spawn a Block Authorship Provisioning Job with the given relay parent, storing a bidirectional channel with that job.</li>
-<li><code>StopWork</code>: terminate the Block Authorship Provisioning Job for the given relay parent, if any.</li>
+<li><code>ActiveLeavesUpdate</code>:
+<ul>
+<li>For each <code>activated</code> head:
+<ul>
+<li>spawn a Block Authorship Provisioning Job with the given relay parent, storing a bidirectional channel with that job.</li>
+</ul>
+</li>
+<li>For each <code>deactivated</code> head:
+<ul>
+<li>terminate the Block Authorship Provisioning Job for the given relay parent, if any.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>Conclude</code>: Forward <code>Conclude</code> to all jobs, waiting a small amount of time for them to join, and then hard-exiting.</li>
 </ul>
 <h3><a class="header" href="#on-provisionermessage" id="on-provisionermessage">On <code>ProvisionerMessage</code></a></h3>
 <p>Forward the message to the appropriate Block Authorship Provisioning Job, or discard if no appropriate job is currently active.</p>
@@ -1848,7 +1873,7 @@ There are two types of network messages this sends and receives:</p>
 <li>ProtocolMessage(ProtocolId, Bytes)</li>
 <li>ViewUpdate(View)</li>
 </ul>
-<p><code>StartWork</code> and <code>StopWork</code> determine the computation of our local view. A <code>ViewUpdate</code> is issued to each connected peer, and a <code>NetworkBridgeUpdate::OurViewChange</code> is issued for each registered event producer.</p>
+<p><code>ActiveLeavesUpdate</code>'s <code>activated</code> and <code>deactivated</code> lists determine the evolution of our local view over time. A <code>ViewUpdate</code> is issued to each connected peer after each update, and a <code>NetworkBridgeUpdate::OurViewChange</code> is issued for each registered event producer.</p>
 <p>On <code>RegisterEventProducer</code>:</p>
 <ul>
 <li>Add the event producer to the set of event producers. If there is a competing entry, ignore the request.</li>
@@ -1896,7 +1921,7 @@ There are two types of network messages this sends and receives:</p>
 </blockquote>
 <h2><a class="header" href="#jobs" id="jobs">Jobs</a></h2>
 <blockquote>
-<p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on relay_parents that are not live based on <code>StartWork</code> or <code>StopWork</code> messages. Maybe with some leeway for things that have just been stopped.</p>
+<p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on relay_parents that are not active based on <code>ActiveLeavesUpdate</code> messages. Maybe with some leeway for things that have just been stopped.</p>
 </blockquote>
 <h1><a class="header" href="#type-definitions" id="type-definitions">Type Definitions</a></h1>
 <p>This section of the guide provides type definitions of various categories.</p>
@@ -2287,10 +2312,10 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
-  /// Signal to start work localized to the relay-parent hash.
-  StartWork(Hash),
-  /// Signal to stop (or phase down) work localized to the relay-parent hash.
-  StopWork(Hash),
+  /// Signal about a change in active leaves.
+  ActiveLeavesUpdate(ActiveLeavesUpdate),
+  /// Conclude all operation.
+  Conclude,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2300,6 +2325,17 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <li>Add a generic varint to <code>OverseerSignal</code>: <code>Message(T)</code>.</li>
 </ol>
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
+<h2><a class="header" href="#active-leaves-update" id="active-leaves-update">Active Leaves Update</a></h2>
+<p>Indicates a change in active leaves. Activated leaves should have jobs, whereas deactivated leaves should lead to winding-down of work based on those leaves.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ActiveLeavesUpdate {
+	activated: [Hash], // in practice, these should probably be a SmallVec
+	deactivated: [Hash],
+}
+<span class="boring">}
+</span></code></pre></pre>
 <h2><a class="header" href="#all-messages" id="all-messages">All Messages</a></h2>
 <blockquote>
 <p>TODO (now)</p>

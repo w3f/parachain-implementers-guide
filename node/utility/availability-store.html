@@ -179,7 +179,8 @@
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
-<p>On <code>StartWork</code>:</p>
+<p>On <code>ActiveLeavesUpdate</code>:</p>
+<p>For each head in the <code>activated</code> list:</p>
 <ul>
 <li>Note any new candidates backed in the block. Update pruning records for any stored <code>PoVBlock</code>s.</li>
 <li>Note any newly-included candidates backed in the block. Update pruning records for any stored availability chunks.</li>

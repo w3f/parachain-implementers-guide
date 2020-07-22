@@ -170,7 +170,7 @@ There are two types of network messages this sends and receives:</p>
 <li>ProtocolMessage(ProtocolId, Bytes)</li>
 <li>ViewUpdate(View)</li>
 </ul>
-<p><code>StartWork</code> and <code>StopWork</code> determine the computation of our local view. A <code>ViewUpdate</code> is issued to each connected peer, and a <code>NetworkBridgeUpdate::OurViewChange</code> is issued for each registered event producer.</p>
+<p><code>ActiveLeavesUpdate</code>'s <code>activated</code> and <code>deactivated</code> lists determine the evolution of our local view over time. A <code>ViewUpdate</code> is issued to each connected peer after each update, and a <code>NetworkBridgeUpdate::OurViewChange</code> is issued for each registered event producer.</p>
 <p>On <code>RegisterEventProducer</code>:</p>
 <ul>
 <li>Add the event producer to the set of event producers. If there is a competing entry, ignore the request.</li>

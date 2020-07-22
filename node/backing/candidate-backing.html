@@ -177,8 +177,13 @@
 <p>The subsystem should maintain a set of handles to Candidate Backing Jobs that are currently live, as well as the relay-parent to which they correspond.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
 <ul>
-<li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StartWork(relay_parent)</code>, spawn a Candidate Backing Job with the given relay parent, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
-<li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::StopWork(relay_parent)</code>, cease the Candidate Backing Job under that relay parent, if any.</li>
+<li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code>:
+<ul>
+<li>spawn a Candidate Backing Job for each <code>activated</code> head, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
+<li>cease the Candidate Backing Job for each <code>deactivated</code> head, if any.</li>
+</ul>
+</li>
+<li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::Conclude</code>: Forward conclude messages to all jobs, wait a small amount of time for them to join, and then exit.</li>
 </ul>
 <h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
