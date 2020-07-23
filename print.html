@@ -1689,6 +1689,8 @@ Accept and distribute only one bitfield per validator.</p>
 <h1><a class="header" href="#bitfield-signing" id="bitfield-signing">Bitfield Signing</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
 <h2><a class="header" href="#protocol-6" id="protocol-6">Protocol</a></h2>
+<p>Input:</p>
+<p>There is no dedicated input mechanism for bitfield signing. Instead, Bitfield Signing produces a bitfield representing the current state of availability on <code>StartWork</code>.</p>
 <p>Output:</p>
 <ul>
 <li>BitfieldDistribution::DistributeBitfield: distribute a locally signed bitfield</li>
@@ -1700,23 +1702,11 @@ Accept and distribute only one bitfield per validator.</p>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>
 <ul>
-<li>
-<p>Determine our validator index <code>i</code>, the set of backed candidates pending availability in <code>r</code>, and which bit of the bitfield each corresponds to.</p>
-</li>
-<li>
-<blockquote>
-<p>TODO: wait T time for availability distribution?</p>
-</blockquote>
-</li>
-<li>
-<p>Start with an empty bitfield. For each bit in the bitfield, if there is a candidate pending availability, query the <a href="node/availability/../utility/availability-store.html">Availability Store</a> for whether we have the availability chunk for our validator index.</p>
-</li>
-<li>
-<p>For all chunks we have, set the corresponding bit in the bitfield.</p>
-</li>
-<li>
-<p>Sign the bitfield and dispatch a <code>BitfieldDistribution::DistributeBitfield</code> message.</p>
-</li>
+<li>Begin by waiting a fixed period of time so availability distribution has the chance to make candidates available.</li>
+<li>Determine our validator index <code>i</code>, the set of backed candidates pending availability in <code>r</code>, and which bit of the bitfield each corresponds to.</li>
+<li>Start with an empty bitfield. For each bit in the bitfield, if there is a candidate pending availability, query the <a href="node/availability/../utility/availability-store.html">Availability Store</a> for whether we have the availability chunk for our validator index.</li>
+<li>For all chunks we have, set the corresponding bit in the bitfield.</li>
+<li>Sign the bitfield and dispatch a <code>BitfieldDistribution::DistributeBitfield</code> message.</li>
 </ul>
 <h1><a class="header" href="#collators" id="collators">Collators</a></h1>
 <p>Collators are special nodes which bridge a parachain to the relay chain. They are simultaneously full nodes of the parachain, and at least light clients of the relay chain. Their overall contribution to the system is the generation of Proofs of Validity for parachain candidates.</p>
