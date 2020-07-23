@@ -188,6 +188,9 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
     *pending = Some(x);
   })
 }
+
+/// Get the GlobalValidationData, assuming the context is the parent block.
+fn global_validation_data() -&gt; GlobalValidationData;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#entry-points" id="entry-points">Entry-points</a></h2>

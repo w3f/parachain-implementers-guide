@@ -178,13 +178,13 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#omitted-validation-data" id="omitted-validation-data">Omitted Validation Data</a></h2>
 <p>Validation data that is often omitted from types describing candidates as it can be derived from the relay-parent of the candidate. However, with the expectation of state pruning, these are best kept available elsewhere as well.</p>
-<p>This contains the <a href="candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> and <a href="candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
+<p>This contains the <a href="candidate.html#globalvalidationschedule"><code>GlobalValidationData</code></a> and <a href="candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct OmittedValidationData {
     /// The global validation schedule.
-    global_validation: GlobalValidationSchedule,
+    global_validation: GlobalValidationData,
     /// The local validation data.
     local_validation: LocalValidationData,
 }

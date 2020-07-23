@@ -412,7 +412,7 @@ enum ProvisionerMessage {
 	/// Get the validation code for a specific para, using the given occupied core assumption.
 	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
 	/// Get the global validation schedule at the state of a given block.
-	GlobalValidationSchedule(ResponseChannel&lt;GlobalValidationSchedule&gt;),
+	GlobalValidationData(ResponseChannel&lt;GlobalValidationData&gt;),
 	/// Get the local validation data for a specific para, with the given occupied core assumption.
 	LocalValidationData(
 		ParaId,

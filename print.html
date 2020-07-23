@@ -379,6 +379,9 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
     *pending = Some(x);
   })
 }
+
+/// Get the GlobalValidationData, assuming the context is the parent block.
+fn global_validation_data() -&gt; GlobalValidationData;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#entry-points" id="entry-points">Entry-points</a></h2>
@@ -507,6 +510,9 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 </li>
 <li>
 <p><code>last_code_upgrade(id: ParaId, include_future: bool) -&gt; Option&lt;BlockNumber&gt;</code>: The block number of the last scheduled upgrade of the requested para. Includes future upgrades if the flag is set. This is the <code>expected_at</code> number, not the <code>activated_at</code> number.</p>
+</li>
+<li>
+<p><code>local_validation_data(id: ParaId) -&gt; Option&lt;LocalValidationData&gt;</code>: Get the LocalValidationData of the given para, assuming the context is the parent block. Returns <code>None</code> if the para is not known.</p>
 </li>
 </ul>
 <h2><a class="header" href="#finalization-1" id="finalization-1">Finalization</a></h2>
@@ -801,6 +807,7 @@ CurrentSessionIndex: SessionIndex;
 <li>check that each candidate corresponds to a scheduled core and that they are ordered in the same order the cores appear in assignments in <code>scheduled</code>.</li>
 <li>check that <code>scheduled</code> is sorted ascending by <code>CoreIndex</code>, without duplicates.</li>
 <li>check that there is no candidate pending availability for any scheduled <code>ParaId</code>.</li>
+<li>check that each candidate's <code>validation_data_hash</code> corresponds to a <code>(LocalValidationData, GlobalValidationData)</code> computed from the current state.</li>
 <li>If the core assignment includes a specific collator, ensure the backed candidate is issued by that collator.</li>
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
 <li>Check the collator's signature on the candidate data.</li>
@@ -1112,11 +1119,11 @@ enum CoreState {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#global-validation-schedule" id="global-validation-schedule">Global Validation Schedule</a></h2>
-<p>Yields the <a href="runtime-api/../types/candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> at the state of a given block. This applies to all para candidates with the relay-parent equal to that block.</p>
+<p>Yields the <a href="runtime-api/../types/candidate.html#globalvalidationschedule"><code>GlobalValidationData</code></a> at the state of a given block. This applies to all para candidates with the relay-parent equal to that block.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>fn global_validation_schedule(at: Block) -&gt; GlobalValidationSchedule;
+</span>fn global_validation_data(at: Block) -&gt; GlobalValidationData;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#local-validation-data" id="local-validation-data">Local Validation Data</a></h2>
@@ -1952,7 +1959,7 @@ struct CandidateReceipt {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#full-candidate-receipt" id="full-candidate-receipt">Full Candidate Receipt</a></h2>
-<p>This is the full receipt type. The <code>GlobalValidationSchedule</code> and the <code>LocalValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the a block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
+<p>This is the full receipt type. The <code>GlobalValidationData</code> and the <code>LocalValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the a block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
 <p>However, the Full Candidate Receipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -1961,7 +1968,7 @@ struct CandidateReceipt {
 struct FullCandidateReceipt {
 	inner: CandidateReceipt,
 	/// The global validation schedule.
-	global_validation: GlobalValidationSchedule,
+	global_validation: GlobalValidationData,
 	/// The local validation data.
 	local_validation: LocalValidationData,
 }
@@ -1995,15 +2002,18 @@ struct CandidateDescriptor {
 	relay_parent: Hash,
 	/// The collator's sr25519 public key.
 	collator: CollatorId,
-	/// Signature on blake2-256 of components of this receipt:
-	/// The parachain index, the relay parent, and the pov_hash.
-	signature: CollatorSignature,
+	/// The blake2-256 hash of the validation data. These are extra parameters
+	/// derived from relay-chain state that influence the validity of the block.
+	validation_data_hash: Hash,
 	/// The blake2-256 hash of the pov-block.
 	pov_hash: Hash,
+	/// Signature on blake2-256 of components of this receipt:
+	/// The parachain index, the relay parent, the validation data hash, and the pov_hash.
+	signature: CollatorSignature,
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#globalvalidationschedule" id="globalvalidationschedule">GlobalValidationSchedule</a></h2>
+<h2><a class="header" href="#globalvalidationdata" id="globalvalidationdata">GlobalValidationData</a></h2>
 <p>The global validation schedule comprises of information describing the global environment for para execution, as derived from a particular relay-parent. These are parameters that will apply to all parablocks executed in the context of this relay-parent.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2012,7 +2022,7 @@ struct CandidateDescriptor {
 /// to fully validate the candidate.
 ///
 /// These are global parameters that apply to all candidates in a block.
-struct GlobalValidationSchedule {
+struct GlobalValidationData {
 	/// The maximum code size permitted, in bytes.
 	max_code_size: u32,
 	/// The maximum head-data size permitted, in bytes.
@@ -2114,7 +2124,7 @@ struct CandidateCommitments {
 	/// The head-data produced by validation.
 	head_data: HeadData,
 	/// The global validation schedule.
-	global_validation_schedule: GlobalValidationSchedule,
+	global_validation_data: GlobalValidationData,
 	/// The local validation data.
 	local_validation_data: LocalValidationData,
 	/// Upwards messages to the relay chain.
@@ -2259,13 +2269,13 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span></code></pre></pre>
 <h2><a class="header" href="#omitted-validation-data" id="omitted-validation-data">Omitted Validation Data</a></h2>
 <p>Validation data that is often omitted from types describing candidates as it can be derived from the relay-parent of the candidate. However, with the expectation of state pruning, these are best kept available elsewhere as well.</p>
-<p>This contains the <a href="types/candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> and <a href="types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
+<p>This contains the <a href="types/candidate.html#globalvalidationschedule"><code>GlobalValidationData</code></a> and <a href="types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct OmittedValidationData {
     /// The global validation schedule.
-    global_validation: GlobalValidationSchedule,
+    global_validation: GlobalValidationData,
     /// The local validation data.
     local_validation: LocalValidationData,
 }
@@ -2559,7 +2569,7 @@ enum ProvisionerMessage {
 	/// Get the validation code for a specific para, using the given occupied core assumption.
 	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
 	/// Get the global validation schedule at the state of a given block.
-	GlobalValidationSchedule(ResponseChannel&lt;GlobalValidationSchedule&gt;),
+	GlobalValidationData(ResponseChannel&lt;GlobalValidationData&gt;),
 	/// Get the local validation data for a specific para, with the given occupied core assumption.
 	LocalValidationData(
 		ParaId,

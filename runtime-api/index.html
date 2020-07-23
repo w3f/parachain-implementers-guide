@@ -291,11 +291,11 @@ enum CoreState {
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#global-validation-schedule" id="global-validation-schedule">Global Validation Schedule</a></h2>
-<p>Yields the <a href="../types/candidate.html#globalvalidationschedule"><code>GlobalValidationSchedule</code></a> at the state of a given block. This applies to all para candidates with the relay-parent equal to that block.</p>
+<p>Yields the <a href="../types/candidate.html#globalvalidationschedule"><code>GlobalValidationData</code></a> at the state of a given block. This applies to all para candidates with the relay-parent equal to that block.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>fn global_validation_schedule(at: Block) -&gt; GlobalValidationSchedule;
+</span>fn global_validation_data(at: Block) -&gt; GlobalValidationData;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#local-validation-data" id="local-validation-data">Local Validation Data</a></h2>

@@ -280,6 +280,9 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 <li>
 <p><code>last_code_upgrade(id: ParaId, include_future: bool) -&gt; Option&lt;BlockNumber&gt;</code>: The block number of the last scheduled upgrade of the requested para. Includes future upgrades if the flag is set. This is the <code>expected_at</code> number, not the <code>activated_at</code> number.</p>
 </li>
+<li>
+<p><code>local_validation_data(id: ParaId) -&gt; Option&lt;LocalValidationData&gt;</code>: Get the LocalValidationData of the given para, assuming the context is the parent block. Returns <code>None</code> if the para is not known.</p>
+</li>
 </ul>
 <h2><a class="header" href="#finalization" id="finalization">Finalization</a></h2>
 <p>No finalization routine runs for this module.</p>

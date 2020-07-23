@@ -241,6 +241,7 @@ CurrentSessionIndex: SessionIndex;
 <li>check that each candidate corresponds to a scheduled core and that they are ordered in the same order the cores appear in assignments in <code>scheduled</code>.</li>
 <li>check that <code>scheduled</code> is sorted ascending by <code>CoreIndex</code>, without duplicates.</li>
 <li>check that there is no candidate pending availability for any scheduled <code>ParaId</code>.</li>
+<li>check that each candidate's <code>validation_data_hash</code> corresponds to a <code>(LocalValidationData, GlobalValidationData)</code> computed from the current state.</li>
 <li>If the core assignment includes a specific collator, ensure the backed candidate is issued by that collator.</li>
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
 <li>Check the collator's signature on the candidate data.</li>
