@@ -159,17 +159,25 @@
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
 <p><code>ProtocolId</code>: <code>b&quot;bitd&quot;</code></p>
-<p>Input: <a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a>
-Output:</p>
+<p>Input:
+<a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a> which are gossiped to all peers, no matter if validator or not.</p>
+<p>Output:</p>
 <ul>
-<li><code>NetworkBridge::RegisterEventProducer(ProtocolId)</code></li>
-<li><code>NetworkBridge::SendMessage([PeerId], ProtocolId, Bytes)</code></li>
-<li><code>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</code></li>
-<li><code>BlockAuthorshipProvisioning::Bitfield(relay_parent, SignedAvailabilityBitfield)</code></li>
+<li><code>NetworkBridge::RegisterEventProducer(ProtocolId)</code> in order to register ourself as an event provider for the protocol.</li>
+<li><code>NetworkBridge::SendMessage([PeerId], ProtocolId, Bytes)</code> gossip a verified incoming bitfield on to interested subsystems within this validator node.</li>
+<li><code>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</code> improve or penalize the reputation of peers based on the messages that are received relative to the current view.</li>
+<li><code>ProvisionerMessage::ProvisionableData(ProvisionableData::Bitfield(relay_parent, SignedAvailabilityBitfield))</code> pass
+on the bitfield to the other submodules via the overseer.</li>
 </ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
-<p>This is implemented as a gossip system. Register a <a href="../utility/network-bridge.html">network bridge</a> event producer on startup and track peer connection, view change, and disconnection events. Only accept bitfields relevant to our current view and only distribute bitfields to other peers when relevant to their most recent view. Check bitfield signatures in this subsystem and accept and distribute only one bitfield per validator.</p>
+<p>This is implemented as a gossip system. Register a <a href="../utility/network-bridge.html">network bridge</a> event producer on startup.</p>
+<p>It is necessary to track peer connection, view change, and disconnection events, in order to maintain an index of which peers are interested in which relay parent bitfields.</p>
+<p>Before gossiping incoming bitfields, they must be checked to be signed by one of the validators
+of the validator set relevant to the current relay parent.
+Only accept bitfields relevant to our current view and only distribute bitfields to other peers when relevant to their most recent view.
+Accept and distribute only one bitfield per validator.</p>
 <p>When receiving a bitfield either from the network or from a <code>DistributeBitfield</code> message, forward it along to the block authorship (provisioning) subsystem for potential inclusion in a block.</p>
+<p>Peers connecting after a set of valid bitfield gossip messages was received, those messages must be cached and sent upon connection of new peers or re-connecting peers.</p>
 
                     </main>
 
