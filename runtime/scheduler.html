@@ -172,45 +172,9 @@
 <li>High or close to optimal throughput of parachains and parathreads. Work among validator groups should be balanced.</li>
 </ul>
 <p>The Scheduler manages resource allocation using the concept of &quot;Availability Cores&quot;. There will be one availability core for each parachain, and a fixed number of cores used for multiplexing parathreads. Validators will be partitioned into groups, with the same number of groups as availability cores. Validator groups will be assigned to different availability cores over time.</p>
-<p>An availability core can exist in either one of two states at the beginning or end of a block: free or occupied. A free availability core can have a parachain or parathread assigned to it for the potential to have a backed candidate included. After inclusion, the core enters the occupied state as the backed candidate is pending availability. There is an important distinction: a core is not considered occupied until it is in charge of a block pending availability, although the implementation may treat scheduled cores the same as occupied ones for brevity. A core exits the occupied state when the candidate is no longer pending availability - either on timeout or on availability. A core starting in the occupied state can move to the free state and back to occupied all within a single block, as availability bitfields are processed before backed candidates. At the end of the block, there is a possible timeout on availability which can move the core back to the free state if occupied.</p>
-<pre><code class="language-text">Availability Core State Machine
-
-              Assignment &amp;
-              Backing
-+-----------+              +-----------+
-|           +--------------&gt;           |
-|  Free     |              | Occupied  |
-|           &lt;--------------+           |
-+-----------+ Availability +-----------+
-              or Timeout
-
-</code></pre>
-<pre><code class="language-text">Availability Core Transitions within Block
-
-              +-----------+                |                    +-----------+
-              |           |                |                    |           |
-              | Free      |                |                    | Occupied  |
-              |           |                |                    |           |
-              +--/-----\--+                |                    +--/-----\--+
-               /-       -\                 |                     /-       -\
- No Backing  /-           \ Backing        |      Availability /-           \ No availability
-           /-              \               |                  /              \
-         /-                 -\             |                /-                -\
-  +-----v-----+         +----v------+      |         +-----v-----+        +-----v-----+
-  |           |         |           |      |         |           |        |           |
-  | Free      |         | Occupied  |      |         | Free      |        | Occupied  |
-  |           |         |           |      |         |           |        |           |
-  +-----------+         +-----------+      |         +-----|---\-+        +-----|-----+
-                                           |               |    \               |
-                                           |    No backing |     \ Backing      | (no change)
-                                           |               |      -\            |
-                                           |         +-----v-----+  \     +-----v-----+
-                                           |         |           |   \    |           |
-                                           |         | Free      -----+---&gt; Occupied  |
-                                           |         |           |        |           |
-                                           |         +-----------+        +-----------+
-                                           |                 Availability Timeout
-</code></pre>
+<p>An availability core can exist in either one of two states at the beginning or end of a block: free or occupied. A free availability core can have a parachain or parathread assigned to it for the potential to have a backed candidate included. After backing, the core enters the occupied state as the backed candidate is pending availability. There is an important distinction: a core is not considered occupied until it is in charge of a block pending availability, although the implementation may treat scheduled cores the same as occupied ones for brevity. A core exits the occupied state when the candidate is no longer pending availability - either on timeout or on availability. A core starting in the occupied state can move to the free state and back to occupied all within a single block, as availability bitfields are processed before backed candidates. At the end of the block, there is a possible timeout on availability which can move the core back to the free state if occupied.</p>
+<p><img src="scheduler_module_0.generated.svg" alt="" /></p>
+<p><img src="scheduler_module_1.generated.svg" alt="" /></p>
 <p>Validator group assignments do not need to change very quickly. The security benefits of fast rotation is redundant with the challenge mechanism in the <a href="validity.html">Validity module</a>. Because of this, we only divide validators into groups at the beginning of the session and do not shuffle membership during the session. However, we do take steps to ensure that no particular validator group has dominance over a single parachain or parathread-multiplexer for an entire session to provide better guarantees of liveness.</p>
 <p>Validator groups rotate across availability cores in a round-robin fashion, with rotation occurring at fixed intervals. The i'th group will be assigned to the <code>(i+k)%n</code>'th core at any point in time, where <code>k</code> is the number of rotations that have occurred in the session, and <code>n</code> is the number of cores. This makes upcoming rotations within the same session predictable.</p>
 <p>When a rotation occurs, validator groups are still responsible for distributing availability chunks for any previous cores that are still occupied and pending availability. In practice, rotation and availability-timeout frequencies should be set so this will only be the core they have just been rotated from. It is possible that a validator group is rotated onto a core which is currently occupied. In this case, the validator group will have nothing to do until the previously-assigned group finishes their availability work and frees the core or the availability process times out. Depending on if the core is for a parachain or parathread, a different timeout <code>t</code> from the <a href="../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> will apply. Availability timeouts should only be triggered in the first <code>t-1</code> blocks after the beginning of a rotation.</p>

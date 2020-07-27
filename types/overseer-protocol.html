@@ -214,12 +214,12 @@
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
 	/// Query the `AvailableData` of a candidate by hash.
-	QueryAvailableData(Hash, ResponseChannel&lt;AvailableData&gt;),
+	QueryAvailableData(Hash, ResponseChannel&lt;Option&lt;AvailableData&gt;&gt;),
 	/// Query whether an `AvailableData` exists within the AV Store.
 	QueryDataAvailability(Hash, ResponseChannel&lt;bool&gt;),
 	/// Query a specific availability chunk of the candidate's erasure-coding by validator index.
 	/// Returns the chunk and its inclusion proof against the candidate's erasure-root.
-	QueryChunk(Hash, ValidatorIndex, ResponseChannel&lt;AvailabilityChunkAndProof&gt;),
+	QueryChunk(Hash, ValidatorIndex, ResponseChannel&lt;Option&lt;AvailabilityChunkAndProof&gt;&gt;),
 	/// Store a specific chunk of the candidate's erasure-coding by validator index, with an
 	/// accompanying proof.
 	StoreChunk(Hash, ValidatorIndex, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),

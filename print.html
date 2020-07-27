@@ -534,45 +534,9 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 <li>High or close to optimal throughput of parachains and parathreads. Work among validator groups should be balanced.</li>
 </ul>
 <p>The Scheduler manages resource allocation using the concept of &quot;Availability Cores&quot;. There will be one availability core for each parachain, and a fixed number of cores used for multiplexing parathreads. Validators will be partitioned into groups, with the same number of groups as availability cores. Validator groups will be assigned to different availability cores over time.</p>
-<p>An availability core can exist in either one of two states at the beginning or end of a block: free or occupied. A free availability core can have a parachain or parathread assigned to it for the potential to have a backed candidate included. After inclusion, the core enters the occupied state as the backed candidate is pending availability. There is an important distinction: a core is not considered occupied until it is in charge of a block pending availability, although the implementation may treat scheduled cores the same as occupied ones for brevity. A core exits the occupied state when the candidate is no longer pending availability - either on timeout or on availability. A core starting in the occupied state can move to the free state and back to occupied all within a single block, as availability bitfields are processed before backed candidates. At the end of the block, there is a possible timeout on availability which can move the core back to the free state if occupied.</p>
-<pre><code class="language-text">Availability Core State Machine
-
-              Assignment &amp;
-              Backing
-+-----------+              +-----------+
-|           +--------------&gt;           |
-|  Free     |              | Occupied  |
-|           &lt;--------------+           |
-+-----------+ Availability +-----------+
-              or Timeout
-
-</code></pre>
-<pre><code class="language-text">Availability Core Transitions within Block
-
-              +-----------+                |                    +-----------+
-              |           |                |                    |           |
-              | Free      |                |                    | Occupied  |
-              |           |                |                    |           |
-              +--/-----\--+                |                    +--/-----\--+
-               /-       -\                 |                     /-       -\
- No Backing  /-           \ Backing        |      Availability /-           \ No availability
-           /-              \               |                  /              \
-         /-                 -\             |                /-                -\
-  +-----v-----+         +----v------+      |         +-----v-----+        +-----v-----+
-  |           |         |           |      |         |           |        |           |
-  | Free      |         | Occupied  |      |         | Free      |        | Occupied  |
-  |           |         |           |      |         |           |        |           |
-  +-----------+         +-----------+      |         +-----|---\-+        +-----|-----+
-                                           |               |    \               |
-                                           |    No backing |     \ Backing      | (no change)
-                                           |               |      -\            |
-                                           |         +-----v-----+  \     +-----v-----+
-                                           |         |           |   \    |           |
-                                           |         | Free      -----+---&gt; Occupied  |
-                                           |         |           |        |           |
-                                           |         +-----------+        +-----------+
-                                           |                 Availability Timeout
-</code></pre>
+<p>An availability core can exist in either one of two states at the beginning or end of a block: free or occupied. A free availability core can have a parachain or parathread assigned to it for the potential to have a backed candidate included. After backing, the core enters the occupied state as the backed candidate is pending availability. There is an important distinction: a core is not considered occupied until it is in charge of a block pending availability, although the implementation may treat scheduled cores the same as occupied ones for brevity. A core exits the occupied state when the candidate is no longer pending availability - either on timeout or on availability. A core starting in the occupied state can move to the free state and back to occupied all within a single block, as availability bitfields are processed before backed candidates. At the end of the block, there is a possible timeout on availability which can move the core back to the free state if occupied.</p>
+<p><img src="runtime/scheduler_module_0.generated.svg" alt="" /></p>
+<p><img src="runtime/scheduler_module_1.generated.svg" alt="" /></p>
 <p>Validator group assignments do not need to change very quickly. The security benefits of fast rotation is redundant with the challenge mechanism in the <a href="runtime/validity.html">Validity module</a>. Because of this, we only divide validators into groups at the beginning of the session and do not shuffle membership during the session. However, we do take steps to ensure that no particular validator group has dominance over a single parachain or parathread-multiplexer for an entire session to provide better guarantees of liveness.</p>
 <p>Validator groups rotate across availability cores in a round-robin fashion, with rotation occurring at fixed intervals. The i'th group will be assigned to the <code>(i+k)%n</code>'th core at any point in time, where <code>k</code> is the number of rotations that have occurred in the session, and <code>n</code> is the number of cores. This makes upcoming rotations within the same session predictable.</p>
 <p>When a rotation occurs, validator groups are still responsible for distributing availability chunks for any previous cores that are still occupied and pending availability. In practice, rotation and availability-timeout frequencies should be set so this will only be the core they have just been rotated from. It is possible that a validator group is rotated onto a core which is currently occupied. In this case, the validator group will have nothing to do until the previously-assigned group finishes their availability work and frees the core or the availability process times out. Depending on if the core is for a parachain or parathread, a different timeout <code>t</code> from the <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> will apply. Availability timeouts should only be triggered in the first <code>t-1</code> blocks after the beginning of a rotation.</p>
@@ -1756,8 +1720,16 @@ If not running as a validator, do nothing.</p>
 <p>TODO: ideally would be an upper bound on how far back contextual execution is OK.</p>
 </blockquote>
 <p>There may be multiple competing blocks all ending the availability phase for a particular candidate. Until (and slightly beyond) finality, it will be unclear which of those is actually the canonical chain, so the pruning records for PoVs and Availability chunks should keep track of all such blocks.</p>
+<h2><a class="header" href="#lifetime-of-the-pov-in-the-storage" id="lifetime-of-the-pov-in-the-storage">Lifetime of the PoV in the storage</a></h2>
+<p><img src="node/utility/availability_store_0.generated.svg" alt="" /></p>
+<h2><a class="header" href="#lifetime-of-the-chunk-in-the-storage" id="lifetime-of-the-chunk-in-the-storage">Lifetime of the chunk in the storage</a></h2>
+<p><img src="node/utility/availability_store_1.generated.svg" alt="" /></p>
 <h2><a class="header" href="#protocol-9" id="protocol-9">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
+<p>Output:</p>
+<ul>
+<li><a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+</ul>
 <h2><a class="header" href="#functionality-9" id="functionality-9">Functionality</a></h2>
 <p>On <code>ActiveLeavesUpdate</code>:</p>
 <p>For each head in the <code>activated</code> list:</p>
@@ -1765,16 +1737,9 @@ If not running as a validator, do nothing.</p>
 <li>Note any new candidates backed in the block. Update pruning records for any stored <code>PoVBlock</code>s.</li>
 <li>Note any newly-included candidates backed in the block. Update pruning records for any stored availability chunks.</li>
 </ul>
-<p>On block finality events:</p>
+<p>On <code>OverseerSignal::BlockFinalized(_)</code> events:</p>
 <ul>
-<li>
-<blockquote>
-<p>TODO: figure out how we get block finality events from overseer</p>
-</blockquote>
-</li>
-<li>
-<p>Handle all pruning based on the newly-finalized block.</p>
-</li>
+<li>Handle all pruning based on the newly-finalized block.</li>
 </ul>
 <p>On <code>QueryPoV</code> message:</p>
 <ul>
@@ -1787,6 +1752,109 @@ If not running as a validator, do nothing.</p>
 <p>On <code>StoreChunk</code> message:</p>
 <ul>
 <li>Store the chunk along with its inclusion proof under the candidate hash and validator index.</li>
+</ul>
+<p>On <code>StorePoV</code> message:</p>
+<ul>
+<li>Store the block, if the validator index is provided, store the respective chunk as well.</li>
+</ul>
+<p>On finality event:</p>
+<ul>
+<li>For the finalized block and any earlier block (if any) update pruning records of <code>PoV</code>s and chunks to keep them for respective periods after finality.</li>
+</ul>
+<h3><a class="header" href="#note-any-backed-included-and-timedout-candidates-in-the-block-by-hash" id="note-any-backed-included-and-timedout-candidates-in-the-block-by-hash">Note any backed, included and timedout candidates in the block by <code>hash</code>.</a></h3>
+<ul>
+<li>Create a <code>(sender, receiver)</code> pair.</li>
+<li>Dispatch a <a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a><code>::Request(hash, RuntimeApiRequest::CandidateEvents(sender)</code> and listen on the receiver for a response.</li>
+<li>For every event in the response:<code>CandidateEvent::CandidateIncluded</code>.
+<ul>
+<li>For every <code>CandidateEvent::CandidateBacked</code> do nothing</li>
+<li>For every <code>CandidateEvent::CandidateIncluded</code> update pruning records of any blocks that the node stored previously.</li>
+<li>For every <code>CandidateEvent::CandidateTimedOut</code> use pruning records to prune the data; delete the info from records.</li>
+</ul>
+</li>
+</ul>
+<h2><a class="header" href="#schema" id="schema">Schema</a></h2>
+<h3><a class="header" href="#pov-pruning" id="pov-pruning">PoV pruning</a></h3>
+<p>We keep a record about every PoV we keep, tracking its state and the time after which this PoV should be pruned.</p>
+<p>As the state of the <code>Candidate</code> changes, so does the <code>Prune At</code> time according to the rules defined earlier.</p>
+<table><thead><tr><th>Record 1</th><th>..</th><th>Record N</th></tr></thead><tbody>
+<tr><td>CandidateHash1</td><td>..</td><td>CandidateHashN</td></tr>
+<tr><td>Prune At</td><td>..</td><td>Prune At</td></tr>
+<tr><td>CandidateState</td><td>..</td><td>CandidateState</td></tr>
+</tbody></table>
+<h3><a class="header" href="#chunk-pruning" id="chunk-pruning">Chunk pruning</a></h3>
+<p>Chunk pruning is organized in a similar schema as PoV pruning.</p>
+<table><thead><tr><th>Record 1</th><th>..</th><th>Record N</th></tr></thead><tbody>
+<tr><td>CandidateHash1</td><td>..</td><td>CandidateHashN</td></tr>
+<tr><td>Prune At</td><td>..</td><td>Prune At</td></tr>
+<tr><td>CandidateState</td><td>..</td><td>CandidateState</td></tr>
+</tbody></table>
+<h3><a class="header" href="#included-blocks-caching" id="included-blocks-caching">Included blocks caching</a></h3>
+<p>In order to process finality events correctly we need to cache the set of parablocks included into each relay block beginning with the last finalized block and up to the most recent heads. We have to cache this data since we are only able to query this info from the state for the <code>k</code> last blocks where <code>k</code> is a relatively small number (for more info see <code>Assumptions</code>)</p>
+<p>These are used to update Chunk pruning and PoV pruning records upon finality:
+When another block finality notification is received:</p>
+<ul>
+<li>For any record older than this block:
+<ul>
+<li>Update pruning</li>
+<li>Remove the record</li>
+</ul>
+</li>
+</ul>
+<table><thead><tr><th>Relay Block N</th><th>..</th><th>Chain Head 1</th><th>Chain Head 2</th></tr></thead><tbody>
+<tr><td>CandidateN_1 Included</td><td>..</td><td>Candidate1_1 Included</td><td>Candidate2_1 Included</td></tr>
+<tr><td>CandidateN_2 Included</td><td>..</td><td>Candidate1_2 Included</td><td>Candidete2_2 Included</td></tr>
+<tr><td>..</td><td>..</td><td>..</td><td>..</td></tr>
+<tr><td>CandidateN_M Included</td><td>..</td><td>Candidate1_K Included</td><td>Candidate2_L Included</td></tr>
+</tbody></table>
+<blockquote>
+<p>TODO: It's likely we will have to have a way to go from block hash to <code>BlockNumber</code> to make this work.</p>
+</blockquote>
+<h3><a class="header" href="#blocks" id="blocks">Blocks</a></h3>
+<p>Blocks are simply stored as <code>(Hash, AvailableData)</code> key-value pairs.</p>
+<h3><a class="header" href="#chunks" id="chunks">Chunks</a></h3>
+<p>Chunks are stored as <code>(Hash, Vec&lt;ErasureChunk&gt;)</code> key-value pairs.</p>
+<h2><a class="header" href="#basic-scenarios-to-test" id="basic-scenarios-to-test">Basic scenarios to test</a></h2>
+<p>Basically we need to test the correctness of data flow through state FSMs described earlier. These tests obviously assume that some mocking of time is happening.</p>
+<ul>
+<li>
+<p>Stored data that is never included pruned in necessary timeout</p>
+<ul>
+<li>A block (and/or a chunk) is added to the store.</li>
+<li>We never note that the respective candidate is included.</li>
+<li>Until a defined timeout the data in question is available.</li>
+<li>After this timeout the data is no longer available.</li>
+</ul>
+</li>
+<li>
+<p>Stored data is kept until we are certain it is finalized.</p>
+<ul>
+<li>A block (and/or a chunk) is added to the store.</li>
+<li>It is available.</li>
+<li>Before the inclusion timeout expires notify storage that the candidate was included.</li>
+<li>The data is still available.</li>
+<li>Wait for an absurd amount of time (longer than 1 day).</li>
+<li>Check that the data is still available.</li>
+<li>Send finality notification about the block in question.</li>
+<li>Wait for some time below finalized data timeout.</li>
+<li>The data is still available.</li>
+<li>Wait until the data should have been pruned.</li>
+<li>The data is no longer available.</li>
+</ul>
+</li>
+<li>
+<p>Forkfulness of the relay chain is taken into account</p>
+<ul>
+<li>Block <code>B1</code> is added to the store.</li>
+<li>Block <code>B2</code> is added to the store.</li>
+<li>Notify the subsystem that both <code>B1</code> and <code>B2</code> were included in different leafs of relay chain.</li>
+<li>Notify the subsystem that the leaf with <code>B1</code> was finalized.</li>
+<li>Leaf with <code>B2</code> is never finalized.</li>
+<li>Leaf with <code>B2</code> is pruned and its data is no longer available.</li>
+<li>Wait until the finalized data of <code>B1</code> should have been pruned.</li>
+<li><code>B1</code> is no longer available.</li>
+</ul>
+</li>
 </ul>
 <h1><a class="header" href="#candidate-validation" id="candidate-validation">Candidate Validation</a></h1>
 <p>This subsystem is responsible for handling candidate validation requests. It is a simple request/response server.</p>
@@ -2371,12 +2439,12 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
 	/// Query the `AvailableData` of a candidate by hash.
-	QueryAvailableData(Hash, ResponseChannel&lt;AvailableData&gt;),
+	QueryAvailableData(Hash, ResponseChannel&lt;Option&lt;AvailableData&gt;&gt;),
 	/// Query whether an `AvailableData` exists within the AV Store.
 	QueryDataAvailability(Hash, ResponseChannel&lt;bool&gt;),
 	/// Query a specific availability chunk of the candidate's erasure-coding by validator index.
 	/// Returns the chunk and its inclusion proof against the candidate's erasure-root.
-	QueryChunk(Hash, ValidatorIndex, ResponseChannel&lt;AvailabilityChunkAndProof&gt;),
+	QueryChunk(Hash, ValidatorIndex, ResponseChannel&lt;Option&lt;AvailabilityChunkAndProof&gt;&gt;),
 	/// Store a specific chunk of the candidate's erasure-coding by validator index, with an
 	/// accompanying proof.
 	StoreChunk(Hash, ValidatorIndex, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),
