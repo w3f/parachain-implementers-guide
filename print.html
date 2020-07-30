@@ -1863,24 +1863,35 @@ When another block finality notification is received:</p>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#validation-request-type"><code>CandidateValidationMessage</code></a></p>
 <p>Output: Validation result via the provided response side-channel.</p>
 <h2><a class="header" href="#functionality-10" id="functionality-10">Functionality</a></h2>
-<p>Given the hashes of a relay parent and a parachain candidate block, and either its PoV or the information with which to retrieve the PoV from the network, spawn a short-lived async job to determine whether the candidate is valid.</p>
-<p>Each job follows this process:</p>
+<p>This subsystem answers two types of requests: one which draws out validation data from the state, and another which accepts all validation data exhaustively. The goal of both request types is to validate a candidate. There are three possible outputs of validation: either the candidate is valid, the candidate is invalid, or an internal error occurred. Whatever the end result is, it will be returned on the response channel to the requestor.</p>
+<p>Parachain candidates are validated against their validation function: A piece of Wasm code that is describes the state-transition of the parachain. Validation function execution is not metered. This means that an execution which is an infinite loop or simply takes too long must be forcibly exited by some other means. For this reason, we recommend dispatching candidate validation to be done on subprocesses which can be killed if they time-out.</p>
+<p>Upon receiving a validation request, the first thing the candidate validation subsystem should do is make sure it has all the necessary parameters to the validation function. These are:</p>
 <ul>
-<li>
-<p>Get the full candidate from the current relay chain state</p>
-</li>
-<li>
-<p>Check the candidate's proof</p>
+<li>The Validation Function itself.</li>
+<li>The <a href="node/utility/../../types/candidate.html#candidatedescriptor"><code>CandidateDescriptor</code></a>.</li>
+<li>The <a href="node/utility/../../types/candidate.html#localvalidationdata"><code>LocalValidationData</code></a>.</li>
+<li>The <a href="node/utility/../../types/candidate.html#globalvalidationschedule">`GlobalValidationSchedule</a>.</li>
+<li>The <a href="node/utility/../../types/availability.html#proofofvalidity"><code>PoV</code></a>.</li>
+</ul>
+<h3><a class="header" href="#determining-parameters" id="determining-parameters">Determining Parameters</a></h3>
+<p>For a <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided. The <a href="node/utility/../../types/availability.html#omittedvalidationdata"><code>OmittedValidationData</code></a> can be deconstructed into the validation data.</p>
+<p>For a <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>, some more work needs to be done. Due to the uncertainty of Availability Cores (implemented in the <a href="node/utility/../../runtime/scheduler.html"><code>Scheduler</code></a> module of the runtime), a candidate at a particular relay-parent and for a particular para may have two different valid validation-data to be executed under depending on what is assumed to happen if the para is occupying a core at the onset of the new block. This is encoded as an <code>OccupiedCoreAssumption</code> in the runtime API.</p>
+<p>The way that we can determine which assumption the candidate is meant to be executed under is simply to do an exhaustive check of both possibilities based on the state of the relay-parent. First we fetch the validation data under the assumption that the block occupying becomes available. If the <code>validation_data_hash</code> of the <code>CandidateDescriptor</code> matches this validation data, we use that. Otherwise, if the <code>validation_data_hash</code> matches the validation data fetched under the <code>TimedOut</code> assumption, we use that. Otherwise, we return a <code>ValidationResult::Invalid</code> response and conclude.</p>
+<p>Then, we can fetch the validation code from the runtime based on which type of candidate this is. This gives us all the parameters. The descriptor and PoV come from the request itself, and the other parameters have been derived from the state.</p>
 <blockquote>
-<p>TODO: that's extremely hand-wavey. What does that actually entail?</p>
+<p>TODO: This would be a great place for caching to avoid making lots of runtime requests. That would need a job, though.</p>
 </blockquote>
-</li>
-<li>
-<p>Generate either <code>Statement::Valid</code> or <code>Statement::Invalid</code>. Note that this never generates <code>Statement::Seconded</code>; Candidate Backing is the only subsystem which upgrades valid to seconded.</p>
-</li>
-<li>
-<p>Return the statement on the provided channel.</p>
-</li>
+<h3><a class="header" href="#execution-of-the-parachain-wasm" id="execution-of-the-parachain-wasm">Execution of the Parachain Wasm</a></h3>
+<p>Once we have all parameters, we can spin up a background task to perform the validation in a way that doesn't hold up the entire event loop. Before invoking the validation function itself, this should first do some basic checks:</p>
+<ul>
+<li>The collator signature is valid</li>
+<li>The PoV provided matches the <code>pov_hash</code> field of the descriptor</li>
+</ul>
+<p>After that, we can invoke the validation function. Lastly, we do some final checks on the output:</p>
+<ul>
+<li>The produced head-data is no larger than the maximum allowed.</li>
+<li>The produced code upgrade, if any, is no larger than the maximum allowed, and a code upgrade was allowed to be signaled.</li>
+<li>The amount and size of produced upward messages is not too large.</li>
 </ul>
 <h1><a class="header" href="#provisioner" id="provisioner">Provisioner</a></h1>
 <p>Relay chain block authorship authority is governed by BABE and is beyond the scope of the Overseer and the rest of the subsystems. That said, ultimately the block author needs to select a set of backable parachain candidates and other consensus data, and assemble a block from them. This subsystem is responsible for providing the necessary data to all potential block authors.</p>
@@ -2706,7 +2717,9 @@ enum CandidateValidationMessage {
 	/// Validate a candidate with provided parameters. This will implicitly attempt to gather the
 	/// `OmittedValidationData` and `ValidationCode` from the runtime API of the chain,
 	/// based on the `relay_parent` of the `CandidateDescriptor`.
-	/// If there is no state available which can provide this data, an error is returned.
+	///
+	/// If there is no state available which can provide this data or the core for
+	/// the para is not free at the relay-parent, an error is returned.
 	ValidateFromChainState(CandidateDescriptor, PoV, ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;),
 
 	/// Validate a candidate with provided parameters. Explicitly provide the `OmittedValidationData`
