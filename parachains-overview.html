@@ -205,13 +205,12 @@
 <li>Included: Backed and considered available.</li>
 <li>Accepted: Backed, available, and undisputed</li>
 </ol>
-<blockquote>
-<p>TODO Diagram: Inclusion Pipeline &amp; Approval Subsystems interaction</p>
-</blockquote>
+<p><img src="parachains_overview_inclusion_pipeline_0.generated.svg" alt="" title="Inclusion Pipeline" /></p>
+<p>The diagram above shows the happy path of a block from (1) Candidate to the (7) Approved state.</p>
 <p>It is also important to take note of the fact that the relay-chain is extended by BABE, which is a forkful algorithm. That means that different block authors can be chosen at the same time, and may not be building on the same block parent. Furthermore, the set of validators is not fixed, nor is the set of parachains. And even with the same set of validators and parachains, the validators' assignments to parachains is flexible. This means that the architecture proposed in the next chapters must deal with the variability and multiplicity of the network state.</p>
-<p><img src="parachains_overview_0.generated.svg" alt="" /></p>
-<p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
 <p><img src="parachains_overview_1.generated.svg" alt="" /></p>
+<p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
+<p><img src="parachains_overview_2.generated.svg" alt="" /></p>
 <p>Those validators that are aware of many competing heads must be aware of the work happening on each one. They may contribute to some or a full extent on both. It is possible that due to network asynchrony two forks may grow in parallel for some time, although in the absence of an adversarial network this is unlikely in the case where there are validators who are aware of both chain heads.</p>
 
                     </main>
