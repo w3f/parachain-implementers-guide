@@ -263,7 +263,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li>Resize <code>AvailabilityCores</code> to have length <code>Paras::parachains().len() + configuration.parathread_cores with all</code>None` entries.</li>
 <li>Compute new validator groups by shuffling using a secure randomness beacon
 <ul>
-<li>We need a total of <code>N = Paras::parathreads().len() + configuration.parathread_cores</code> validator groups.</li>
+<li>We need a total of <code>N = Paras::parachains().len() + configuration.parathread_cores</code> validator groups.</li>
 <li>The total number of validators <code>V</code> in the <code>SessionChangeNotification</code>'s <code>validators</code> may not be evenly divided by <code>V</code>.</li>
 <li>First, we obtain &quot;shuffled validators&quot; <code>SV</code> by shuffling the validators using the <code>SessionChangeNotification</code>'s random seed.</li>
 <li>The groups are selected by partitioning <code>SV</code>. The first V % N groups will have (V / N) + 1 members, while the remaining groups will have (V / N) members each.</li>
