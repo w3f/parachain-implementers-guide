@@ -300,6 +300,10 @@ struct LocalValidationData {
 	/// which case the code upgrade should be applied at the end of the signaling
 	/// block.
 	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
+	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
+	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
+	/// sender.
+	hrmp_mqc_heads: Vec&lt;(ParaId, Hash)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -322,6 +326,8 @@ struct LocalValidationData {
 struct CandidateCommitments {
 	/// Fees paid from the chain to the relay chain validators.
 	fees: Balance,
+	/// Messages directed to other paras routed via the relay chain.
+	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Messages destined to be interpreted by the Relay chain itself.
 	upward_messages: Vec&lt;UpwardMessage&gt;,
 	/// The root of a block's erasure encoding Merkle tree.
@@ -330,6 +336,10 @@ struct CandidateCommitments {
 	new_validation_code: Option&lt;ValidationCode&gt;,
 	/// The head-data produced as a result of execution.
 	head_data: HeadData,
+	/// The number of messages processed from the DMQ.
+	processed_downward_messages: u32,
+	/// The mark which specifies the block number up to which all inbound HRMP messages are processed.
+	hrmp_watermark: BlockNumber,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -358,12 +368,18 @@ struct CandidateCommitments {
 	global_validation_data: GlobalValidationData,
 	/// The local validation data.
 	local_validation_data: LocalValidationData,
+	/// Messages directed to other paras routed via the relay chain.
+	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Upwards messages to the relay chain.
 	upwards_messages: Vec&lt;UpwardsMessage&gt;,
 	/// Fees paid to the validators of the relay-chain.
 	fees: Balance,
 	/// The new validation code submitted by the execution, if any.
 	new_validation_code: Option&lt;ValidationCode&gt;,
+	/// The number of messages processed from the DMQ.
+	processed_downward_messages: u32,
+	/// The mark which specifies the block number up to which all inbound HRMP messages are processed.
+	hrmp_watermark: BlockNumber,
 }
 <span class="boring">}
 </span></code></pre></pre>

@@ -248,7 +248,11 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 </span></code></pre></pre>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
 <ol>
-<li>Clean up outgoing paras. This means removing the entries under <code>Heads</code>, <code>ValidationCode</code>, <code>FutureCodeUpgrades</code>, and <code>FutureCode</code>. An according entry should be added to <code>PastCode</code>, <code>PastCodeMeta</code>, and <code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>ValidationCode</code> value. This is because any outdated validation code must remain available on-chain for a determined amount of blocks, and validation code outdated by de-registering the para is still subject to that invariant.</li>
+<li>Clean up outgoing paras.
+<ol>
+<li>This means removing the entries under <code>Heads</code>, <code>ValidationCode</code>, <code>FutureCodeUpgrades</code>, and <code>FutureCode</code>. An according entry should be added to <code>PastCode</code>, <code>PastCodeMeta</code>, and <code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>ValidationCode</code> value. This is because any outdated validation code must remain available on-chain for a determined amount of blocks, and validation code outdated by de-registering the para is still subject to that invariant.</li>
+</ol>
+</li>
 <li>Apply all incoming paras by initializing the <code>Heads</code> and <code>ValidationCode</code> using the genesis parameters.</li>
 <li>Amend the <code>Parachains</code> list to reflect changes in registered parachains.</li>
 <li>Amend the <code>Parathreads</code> set to reflect changes in registered parathreads.</li>

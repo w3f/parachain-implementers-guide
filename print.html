@@ -478,7 +478,11 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 </span></code></pre></pre>
 <h2><a class="header" href="#session-change-2" id="session-change-2">Session Change</a></h2>
 <ol>
-<li>Clean up outgoing paras. This means removing the entries under <code>Heads</code>, <code>ValidationCode</code>, <code>FutureCodeUpgrades</code>, and <code>FutureCode</code>. An according entry should be added to <code>PastCode</code>, <code>PastCodeMeta</code>, and <code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>ValidationCode</code> value. This is because any outdated validation code must remain available on-chain for a determined amount of blocks, and validation code outdated by de-registering the para is still subject to that invariant.</li>
+<li>Clean up outgoing paras.
+<ol>
+<li>This means removing the entries under <code>Heads</code>, <code>ValidationCode</code>, <code>FutureCodeUpgrades</code>, and <code>FutureCode</code>. An according entry should be added to <code>PastCode</code>, <code>PastCodeMeta</code>, and <code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>ValidationCode</code> value. This is because any outdated validation code must remain available on-chain for a determined amount of blocks, and validation code outdated by de-registering the para is still subject to that invariant.</li>
+</ol>
+</li>
 <li>Apply all incoming paras by initializing the <code>Heads</code> and <code>ValidationCode</code> using the genesis parameters.</li>
 <li>Amend the <code>Parachains</code> list to reflect changes in registered parachains.</li>
 <li>Amend the <code>Parathreads</code> set to reflect changes in registered parathreads.</li>
@@ -781,6 +785,10 @@ CurrentSessionIndex: SessionIndex;
 <li>Check the collator's signature on the candidate data.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
 <li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
+<li>call <code>Router::check_processed_downward_messages(para, commitments.processed_downward_messages)</code> to check that the DMQ is properly drained.</li>
+<li>call <code>Router::check_hrmp_watermark(para, commitments.hrmp_watermark)</code> for each candidate to check rules of processing the HRMP watermark.</li>
+<li>check that in the commitments of each candidate the horizontal messages are sorted by ascending recipient ParaId and there is no two horizontal messages have the same recipient.</li>
+<li>using <code>Router::verify_outbound_hrmp(sender, commitments.horizontal_messages)</code> ensure that the each candidate send a valid set of horizontal messages</li>
 <li>create an entry in the <code>PendingAvailability</code> map for each backed candidate with a blank <code>availability_votes</code> bitfield.</li>
 <li>create a corresponding entry in the <code>PendingAvailabilityCommitments</code> with the commitments.</li>
 <li>Return a <code>Vec&lt;CoreIndex&gt;</code> of all scheduled cores of the list of passed assignments that a candidate was successfully backed for, sorted ascending by CoreIndex.</li>
@@ -796,6 +804,9 @@ CurrentSessionIndex: SessionIndex;
 </blockquote>
 <ol>
 <li>call <code>Router::queue_upward_messages</code> for each backed candidate, using the <a href="runtime/../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="runtime/../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
+<li>call <code>Router::queue_outbound_hrmp</code> with the para id of the candidate and the list of horizontal messages taken from the commitment,</li>
+<li>call <code>Router::prune_hrmp</code> with the para id of the candiate and the candidate's <code>hrmp_watermark</code>.</li>
+<li>call <code>Router::prune_dmq</code> with the para id of the candidate and the candidate's <code>processed_downward_messages</code>.</li>
 <li>Call <code>Paras::note_new_head</code> using the <code>HeadData</code> from the receipt and <code>relay_parent_number</code>.</li>
 </ol>
 </li>
@@ -922,11 +933,13 @@ CurrentSessionIndex: SessionIndex;
 <p>For remote disputes, it is possible that the parablock disputed has never actually passed any availability process on any chain. In this case, validators will not be able to obtain the PoV of the parablock and there will be relatively few votes. We want to disincentivize voters claiming validity of the block from preventing it from becoming available, so we charge them a small distraction fee for wasting the others' time if the dispute does not garner a 2/3+ supermajority on either side. This fee can take the form of a small slash or a reduction in rewards.</p>
 <p>When a supermajority is achieved for the dispute in either the valid or invalid direction, we will penalize non-voters either by issuing a small slash or reducing their rewards. We prevent censorship of the remaining validators by leaving the dispute open for some blocks after resolution in order to accept late votes.</p>
 <h1><a class="header" href="#router-module" id="router-module">Router Module</a></h1>
-<p>The Router module is responsible for storing and dispatching Upward and Downward messages from and to parachains respectively. It is intended to later handle the XCMP logic as well.</p>
-<p>For each enacted block the <code>queue_upward_messages</code> entry-point is called.</p>
+<p>The Router module is responsible for all messaging mechanisms supported between paras and the relay chain, specifically: UMP, DMP, HRMP and later XCMP.</p>
 <h2><a class="header" href="#storage-6" id="storage-6">Storage</a></h2>
 <p>Storage layout:</p>
-<pre><code class="language-rust ignore">/// Messages ready to be dispatched onto the relay chain.
+<pre><code class="language-rust ignore">/// Paras that are to be cleaned up at the end of the session.
+/// The entries are sorted ascending by the para id.
+OutgoingParas: Vec&lt;ParaId&gt;;
+/// Messages ready to be dispatched onto the relay chain.
 /// This is subject to `max_upward_queue_count` and
 /// `watermark_queue_size` from `HostConfiguration`.
 RelayDispatchQueues: map ParaId =&gt; Vec&lt;UpwardMessage&gt;;
@@ -936,17 +949,272 @@ RelayDispatchQueues: map ParaId =&gt; Vec&lt;UpwardMessage&gt;;
 RelayDispatchQueueSize: map ParaId =&gt; (u32, u32);
 /// The ordered list of `ParaId`s that have a `RelayDispatchQueue` entry.
 NeedsDispatch: Vec&lt;ParaId&gt;;
+/// The downward messages addressed for a certain para.
+DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
+</code></pre>
+<h3><a class="header" href="#hrmp" id="hrmp">HRMP</a></h3>
+<p>HRMP related structs:</p>
+<pre><code class="language-rust ignore">/// A type used to designate a HRMP channel between a (sender, recipient).
+struct HrmpChannelId {
+    sender: ParaId,
+    recipient: ParaId,
+}
+
+/// A description of a request to open an HRMP channel.
+struct HrmpOpenChannelRequest {
+    /// The sender and the initiator of this request.
+    sender: ParaId,
+    /// The recipient of the opened request.
+    recipient: ParaId,
+    /// Indicates if this request was confirmed by the recipient.
+    confirmed: bool,
+    /// How many session boundaries ago this request was seen.
+    age: SessionIndex,
+    /// The amount that the sender supplied at the time of creation of this request.
+    sender_deposit: Balance,
+    /// The maximum number of messages that can be pending in the channel at once.
+    limit_used_places: u32,
+    /// The maximum total size of the messages that can be pending in the channel at once.
+    limit_used_bytes: u32,
+}
+
+/// A description of a request to close an opened HRMP channel.
+struct HrmpCloseChannelRequest {
+    /// The para which initiated closing an existing channel.
+    ///
+    /// Invariant: it should be equal to one of the following
+    /// - `Some(sender)`
+    /// - `Some(recipient)`
+    /// - `None` in case the request initiated by the runtime (including governance, migration, etc)
+    initiator: Option&lt;ParaId&gt;,
+    /// The identifier of an HRMP channel to be closed.
+    id: HrmpChannelId,
+}
+
+/// A metadata of an HRMP channel.
+struct HrmpChannel {
+    /// The amount that the sender supplied as a deposit when opening this channel.
+    sender_deposit: Balance,
+    /// The amount that the recipient supplied as a deposit when accepting opening this channel.
+    recipient_deposit: Balance,
+    /// The maximum number of messages that can be pending in the channel at once.
+    limit_used_places: u32,
+    /// The maximum total size of the messages that can be pending in the channel at once.
+    limit_used_bytes: u32,
+    /// The current number of messages pending in the channel.
+    /// Invariant: should be less or equal to `limit_used_places`.
+    used_places: u32,
+    /// The total size in bytes of all message payloads in the channel.
+    /// Invariant: should be less or equal to `limit_used_bytes`.
+    used_bytes: u32,
+    /// A head of the Message Queue Chain for this channel. Each link in this chain has a form:
+    /// `(prev_head, B, H(M))`, where
+    /// - `prev_head`: is the previous value of `mqc_head`.
+    /// - `B`: is the [relay-chain] block number in which a message was appended
+    /// - `H(M)`: is the hash of the message being appended.
+    /// This value is initialized to a special value that consists of all zeroes which indicates
+    /// that no messages were previously added.
+    mqc_head: Hash,
+}
+</code></pre>
+<p>HRMP related storage layout</p>
+<pre><code class="language-rust ignore">/// Pending HRMP open channel requests.
+HrmpOpenChannelRequests: Vec&lt;HrmpOpenChannelRequest&gt;;
+/// This mapping tracks how many open channel requests are inititated by a given sender para.
+/// Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `_.sender == X`
+/// as the number of `HrmpOpenChannelRequestCount` for `X`.
+HrmpOpenChannelRequestCount: map ParaId =&gt; u32;
+/// Pending HRMP close channel requests.
+HrmpCloseChannelRequests: Vec&lt;HrmpCloseChannelRequest&gt;;
+/// The HRMP watermark associated with each para.
+HrmpWatermarks: map ParaId =&gt; Option&lt;BlockNumber&gt;;
+/// HRMP channel data associated with each para.
+HrmpChannels: map HrmpChannelId =&gt; Option&lt;HrmpChannel&gt;;
+/// The indexes that map all senders to their recievers and vise versa.
+/// Invariants:
+/// - for each ingress index entry for `P` each item `I` in the index should present in `HrmpChannels` as `(I, P)`.
+/// - for each egress index entry for `P` each item `E` in the index should present in `HrmpChannels` as `(P, E)`.
+/// - there should be no other dangling channels in `HrmpChannels`.
+HrmpIngressChannelsIndex: map ParaId =&gt; Vec&lt;ParaId&gt;;
+HrmpEgressChannelsIndex: map ParaId =&gt; Vec&lt;ParaId&gt;;
+/// Storage for the messages for each channel.
+/// Invariant: cannot be non-empty if the corresponding channel in `HrmpChannels` is `None`.
+HrmpChannelContents: map HrmpChannelId =&gt; Vec&lt;InboundHrmpMessage&gt;;
+/// Maintains a mapping that can be used to answer the question:
+/// What paras sent a message at the given block number for a given reciever.
+HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;;
 </code></pre>
 <h2><a class="header" href="#initialization-3" id="initialization-3">Initialization</a></h2>
 <p>No initialization routine runs for this module.</p>
-<h2><a class="header" href="#routines-4" id="routines-4">Routines</a></h2>
+<h2><a class="header" href="#entry-points-2" id="entry-points-2">Entry points</a></h2>
+<p>The following routines are intended to be invoked by paras' upward messages.</p>
 <ul>
-<li><code>queue_upward_messages(ParaId, Vec&lt;UpwardMessage&gt;)</code>:
+<li>
+<p><code>hrmp_init_open_channel(recipient)</code>:</p>
+<ol>
+<li>Check that the origin of this message is a para. We say that the origin of this message is the <code>sender</code>.</li>
+<li>Check that the <code>sender</code> is not <code>recipient</code>.</li>
+<li>Check that the <code>recipient</code> para exists.</li>
+<li>Check that there is no existing open channel request from sender to recipient.</li>
+<li>Check that the sum of the number of already opened HRMP channels by the <code>sender</code> (the size of the set found <code>HrmpEgressChannelsIndex</code> for <code>sender</code>) and the number of open requests by the <code>sender</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>sender</code>) doesn't exceed the limit of channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
+<li>Reserve the deposit for the <code>sender</code> according to <code>config.hrmp_sender_deposit</code></li>
+<li>Add a new entry to <code>HrmpOpenChannelRequests</code> and increase <code>HrmpOpenChannelRequestCount</code> by 1 for the <code>sender</code>.
+<ol>
+<li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
+<li>Set <code>limit_used_places</code> to <code>config.hrmp_channel_max_places</code></li>
+<li>Set <code>limit_limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
+</ol>
+</li>
+</ol>
+</li>
+<li>
+<p><code>hrmp_accept_open_channel(i)</code>, <code>i</code> - is the index of open channel request:</p>
+<ol>
+<li>Check that the designated open channel request exists</li>
+<li>Check that the request's <code>recipient</code> corresponds to the origin of this message.</li>
+<li>Reserve the deposit for the <code>recipient</code> according to <code>config.hrmp_recipient_deposit</code></li>
+<li>Set the request's <code>confirmed</code> flag to <code>true</code>.</li>
+</ol>
+</li>
+<li>
+<p><code>hrmp_close_channel(sender, recipient)</code>:</p>
+<ol>
+<li>Check that the channel between <code>sender</code> and <code>recipient</code> exists</li>
+<li>Check that the origin of the message is either <code>sender</code> or <code>recipient</code></li>
+<li>Check that there is no existing intention to close the channel between <code>sender</code> and <code>recipient</code>.</li>
+<li>Add a new entry to <code>HrmpCloseChannelRequests</code> with initiator set to the <code>Some</code> variant with the origin of this message.</li>
+</ol>
+</li>
+</ul>
+<h2><a class="header" href="#routines-4" id="routines-4">Routines</a></h2>
+<p>Candidate Acceptance Function:</p>
+<ul>
+<li><code>check_processed_downward_messages(P: ParaId, processed_downward_messages)</code>:
+<ol>
+<li>Checks that <code>DownwardMessageQueues</code> for <code>P</code> is at least <code>processed_downward_messages</code> long.</li>
+<li>Checks that <code>processed_downward_messages</code> is at least 1 if <code>DownwardMessageQueues</code> for <code>P</code> is not empty.</li>
+</ol>
+</li>
+<li><code>check_hrmp_watermark(P: ParaId, new_hrmp_watermark)</code>:
+<ol>
+<li><code>new_hrmp_watermark</code> should be strictly greater than the value of <code>HrmpWatermarks</code> for <code>P</code> (if any).</li>
+<li><code>new_hrmp_watermark</code> must not be greater than the context's block number.</li>
+<li>in <code>HrmpChannelDigests</code> for <code>P</code> an entry with the block number equal to <code>new_hrmp_watermark</code> should exist.</li>
+</ol>
+</li>
+<li><code>verify_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
+<ol>
+<li>For each horizontal message <code>M</code> with the channel <code>C</code> identified by <code>(sender, M.recipient)</code> check:
+<ol>
+<li>exists</li>
+<li><code>M</code>'s payload size summed with the <code>C.used_bytes</code> doesn't exceed a preconfigured limit <code>C.limit_used_bytes</code>.</li>
+<li><code>C.used_places + 1</code> doesn't exceed a preconfigured limit <code>C.limit_used_places</code>.</li>
+</ol>
+</li>
+</ol>
+</li>
+</ul>
+<p>Candidate Enactment:</p>
+<ul>
+<li>
+<p><code>queue_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:</p>
+<ol>
+<li>For each horizontal message <code>HM</code> with the channel <code>C</code> identified by <code>(sender, HM.recipient)</code>:</li>
+<li>Append <code>HM</code> into <code>HrmpChannelContents</code> that corresponds to <code>C</code>.</li>
+<li>Locate or create an entry in <code>HrmpChannelDigests</code> for <code>HM.recipient</code> and append <code>sender</code> into the entry's list.</li>
+<li>Increment <code>C.used_places</code></li>
+<li>Increment <code>C.used_bytes</code> by <code>HM</code>'s payload size</li>
+<li>Append a new link to the MQC and save the new head in <code>C.mqc_head</code>. Note that the current block number as of enactment is used for the link.</li>
+</ol>
+</li>
+<li>
+<p><code>prune_hrmp(recipient, new_hrmp_watermark)</code>:</p>
+<ol>
+<li>From <code>HrmpChannelDigests</code> for <code>recipient</code> remove all entries up to an entry with block number equal to <code>new_hrmp_watermark</code>.</li>
+<li>From the removed digests construct a set of paras that sent new messages within the interval between the old and new watermarks.</li>
+<li>For each channel <code>C</code> identified by <code>(sender, recipient)</code> for each <code>sender</code> coming from the set, prune messages up to the <code>new_hrmp_watermark</code>.</li>
+<li>For each pruned message <code>M</code> from channel <code>C</code>:
+<ol>
+<li>Decrement <code>C.used_places</code></li>
+<li>Decrement <code>C.used_bytes</code> by <code>M</code>'s payload size.</li>
+</ol>
+</li>
+<li>Set <code>HrmpWatermarks</code> for <code>P</code> to be equal to <code>new_hrmp_watermark</code></li>
+</ol>
+</li>
+<li>
+<p><code>prune_dmq(P: ParaId, processed_downward_messages)</code>:</p>
+<ol>
+<li>Remove the first <code>processed_downward_messages</code> from the <code>DownwardMessageQueues</code> of <code>P</code>.</li>
+</ol>
+</li>
+<li>
+<p><code>queue_upward_messages(ParaId, Vec&lt;UpwardMessage&gt;)</code>:</p>
 <ol>
 <li>Updates <code>NeedsDispatch</code>, and enqueues upward messages into <code>RelayDispatchQueue</code> and modifies the respective entry in <code>RelayDispatchQueueSize</code>.</li>
 </ol>
 </li>
 </ul>
+<p>The following routine is intended to be called in the same time when <code>Paras::schedule_para_cleanup</code> is called.</p>
+<p><code>schedule_para_cleanup(ParaId)</code>:</p>
+<ol>
+<li>Add the para into the <code>OutgoingParas</code> vector maintaining the sorted order.</li>
+</ol>
+<h2><a class="header" href="#session-change-5" id="session-change-5">Session Change</a></h2>
+<ol>
+<li>Drain <code>OutgoingParas</code>. For each <code>P</code> happened to be in the list:</li>
+<li>Remove all inbound channels of <code>P</code>, i.e. <code>(_, P)</code>,</li>
+<li>Remove all outbound channels of <code>P</code>, i.e. <code>(P, _)</code>,</li>
+<li>Remove all <code>DownwardMessageQueues</code> of <code>P</code>.</li>
+<li>Remove <code>RelayDispatchQueueSize</code> of <code>P</code>.</li>
+<li>Remove <code>RelayDispatchQueues</code> of <code>P</code>.</li>
+</ol>
+<ul>
+<li>Note that we don't remove the open/close requests since they are gon die out naturally.
+TODO: What happens with the deposits in channels or open requests?</li>
+</ul>
+<ol>
+<li>For each request <code>R</code> in <code>HrmpOpenChannelRequests</code>:
+<ol>
+<li>if <code>R.confirmed = false</code>:
+<ol>
+<li>increment <code>R.age</code> by 1.</li>
+<li>if <code>R.age</code> reached a preconfigured time-to-live limit <code>config.hrmp_open_request_ttl</code>, then:
+<ol>
+<li>refund <code>R.sender_deposit</code> to the sender</li>
+<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>R.sender</code> by 1.</li>
+<li>remove <code>R</code></li>
+</ol>
+</li>
+</ol>
+</li>
+<li>if <code>R.confirmed = true</code>,
+<ol>
+<li>check that <code>R.sender</code> and <code>R.recipient</code> are not offboarded.</li>
+<li>create a new channel <code>C</code> between <code>(R.sender, R.recipient)</code>.
+<ol>
+<li>Initialize the <code>C.sender_deposit</code> with <code>R.sender_deposit</code> and <code>C.recipient_deposit</code> with the value found in the configuration <code>config.hrmp_recipient_deposit</code>.</li>
+<li>Insert <code>sender</code> into the set <code>HrmpIngressChannelsIndex</code> for the <code>recipient</code>.</li>
+<li>Insert <code>recipient</code> into the set <code>HrmpEgressChannelsIndex</code> for the <code>sender</code>.</li>
+</ol>
+</li>
+<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>R.sender</code> by 1.</li>
+<li>remove <code>R</code></li>
+</ol>
+</li>
+</ol>
+</li>
+<li>For each request <code>R</code> in <code>HrmpCloseChannelRequests</code> remove the channel identified by <code>R.id</code>, if exists.</li>
+</ol>
+<p>To remove a channel <code>C</code> identified with a tuple <code>(sender, recipient)</code>:</p>
+<ol>
+<li>Return <code>C.sender_deposit</code> to the <code>sender</code>.</li>
+<li>Return <code>C.recipient_deposit</code> to the <code>recipient</code>.</li>
+<li>Remove <code>C</code> from <code>HrmpChannels</code>.</li>
+<li>Remove <code>C</code> from <code>HrmpChannelContents</code>.</li>
+<li>Remove <code>recipient</code> from the set <code>HrmpEgressChannelsIndex</code> for <code>sender</code>.</li>
+<li>Remove <code>sender</code> from the set <code>HrmpIngressChannelsIndex</code> for <code>recipient</code>.</li>
+</ol>
 <h2><a class="header" href="#finalization-4" id="finalization-4">Finalization</a></h2>
 <ol>
 <li>Dispatch queued upward messages from <code>RelayDispatchQueues</code> in a FIFO order applying the <code>config.watermark_upward_queue_size</code> and <code>config.max_upward_queue_count</code> limits.</li>
@@ -2271,6 +2539,10 @@ struct LocalValidationData {
 	/// which case the code upgrade should be applied at the end of the signaling
 	/// block.
 	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
+	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
+	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
+	/// sender.
+	hrmp_mqc_heads: Vec&lt;(ParaId, Hash)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2293,6 +2565,8 @@ struct LocalValidationData {
 struct CandidateCommitments {
 	/// Fees paid from the chain to the relay chain validators.
 	fees: Balance,
+	/// Messages directed to other paras routed via the relay chain.
+	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Messages destined to be interpreted by the Relay chain itself.
 	upward_messages: Vec&lt;UpwardMessage&gt;,
 	/// The root of a block's erasure encoding Merkle tree.
@@ -2301,6 +2575,10 @@ struct CandidateCommitments {
 	new_validation_code: Option&lt;ValidationCode&gt;,
 	/// The head-data produced as a result of execution.
 	head_data: HeadData,
+	/// The number of messages processed from the DMQ.
+	processed_downward_messages: u32,
+	/// The mark which specifies the block number up to which all inbound HRMP messages are processed.
+	hrmp_watermark: BlockNumber,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2329,12 +2607,18 @@ struct CandidateCommitments {
 	global_validation_data: GlobalValidationData,
 	/// The local validation data.
 	local_validation_data: LocalValidationData,
+	/// Messages directed to other paras routed via the relay chain.
+	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Upwards messages to the relay chain.
 	upwards_messages: Vec&lt;UpwardsMessage&gt;,
 	/// Fees paid to the validators of the relay-chain.
 	fees: Balance,
 	/// The new validation code submitted by the execution, if any.
 	new_validation_code: Option&lt;ValidationCode&gt;,
+	/// The number of messages processed from the DMQ.
+	processed_downward_messages: u32,
+	/// The mark which specifies the block number up to which all inbound HRMP messages are processed.
+	hrmp_watermark: BlockNumber,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2953,6 +3237,20 @@ enum CandidateValidationMessage {
 	/// no further messages may be added to it. If it exceeds this then the queue may contain only
 	/// a single message.
 	pub watermark_upward_queue_size: u32,
+	/// Number of sessions after which an HRMP open channel request expires.
+	pub hrmp_open_request_ttl: u32,
+	/// The deposit that the sender should provide for opening an HRMP channel.
+	pub hrmp_sender_deposit: u32,
+	/// The deposit that the recipient should provide for accepting opening an HRMP channel.
+	pub hrmp_recipient_deposit: u32,
+	/// The maximum number of messages allowed in an HRMP channel at once.
+	pub hrmp_channel_max_places: u32,
+	/// The maximum total size of messages in bytes allowed in an HRMP channel at once.
+	pub hrmp_channel_max_size: u32,
+	/// The maximum number of outbound HRMP channels a parachain is allowed to open.
+	pub hrmp_max_parachain_outbound_channels: u32,
+	/// The maximum number of outbound HRMP channels a parathread is allowed to open.
+	pub hrmp_max_parathread_outbound_channels: u32,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2989,6 +3287,8 @@ struct BlockFinalizationEvent {
 </span></code></pre></pre>
 <h1><a class="header" href="#message-types" id="message-types">Message types</a></h1>
 <p>Types of messages that are passed between parachains and the relay chain: UMP, DMP, XCMP.</p>
+<p>There is also HRMP (Horizontally Relay-routed Message Passing) which provides the same functionality
+although with smaller scalability potential.</p>
 <h2><a class="header" href="#upward-message" id="upward-message">Upward Message</a></h2>
 <p>A type of messages dispatched from a parachain to the relay chain.</p>
 <pre><code class="language-rust ignore">enum ParachainDispatchOrigin {
@@ -3008,6 +3308,36 @@ struct UpwardMessage {
 	pub origin: ParachainDispatchOrigin,
 	/// The message data.
 	pub data: Vec&lt;u8&gt;,
+}
+</code></pre>
+<h2><a class="header" href="#horizontal-message" id="horizontal-message">Horizontal Message</a></h2>
+<p>This is a message sent from a parachain to another parachain that travels through the relay chain.
+This message ends up in the recipient's mailbox. A size of a horizontal message is defined by its
+<code>data</code> payload.</p>
+<pre><code class="language-rust ignore">struct OutboundHrmpMessage {
+	/// The para that will get this message in its downward message queue.
+	pub recipient: ParaId,
+	/// The message payload.
+	pub data: Vec&lt;u8&gt;,
+}
+
+struct InboundHrmpMessage {
+	pub sent_at: BlockNumber,
+	/// The message payload.
+	pub data: Vec&lt;u8&gt;,
+}
+</code></pre>
+<h2><a class="header" href="#downward-message" id="downward-message">Downward Message</a></h2>
+<p>A message that go down from the relay chain to a parachain. Such a message could be initiated either
+as a result of an operation took place on the relay chain.</p>
+<pre><code class="language-rust ignore">enum DownwardMessage {
+	/// Some funds were transferred into the parachain's account. The hash is the identifier that
+	/// was given with the transfer.
+	TransferInto(AccountId, Balance, Remark),
+	/// An opaque message which interpretation is up to the recipient para. This variant ought
+	/// to be used as a basis for special protocols between the relay chain and, typically system,
+	/// paras.
+	ParachainSpecific(Vec&lt;u8&gt;),
 }
 </code></pre>
 <h1><a class="header" href="#network-types" id="network-types">Network Types</a></h1>
@@ -3140,12 +3470,15 @@ enum ObservedRole {
 <li>Backed Candidate: A Backable Candidate noted in a relay-chain block</li>
 <li>Backing: A set of statements proving that a Parachain Candidate is backable.</li>
 <li>Collator: A node who generates Proofs-of-Validity (PoV) for blocks of a specific parachain.</li>
+<li>DMP: (Downward Message Passing). Message passing from the relay-chain to a parachain.</li>
 <li>Extrinsic: An element of a relay-chain block which triggers a specific entry-point of a runtime module with given arguments.</li>
 <li>GRANDPA: (Ghost-based Recursive ANcestor Deriving Prefix Agreement). The algorithm validators use to guarantee finality of the Relay Chain.</li>
+<li>HRMP: (Horizontally Relay-routed Message Passing). A mechanism for message passing between parachains (hence horizontal) that leverages the relay-chain storage. Predates XCMP.</li>
 <li>Inclusion Pipeline: The set of steps taken to carry a Parachain Candidate from authoring, to backing, to availability and full inclusion in an active fork of its parachain.</li>
 <li>Module: A component of the Runtime logic, encapsulating storage, routines, and entry-points.</li>
 <li>Module Entry Point: A recipient of new information presented to the Runtime. This may trigger routines.</li>
 <li>Module Routine: A piece of code executed within a module by block initialization, closing, or upon an entry point being triggered. This may execute computation, and read or write storage.</li>
+<li>MQC: (Message Queue Chain). A cryptographic data structure that resembles an append-only linked list which doesn't store original values but only their hashes. The whole structure is described by a single hash, referred as a &quot;head&quot;. When a value is appended, it's contents hashed with the previous head creating a hash that becomes a new head.</li>
 <li>Node: A participant in the Polkadot network, who follows the protocols of communication and connection to other nodes. Nodes form a peer-to-peer network topology without a central authority.</li>
 <li>Parachain Candidate, or Candidate: A proposed block for inclusion into a parachain.</li>
 <li>Parablock: A block in a parachain.</li>
@@ -3159,8 +3492,11 @@ enum ObservedRole {
 <li>Runtime API: A means for the node-side behavior to access structured information based on the state of a fork of the blockchain.</li>
 <li>Secondary Checker: A validator who has been randomly selected to perform secondary approval checks on a parablock which is pending approval.</li>
 <li>Subsystem: A long-running task which is responsible for carrying out a particular category of work.</li>
+<li>UMP: (Upward Message Passing) A vertical message passing mechanism from a parachain to the relay chain.</li>
 <li>Validator: Specially-selected node in the network who is responsible for validating parachain blocks and issuing attestations about their validity.</li>
 <li>Validation Function: A piece of Wasm code that describes the state-transition function of a parachain.</li>
+<li>VMP: (Vertical Message Passing) A family of mechanisms that are responsible for message exchange between the relay chain and parachains.</li>
+<li>XCMP (Cross-Chain Message Passing) A type of horizontal message passing (i.e. between parachains) that allows secure message passing directly between parachains and has minimal resource requirements from the relay chain, thus highly scalable.</li>
 </ul>
 <p>Also of use is the <a href="https://substrate.dev/docs/en/knowledgebase/getting-started/glossary">Substrate Glossary</a>.</p>
 <h1><a class="header" href="#further-reading" id="further-reading">Further Reading</a></h1>

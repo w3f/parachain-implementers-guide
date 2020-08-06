@@ -163,12 +163,15 @@
 <li>Backed Candidate: A Backable Candidate noted in a relay-chain block</li>
 <li>Backing: A set of statements proving that a Parachain Candidate is backable.</li>
 <li>Collator: A node who generates Proofs-of-Validity (PoV) for blocks of a specific parachain.</li>
+<li>DMP: (Downward Message Passing). Message passing from the relay-chain to a parachain.</li>
 <li>Extrinsic: An element of a relay-chain block which triggers a specific entry-point of a runtime module with given arguments.</li>
 <li>GRANDPA: (Ghost-based Recursive ANcestor Deriving Prefix Agreement). The algorithm validators use to guarantee finality of the Relay Chain.</li>
+<li>HRMP: (Horizontally Relay-routed Message Passing). A mechanism for message passing between parachains (hence horizontal) that leverages the relay-chain storage. Predates XCMP.</li>
 <li>Inclusion Pipeline: The set of steps taken to carry a Parachain Candidate from authoring, to backing, to availability and full inclusion in an active fork of its parachain.</li>
 <li>Module: A component of the Runtime logic, encapsulating storage, routines, and entry-points.</li>
 <li>Module Entry Point: A recipient of new information presented to the Runtime. This may trigger routines.</li>
 <li>Module Routine: A piece of code executed within a module by block initialization, closing, or upon an entry point being triggered. This may execute computation, and read or write storage.</li>
+<li>MQC: (Message Queue Chain). A cryptographic data structure that resembles an append-only linked list which doesn't store original values but only their hashes. The whole structure is described by a single hash, referred as a &quot;head&quot;. When a value is appended, it's contents hashed with the previous head creating a hash that becomes a new head.</li>
 <li>Node: A participant in the Polkadot network, who follows the protocols of communication and connection to other nodes. Nodes form a peer-to-peer network topology without a central authority.</li>
 <li>Parachain Candidate, or Candidate: A proposed block for inclusion into a parachain.</li>
 <li>Parablock: A block in a parachain.</li>
@@ -182,8 +185,11 @@
 <li>Runtime API: A means for the node-side behavior to access structured information based on the state of a fork of the blockchain.</li>
 <li>Secondary Checker: A validator who has been randomly selected to perform secondary approval checks on a parablock which is pending approval.</li>
 <li>Subsystem: A long-running task which is responsible for carrying out a particular category of work.</li>
+<li>UMP: (Upward Message Passing) A vertical message passing mechanism from a parachain to the relay chain.</li>
 <li>Validator: Specially-selected node in the network who is responsible for validating parachain blocks and issuing attestations about their validity.</li>
 <li>Validation Function: A piece of Wasm code that describes the state-transition function of a parachain.</li>
+<li>VMP: (Vertical Message Passing) A family of mechanisms that are responsible for message exchange between the relay chain and parachains.</li>
+<li>XCMP (Cross-Chain Message Passing) A type of horizontal message passing (i.e. between parachains) that allows secure message passing directly between parachains and has minimal resource requirements from the relay chain, thus highly scalable.</li>
 </ul>
 <p>Also of use is the <a href="https://substrate.dev/docs/en/knowledgebase/getting-started/glossary">Substrate Glossary</a>.</p>
 

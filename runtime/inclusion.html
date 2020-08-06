@@ -252,6 +252,10 @@ CurrentSessionIndex: SessionIndex;
 <li>Check the collator's signature on the candidate data.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
 <li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
+<li>call <code>Router::check_processed_downward_messages(para, commitments.processed_downward_messages)</code> to check that the DMQ is properly drained.</li>
+<li>call <code>Router::check_hrmp_watermark(para, commitments.hrmp_watermark)</code> for each candidate to check rules of processing the HRMP watermark.</li>
+<li>check that in the commitments of each candidate the horizontal messages are sorted by ascending recipient ParaId and there is no two horizontal messages have the same recipient.</li>
+<li>using <code>Router::verify_outbound_hrmp(sender, commitments.horizontal_messages)</code> ensure that the each candidate send a valid set of horizontal messages</li>
 <li>create an entry in the <code>PendingAvailability</code> map for each backed candidate with a blank <code>availability_votes</code> bitfield.</li>
 <li>create a corresponding entry in the <code>PendingAvailabilityCommitments</code> with the commitments.</li>
 <li>Return a <code>Vec&lt;CoreIndex&gt;</code> of all scheduled cores of the list of passed assignments that a candidate was successfully backed for, sorted ascending by CoreIndex.</li>
@@ -267,6 +271,9 @@ CurrentSessionIndex: SessionIndex;
 </blockquote>
 <ol>
 <li>call <code>Router::queue_upward_messages</code> for each backed candidate, using the <a href="../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
+<li>call <code>Router::queue_outbound_hrmp</code> with the para id of the candidate and the list of horizontal messages taken from the commitment,</li>
+<li>call <code>Router::prune_hrmp</code> with the para id of the candiate and the candidate's <code>hrmp_watermark</code>.</li>
+<li>call <code>Router::prune_dmq</code> with the para id of the candidate and the candidate's <code>processed_downward_messages</code>.</li>
 <li>Call <code>Paras::note_new_head</code> using the <code>HeadData</code> from the receipt and <code>relay_parent_number</code>.</li>
 </ol>
 </li>
