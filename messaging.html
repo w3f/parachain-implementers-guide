@@ -187,6 +187,7 @@ can have a limited number of messages and the total sum of pending messages is a
 multiple upward messages per candidate.</p>
 <h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
 <p><img src="messaging_overview_1.generated.svg" alt="" /></p>
+<h3><a class="header" href="#cross-chain-message-passing" id="cross-chain-message-passing">Cross-Chain Message Passing</a></h3>
 <p>The most important member of this family is XCMP.</p>
 <blockquote>
 <p>ℹ️ XCMP is currently under construction and details are subject for change.</p>
@@ -203,8 +204,10 @@ MQC head.</p>
 candidate authoring time. The proof stems from the relay parent storage that contains the root hash of the channel.
 Since not all messages are required to be processed by the receiver's candidate, only the processed
 messages are supplied (i.e. preimages), rest are provided as hashes.</p>
-<p>Further details can be found at the <a href="https://research.web3.foundation/en/latest/polkadot/XCMP.html">W3F research website</a>
-and <a href="https://medium.com/web3foundation/polkadots-messaging-scheme-b1ec560908b7">this blogpost</a>.</p>
+<p>Further details can be found at the official repository for the
+<a href="https://github.com/paritytech/xcm-format/blob/master/README.md">Cross-Consensus Message Format (XCM)</a>, as well as
+at the <a href="https://research.web3.foundation/en/latest/polkadot/XCMP.html">W3F research website</a> and
+<a href="https://medium.com/web3foundation/polkadots-messaging-scheme-b1ec560908b7">this blogpost</a>.</p>
 <p>HRMP (Horizontally Relay-routed Message Passing) is a stop gap that predates XCMP. Semantically, it mimics XCMP's interface.
 The crucial difference from XCMP though is that all the messages are stored in the relay-chain storage. That makes
 things simple but at the same time that makes HRMP more demanding in terms of resources thus making it more expensive.</p>
