@@ -280,25 +280,24 @@ that are responsible for exchanging messages between parachains. Vertical Messag
 used for communication between the relay chain and parachains.</p>
 <h2><a class="header" href="#vertical-message-passing" id="vertical-message-passing">Vertical Message Passing</a></h2>
 <p><img src="messaging_overview_0.generated.svg" alt="" /></p>
-<p>Downward Message Passing (DMP) is a mechanism for delivering messages to parachains from the relay chain. Downward
-messages may originate not from the relay chain, but rather from another parachain via a mechanism
-called HRMP (Will be described later).</p>
+<p>Downward Message Passing (DMP) is a mechanism for delivering messages to parachains from the relay chain.</p>
 <p>Each parachain has its own queue that stores all pending inbound downward messages. A parachain
 doesn't have to process all messages at once, however, there are rules as to how the downward message queue
 should be processed. Currently, at least one message must be consumed per candidate if the queue is not empty.
 The downward message queue doesn't have a cap on its size and it is up to the relay-chain to put mechanisms
 that prevent spamming in place.</p>
 <p>Upward Message Passing (UMP) is a mechanism responsible for delivering messages in the opposite direction:
-from a parachain up to the relay chain. Upward messages are dispatched to Runtime entrypoints and
-typically used for invoking some actions on the relay chain on behalf of the parachain.</p>
-<blockquote>
-<p>NOTE: It is conceivable that upward messages will be divided to more fine-grained kinds with a dispatchable upward message
-being only one kind of multiple. That would make upward messages inspectable and therefore would allow imposing additional
-validity criteria for the candidates that contain these messages.</p>
-</blockquote>
-<p>Semantically, there is a queue of upward messages queue where messages from each parachain are stored. Each parachain
-can have a limited number of messages and the total sum of pending messages is also limited. Each parachain can dispatch
-multiple upward messages per candidate.</p>
+from a parachain up to the relay chain. Upward messages can serve different purposes and can be of different
+kinds.</p>
+<p>One kind of message is <code>Dispatchable</code>. They could be thought of similarly to extrinsics sent to a relay chain: they also
+invoke exposed runtime entrypoints, they consume weight and require fees. The difference is that they originate from
+a parachain. Each parachain has a queue of dispatchables to be executed. There can be only so many dispatchables at a time.
+The weight that processing of the dispatchables can consume is limited by a preconfigured value. Therefore, it is possible
+that some dispatchables will be left for later blocks. To make the dispatching more fair, the queues are processed turn-by-turn
+in a round robin fashion.</p>
+<p>Other kinds of upward messages can be introduced in the future as well. Potential candidates are channel management for
+horizontal message passing (XCMP and HRMP, both are to be described below), new validation code signalling, or other
+requests to the relay chain.</p>
 <h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
 <p><img src="messaging_overview_1.generated.svg" alt="" /></p>
 <h3><a class="header" href="#cross-chain-message-passing" id="cross-chain-message-passing">Cross-Chain Message Passing</a></h3>
@@ -841,7 +840,7 @@ CurrentSessionIndex: SessionIndex;
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
 <li>Check the collator's signature on the candidate data.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
-<li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
+<li>call <code>Router::check_upward_messages(para, commitments.upward_messages)</code> to check that the upward messages are valid.</li>
 <li>call <code>Router::check_processed_downward_messages(para, commitments.processed_downward_messages)</code> to check that the DMQ is properly drained.</li>
 <li>call <code>Router::check_hrmp_watermark(para, commitments.hrmp_watermark)</code> for each candidate to check rules of processing the HRMP watermark.</li>
 <li>check that in the commitments of each candidate the horizontal messages are sorted by ascending recipient ParaId and there is no two horizontal messages have the same recipient.</li>
@@ -860,7 +859,7 @@ CurrentSessionIndex: SessionIndex;
 <p>TODO: Note that this is safe as long as we never enact candidates where the relay parent is across a session boundary. In that case, which we should be careful to avoid with contextual execution, the configuration might have changed and the para may de-sync from the host's understanding of it.</p>
 </blockquote>
 <ol>
-<li>call <code>Router::queue_upward_messages</code> for each backed candidate, using the <a href="runtime/../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="runtime/../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
+<li>call <code>Router::enact_upward_messages</code> for each backed candidate, using the <a href="runtime/../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="runtime/../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
 <li>call <code>Router::queue_outbound_hrmp</code> with the para id of the candidate and the list of horizontal messages taken from the commitment,</li>
 <li>call <code>Router::prune_hrmp</code> with the para id of the candiate and the candidate's <code>hrmp_watermark</code>.</li>
 <li>call <code>Router::prune_dmq</code> with the para id of the candidate and the candidate's <code>processed_downward_messages</code>.</li>
@@ -913,6 +912,7 @@ CurrentSessionIndex: SessionIndex;
 <li>Invoke <code>Scheduler::schedule(freed)</code></li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
+<li>Call the <code>Router::process_upward_dispatchables</code> routine to execute all messages in upward dispatch queues.</li>
 <li>If all of the above succeeds, set <code>Included</code> to <code>Some(())</code>.</li>
 </ol>
 </li>
@@ -996,16 +996,19 @@ CurrentSessionIndex: SessionIndex;
 <pre><code class="language-rust ignore">/// Paras that are to be cleaned up at the end of the session.
 /// The entries are sorted ascending by the para id.
 OutgoingParas: Vec&lt;ParaId&gt;;
-/// Messages ready to be dispatched onto the relay chain.
+/// Dispatchable objects ready to be dispatched onto the relay chain. The messages are processed in FIFO order.
 /// This is subject to `max_upward_queue_count` and
 /// `watermark_queue_size` from `HostConfiguration`.
-RelayDispatchQueues: map ParaId =&gt; Vec&lt;UpwardMessage&gt;;
+RelayDispatchQueues: map ParaId =&gt; Vec&lt;RawDispatchable&gt;;
 /// Size of the dispatch queues. Caches sizes of the queues in `RelayDispatchQueue`.
 /// First item in the tuple is the count of messages and second
 /// is the total length (in bytes) of the message payloads.
 RelayDispatchQueueSize: map ParaId =&gt; (u32, u32);
 /// The ordered list of `ParaId`s that have a `RelayDispatchQueue` entry.
 NeedsDispatch: Vec&lt;ParaId&gt;;
+/// This is the para that gets will get dispatched first during the next upward dispatchable queue
+/// execution round.
+NextDispatchRoundStartWith: Option&lt;ParaId&gt;;
 /// The downward messages addressed for a certain para.
 DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
 </code></pre>
@@ -1146,6 +1149,18 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <h2><a class="header" href="#routines-4" id="routines-4">Routines</a></h2>
 <p>Candidate Acceptance Function:</p>
 <ul>
+<li><code>check_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;</code>:
+<ol>
+<li>Checks that there are at most <code>config.max_upward_message_num_per_candidate</code> messages.</li>
+<li>Checks each upward message individually depending on its kind:</li>
+<li>If the message kind is <code>Dispatchable</code>:
+<ol>
+<li>Verify that <code>RelayDispatchQueueSize</code> for <code>P</code> has enough capacity for the message (NOTE that should include all processed
+upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
+</ol>
+</li>
+</ol>
+</li>
 <li><code>check_processed_downward_messages(P: ParaId, processed_downward_messages)</code>:
 <ol>
 <li>Checks that <code>DownwardMessageQueues</code> for <code>P</code> is at least <code>processed_downward_messages</code> long.</li>
@@ -1173,8 +1188,7 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 </ul>
 <p>Candidate Enactment:</p>
 <ul>
-<li>
-<p><code>queue_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:</p>
+<li><code>queue_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
 <ol>
 <li>For each horizontal message <code>HM</code> with the channel <code>C</code> identified by <code>(sender, HM.recipient)</code>:</li>
 <li>Append <code>HM</code> into <code>HrmpChannelContents</code> that corresponds to <code>C</code>.</li>
@@ -1184,8 +1198,7 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <li>Append a new link to the MQC and save the new head in <code>C.mqc_head</code>. Note that the current block number as of enactment is used for the link.</li>
 </ol>
 </li>
-<li>
-<p><code>prune_hrmp(recipient, new_hrmp_watermark)</code>:</p>
+<li><code>prune_hrmp(recipient, new_hrmp_watermark)</code>:
 <ol>
 <li>From <code>HrmpChannelDigests</code> for <code>recipient</code> remove all entries up to an entry with block number equal to <code>new_hrmp_watermark</code>.</li>
 <li>From the removed digests construct a set of paras that sent new messages within the interval between the old and new watermarks.</li>
@@ -1199,16 +1212,21 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <li>Set <code>HrmpWatermarks</code> for <code>P</code> to be equal to <code>new_hrmp_watermark</code></li>
 </ol>
 </li>
-<li>
-<p><code>prune_dmq(P: ParaId, processed_downward_messages)</code>:</p>
+<li><code>prune_dmq(P: ParaId, processed_downward_messages)</code>:
 <ol>
 <li>Remove the first <code>processed_downward_messages</code> from the <code>DownwardMessageQueues</code> of <code>P</code>.</li>
 </ol>
 </li>
-<li>
-<p><code>queue_upward_messages(ParaId, Vec&lt;UpwardMessage&gt;)</code>:</p>
+<li><code>enact_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;)</code>:
 <ol>
-<li>Updates <code>NeedsDispatch</code>, and enqueues upward messages into <code>RelayDispatchQueue</code> and modifies the respective entry in <code>RelayDispatchQueueSize</code>.</li>
+<li>Process all upward messages in order depending on their kinds:</li>
+<li>If the message kind is <code>Dispatchable</code>:
+<ol>
+<li>Append the message to <code>RelayDispatchQueues</code> for <code>P</code></li>
+<li>Increment the size and the count in <code>RelayDispatchQueueSize</code> for <code>P</code>.</li>
+<li>Ensure that <code>P</code> is present in <code>NeedsDispatch</code>.</li>
+</ol>
+</li>
 </ol>
 </li>
 </ul>
@@ -1216,6 +1234,46 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <p><code>schedule_para_cleanup(ParaId)</code>:</p>
 <ol>
 <li>Add the para into the <code>OutgoingParas</code> vector maintaining the sorted order.</li>
+</ol>
+<p>The following routine is meant to execute pending entries in upward dispatchable queues. This function doesn't fail, even if
+any of dispatchables return an error.</p>
+<p><code>process_upward_dispatchables()</code>:</p>
+<ol>
+<li>
+<p>Initialize a cumulative weight counter <code>T</code> to 0</p>
+</li>
+<li>
+<p>Initialize a local in memory dictionary <code>R</code> that maps <code>ParaId</code> to a vector of <code>DispatchResult</code>.</p>
+</li>
+<li>
+<p>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:</p>
+<ol>
+<li>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></li>
+<li>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></li>
+<li>Decode <code>D</code> into a dispatchable. If failed append <code>DispatchResult::DecodeFailed</code> into <code>R</code> for <code>P</code>. Otherwise, if succeeded:
+<ol>
+<li>If <code>weight_of(D) &gt; config.dispatchable_upward_message_critical_weight</code> then append <code>DispatchResult::CriticalWeightExceeded</code> into <code>R</code> for <code>P</code>. Otherwise:</li>
+<li>Execute <code>D</code> and add the actual amount of weight consumed to <code>T</code>. Add the <code>DispatchResult</code> into <code>R</code> for <code>P</code>.</li>
+</ol>
+</li>
+<li>If <code>weight_of(D) + T &gt; config.preferred_dispatchable_upward_messages_step_weight</code>, set <code>NextDispatchRoundStartWith</code> to <code>P</code> and finish processing.</li>
+</ol>
+<blockquote>
+<p>NOTE that in practice we would need to approach the weight calculation more thoroughly, i.e. incorporate all operations
+that could take place on the course of handling these dispatchables.</p>
+</blockquote>
+<ol>
+<li>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</li>
+<li>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</li>
+</ol>
+</li>
+<li>
+<p>Then, for each <code>P</code> and the vector of <code>DispatchResult</code> in <code>R</code>:</p>
+<ol>
+<li>Obtain a message by wrapping the vector into <code>DownwardMessage::DispatchResult</code></li>
+<li>Append the resulting message to <code>DownwardMessageQueues</code> for <code>P</code>.</li>
+</ol>
+</li>
 </ol>
 <h2><a class="header" href="#session-change-5" id="session-change-5">Session Change</a></h2>
 <ol>
@@ -1225,10 +1283,11 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <li>Remove all <code>DownwardMessageQueues</code> of <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueueSize</code> of <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueues</code> of <code>P</code>.</li>
+<li>Remove <code>P</code> if it exists in <code>NeedsDispatch</code>.</li>
+<li>If <code>P</code> is in <code>NextDispatchRoundStartWith</code>, then reset it to <code>None</code></li>
 </ol>
 <ul>
-<li>Note that we don't remove the open/close requests since they are gon die out naturally.
-TODO: What happens with the deposits in channels or open requests?</li>
+<li>Note that we don't remove the open/close requests since they are gon die out naturally.</li>
 </ul>
 <ol>
 <li>For each request <code>R</code> in <code>HrmpOpenChannelRequests</code>:
@@ -1271,10 +1330,6 @@ TODO: What happens with the deposits in channels or open requests?</li>
 <li>Remove <code>C</code> from <code>HrmpChannelContents</code>.</li>
 <li>Remove <code>recipient</code> from the set <code>HrmpEgressChannelsIndex</code> for <code>sender</code>.</li>
 <li>Remove <code>sender</code> from the set <code>HrmpIngressChannelsIndex</code> for <code>recipient</code>.</li>
-</ol>
-<h2><a class="header" href="#finalization-4" id="finalization-4">Finalization</a></h2>
-<ol>
-<li>Dispatch queued upward messages from <code>RelayDispatchQueues</code> in a FIFO order applying the <code>config.watermark_upward_queue_size</code> and <code>config.max_upward_queue_count</code> limits.</li>
 </ol>
 <h1><a class="header" href="#runtime-apis" id="runtime-apis">Runtime APIs</a></h1>
 <p>Runtime APIs are the means by which the node-side code extracts information from the state of the runtime.</p>
@@ -3345,7 +3400,23 @@ enum CandidateValidationMessage {
 	/// Total size of messages allowed in the parachain -&gt; relay-chain message queue before which
 	/// no further messages may be added to it. If it exceeds this then the queue may contain only
 	/// a single message.
-	pub watermark_upward_queue_size: u32,
+	pub max_upward_queue_size: u32,
+	/// The amount of weight we wish to devote to the processing the dispatchable upward messages
+	/// stage.
+	///
+	/// NOTE that this is a soft limit and could be exceeded.
+	pub preferred_dispatchable_upward_messages_step_weight: u32,
+	/// Any dispatchable upward message that requests more than the critical amount is rejected
+	/// with `DispatchResult::CriticalWeightExceeded`.
+	///
+	/// The parameter value is picked up so that no dispatchable can make the block weight exceed
+	/// the total budget. I.e. that the sum of `preferred_dispatchable_upward_messages_step_weight`
+	/// and `dispatchable_upward_message_critical_weight` doesn't exceed the amount of weight left
+	/// under a typical worst case (e.g. no upgrades, etc) weight consumed by the required phases of
+	/// block execution (i.e. initialization, finalization and inherents).
+	pub dispatchable_upward_message_critical_weight: u32,
+	/// The maximum number of messages that a candidate can contain.
+	pub max_upward_message_num_per_candidate: u32,
 	/// Number of sessions after which an HRMP open channel request expires.
 	pub hrmp_open_request_ttl: u32,
 	/// The deposit that the sender should provide for opening an HRMP channel.
@@ -3412,11 +3483,24 @@ although with smaller scalability potential.</p>
 	Root,
 }
 
-struct UpwardMessage {
-	/// The origin for the message to be sent from.
-	pub origin: ParachainDispatchOrigin,
-	/// The message data.
-	pub data: Vec&lt;u8&gt;,
+/// An opaque byte buffer that encodes an entrypoint and the arguments that should be
+/// provided to it upon the dispatch.
+///
+/// NOTE In order to be executable the byte buffer should be decoded which potentially can fail if
+/// the encoding was changed.
+type RawDispatchable = Vec&lt;u8&gt;;
+
+enum UpwardMessage {
+	/// This upward message is meant to schedule execution of a provided dispatchable.
+	Dispatchable {
+		/// The origin with which the dispatchable should be executed.
+		origin: ParachainDispatchOrigin,
+		/// The dispatchable to be executed in its raw form.
+		dispatchable: RawDispatchable,
+	},
+	// Examples:
+	// HrmpOpenChannel { .. },
+	// HrmpCloseChannel { .. },
 }
 </code></pre>
 <h2><a class="header" href="#horizontal-message" id="horizontal-message">Horizontal Message</a></h2>
@@ -3437,9 +3521,23 @@ struct InboundHrmpMessage {
 }
 </code></pre>
 <h2><a class="header" href="#downward-message" id="downward-message">Downward Message</a></h2>
-<p>A message that go down from the relay chain to a parachain. Such a message could be initiated either
-as a result of an operation took place on the relay chain.</p>
-<pre><code class="language-rust ignore">enum DownwardMessage {
+<p><code>DownwardMessage</code>- is a message that goes down from the relay chain to a parachain. Such a message
+could be seen as a notification, however, it is conceivable that they might be used by the relay
+chain to send a request to the parachain (likely, through the <code>ParachainSpecific</code> variant).</p>
+<pre><code class="language-rust ignore">enum DispatchResult {
+	Executed {
+		success: bool,
+	},
+	/// Decoding `RawDispatchable` into an executable runtime representation has failed.
+	DecodeFailed,
+	/// A dispatchable in question exceeded the maximum amount of weight allowed.
+	CriticalWeightExceeded,
+}
+
+enum DownwardMessage {
+	/// The parachain receives a dispatch result for each sent dispatchable upward message in order
+	/// they were sent.
+	DispatchResult(Vec&lt;DispatchResult&gt;),
 	/// Some funds were transferred into the parachain's account. The hash is the identifier that
 	/// was given with the transfer.
 	TransferInto(AccountId, Balance, Remark),

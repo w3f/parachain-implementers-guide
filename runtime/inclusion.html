@@ -255,7 +255,7 @@ CurrentSessionIndex: SessionIndex;
 <li>Ensure that any code upgrade scheduled by the candidate does not happen within <code>config.validation_upgrade_frequency</code> of <code>Paras::last_code_upgrade(para_id, true)</code>, if any, comparing against the value of <code>Paras::FutureCodeUpgrades</code> for the given para ID.</li>
 <li>Check the collator's signature on the candidate data.</li>
 <li>check the backing of the candidate using the signatures and the bitfields, comparing against the validators assigned to the groups, fetched with the <code>group_validators</code> lookup.</li>
-<li>check that the upward messages, when combined with the existing queue size, are not exceeding <code>config.max_upward_queue_count</code> and <code>config.watermark_upward_queue_size</code> parameters.</li>
+<li>call <code>Router::check_upward_messages(para, commitments.upward_messages)</code> to check that the upward messages are valid.</li>
 <li>call <code>Router::check_processed_downward_messages(para, commitments.processed_downward_messages)</code> to check that the DMQ is properly drained.</li>
 <li>call <code>Router::check_hrmp_watermark(para, commitments.hrmp_watermark)</code> for each candidate to check rules of processing the HRMP watermark.</li>
 <li>check that in the commitments of each candidate the horizontal messages are sorted by ascending recipient ParaId and there is no two horizontal messages have the same recipient.</li>
@@ -274,7 +274,7 @@ CurrentSessionIndex: SessionIndex;
 <p>TODO: Note that this is safe as long as we never enact candidates where the relay parent is across a session boundary. In that case, which we should be careful to avoid with contextual execution, the configuration might have changed and the para may de-sync from the host's understanding of it.</p>
 </blockquote>
 <ol>
-<li>call <code>Router::queue_upward_messages</code> for each backed candidate, using the <a href="../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
+<li>call <code>Router::enact_upward_messages</code> for each backed candidate, using the <a href="../types/messages.html#upward-message"><code>UpwardMessage</code>s</a> from the <a href="../types/candidate.html#candidate-commitments"><code>CandidateCommitments</code></a>.</li>
 <li>call <code>Router::queue_outbound_hrmp</code> with the para id of the candidate and the list of horizontal messages taken from the commitment,</li>
 <li>call <code>Router::prune_hrmp</code> with the para id of the candiate and the candidate's <code>hrmp_watermark</code>.</li>
 <li>call <code>Router::prune_dmq</code> with the para id of the candidate and the candidate's <code>processed_downward_messages</code>.</li>
