@@ -1014,13 +1014,7 @@ DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
 </code></pre>
 <h3><a class="header" href="#hrmp" id="hrmp">HRMP</a></h3>
 <p>HRMP related structs:</p>
-<pre><code class="language-rust ignore">/// A type used to designate a HRMP channel between a (sender, recipient).
-struct HrmpChannelId {
-    sender: ParaId,
-    recipient: ParaId,
-}
-
-/// A description of a request to open an HRMP channel.
+<pre><code class="language-rust ignore">/// A description of a request to open an HRMP channel.
 struct HrmpOpenChannelRequest {
     /// The sender and the initiator of this request.
     sender: ParaId,
@@ -3496,6 +3490,18 @@ struct BlockFinalizationEvent {
 <p>Types of messages that are passed between parachains and the relay chain: UMP, DMP, XCMP.</p>
 <p>There is also HRMP (Horizontally Relay-routed Message Passing) which provides the same functionality
 although with smaller scalability potential.</p>
+<h2><a class="header" href="#hrmpchannelid" id="hrmpchannelid">HrmpChannelId</a></h2>
+<p>A type that uniquely identifies a HRMP channel. A HRMP channel is established between two paras.
+In text, we use the notation <code>(A, B)</code> to specify a channel between A and B. The channels are
+unidirectional, meaning that <code>(A, B)</code> and <code>(B, A)</code> refer to different channels. The convention is
+that we use the first item tuple for the sender and the second for the recipient. Only one channel
+is allowed between two participants in one direction, i.e. there cannot be 2 different channels
+identified by <code>(A, B)</code>.</p>
+<pre><code class="language-rust ignore">struct HrmpChannelId {
+    sender: ParaId,
+    recipient: ParaId,
+}
+</code></pre>
 <h2><a class="header" href="#upward-message" id="upward-message">Upward Message</a></h2>
 <p>A type of messages dispatched from a parachain to the relay chain.</p>
 <pre><code class="language-rust ignore">enum ParachainDispatchOrigin {
