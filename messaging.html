@@ -181,9 +181,9 @@ a parachain. Each parachain has a queue of dispatchables to be executed. There c
 The weight that processing of the dispatchables can consume is limited by a preconfigured value. Therefore, it is possible
 that some dispatchables will be left for later blocks. To make the dispatching more fair, the queues are processed turn-by-turn
 in a round robin fashion.</p>
-<p>Other kinds of upward messages can be introduced in the future as well. Potential candidates are channel management for
-horizontal message passing (XCMP and HRMP, both are to be described below), new validation code signalling, or other
-requests to the relay chain.</p>
+<p>Upward messages are also used by a parachain to request opening and closing HRMP channels (HRMP will be described below).</p>
+<p>Other kinds of upward messages can be introduced in the future as well. Potential candidates are
+new validation code signalling, or other requests to the relay chain.</p>
 <h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
 <p><img src="messaging_overview_1.generated.svg" alt="" /></p>
 <h3><a class="header" href="#cross-chain-message-passing" id="cross-chain-message-passing">Cross-Chain Message Passing</a></h3>

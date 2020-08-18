@@ -186,10 +186,6 @@ DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
 <p>HRMP related structs:</p>
 <pre><code class="language-rust ignore">/// A description of a request to open an HRMP channel.
 struct HrmpOpenChannelRequest {
-    /// The sender and the initiator of this request.
-    sender: ParaId,
-    /// The recipient of the opened request.
-    recipient: ParaId,
     /// Indicates if this request was confirmed by the recipient.
     confirmed: bool,
     /// How many session boundaries ago this request was seen.
@@ -200,19 +196,6 @@ struct HrmpOpenChannelRequest {
     limit_used_places: u32,
     /// The maximum total size of the messages that can be pending in the channel at once.
     limit_used_bytes: u32,
-}
-
-/// A description of a request to close an opened HRMP channel.
-struct HrmpCloseChannelRequest {
-    /// The para which initiated closing an existing channel.
-    ///
-    /// Invariant: it should be equal to one of the following
-    /// - `Some(sender)`
-    /// - `Some(recipient)`
-    /// - `None` in case the request initiated by the runtime (including governance, migration, etc)
-    initiator: Option&lt;ParaId&gt;,
-    /// The identifier of an HRMP channel to be closed.
-    id: HrmpChannelId,
 }
 
 /// A metadata of an HRMP channel.
@@ -242,14 +225,30 @@ struct HrmpChannel {
 }
 </code></pre>
 <p>HRMP related storage layout</p>
-<pre><code class="language-rust ignore">/// Pending HRMP open channel requests.
-HrmpOpenChannelRequests: Vec&lt;HrmpOpenChannelRequest&gt;;
+<pre><code class="language-rust ignore">/// The set of pending HRMP open channel requests.
+///
+/// The set is accompanied by a list for iteration.
+///
+/// Invariant:
+/// - There are no channels that exists in list but not in the set and vice versa.
+HrmpOpenChannelRequests: map HrmpChannelId =&gt; Option&lt;HrmpOpenChannelRequest&gt;;
+HrmpOpenChannelRequestsList: Vec&lt;HrmpChannelId&gt;;
+
 /// This mapping tracks how many open channel requests are inititated by a given sender para.
-/// Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `_.sender == X`
+/// Invariant: `HrmpOpenChannelRequestsList` should contain the same number of items that has `(X, _)`
 /// as the number of `HrmpOpenChannelRequestCount` for `X`.
 HrmpOpenChannelRequestCount: map ParaId =&gt; u32;
-/// Pending HRMP close channel requests.
-HrmpCloseChannelRequests: Vec&lt;HrmpCloseChannelRequest&gt;;
+
+/// A set of pending HRMP close channel requests that are going to be closed during the session change.
+/// Used for checking if a given channel is registered for closure.
+///
+/// The set is accompanied by a list for iteration.
+///
+/// Invariant:
+/// - There are no channels that exists in list but not in the set and vice versa.
+HrmpCloseChannelRequests: map HrmpChannelId =&gt; Option&lt;()&gt;;
+HrmpCloseChannelRequestsList: Vec&lt;HrmpChannelId&gt;;
+
 /// The HRMP watermark associated with each para.
 HrmpWatermarks: map ParaId =&gt; Option&lt;BlockNumber&gt;;
 /// HRMP channel data associated with each para.
@@ -270,57 +269,42 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 </code></pre>
 <h2><a class="header" href="#initialization" id="initialization">Initialization</a></h2>
 <p>No initialization routine runs for this module.</p>
-<h2><a class="header" href="#entry-points" id="entry-points">Entry points</a></h2>
-<p>The following routines are intended to be invoked by paras' upward messages.</p>
-<ul>
-<li>
-<p><code>hrmp_init_open_channel(recipient)</code>:</p>
-<ol>
-<li>Check that the origin of this message is a para. We say that the origin of this message is the <code>sender</code>.</li>
-<li>Check that the <code>sender</code> is not <code>recipient</code>.</li>
-<li>Check that the <code>recipient</code> para exists.</li>
-<li>Check that there is no existing open channel request from sender to recipient.</li>
-<li>Check that the sum of the number of already opened HRMP channels by the <code>sender</code> (the size of the set found <code>HrmpEgressChannelsIndex</code> for <code>sender</code>) and the number of open requests by the <code>sender</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>sender</code>) doesn't exceed the limit of channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
-<li>Reserve the deposit for the <code>sender</code> according to <code>config.hrmp_sender_deposit</code></li>
-<li>Add a new entry to <code>HrmpOpenChannelRequests</code> and increase <code>HrmpOpenChannelRequestCount</code> by 1 for the <code>sender</code>.
-<ol>
-<li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
-<li>Set <code>limit_used_places</code> to <code>config.hrmp_channel_max_places</code></li>
-<li>Set <code>limit_limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
-</ol>
-</li>
-</ol>
-</li>
-<li>
-<p><code>hrmp_accept_open_channel(i)</code>, <code>i</code> - is the index of open channel request:</p>
-<ol>
-<li>Check that the designated open channel request exists</li>
-<li>Check that the request's <code>recipient</code> corresponds to the origin of this message.</li>
-<li>Reserve the deposit for the <code>recipient</code> according to <code>config.hrmp_recipient_deposit</code></li>
-<li>Set the request's <code>confirmed</code> flag to <code>true</code>.</li>
-</ol>
-</li>
-<li>
-<p><code>hrmp_close_channel(sender, recipient)</code>:</p>
-<ol>
-<li>Check that the channel between <code>sender</code> and <code>recipient</code> exists</li>
-<li>Check that the origin of the message is either <code>sender</code> or <code>recipient</code></li>
-<li>Check that there is no existing intention to close the channel between <code>sender</code> and <code>recipient</code>.</li>
-<li>Add a new entry to <code>HrmpCloseChannelRequests</code> with initiator set to the <code>Some</code> variant with the origin of this message.</li>
-</ol>
-</li>
-</ul>
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
 <p>Candidate Acceptance Function:</p>
 <ul>
 <li><code>check_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;</code>:
 <ol>
 <li>Checks that there are at most <code>config.max_upward_message_num_per_candidate</code> messages.</li>
-<li>Checks each upward message individually depending on its kind:</li>
+<li>Checks each upward message <code>M</code> individually depending on its kind:</li>
 <li>If the message kind is <code>Dispatchable</code>:
 <ol>
 <li>Verify that <code>RelayDispatchQueueSize</code> for <code>P</code> has enough capacity for the message (NOTE that should include all processed
 upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
+</ol>
+</li>
+<li>If the message kind is <code>HrmpInitOpenChannel(recipient)</code>:
+<ol>
+<li>Check that the <code>P</code> is not <code>recipient</code>.</li>
+<li>Check that <code>recipient</code> is a valid para.</li>
+<li>Check that there is no existing open channel request (<code>P</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
+<li>Check that the sum of the number of already opened HRMP channels by the <code>sender</code> (the size
+of the set found <code>HrmpEgressChannelsIndex</code> for <code>sender</code>) and the number of open requests by the
+<code>sender</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>sender</code>) doesn't exceed the limit of
+channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
+<li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_sender_deposit</code></li>
+</ol>
+</li>
+<li>If the message kind is <code>HrmpAcceptOpenChannel(sender)</code>:
+<ol>
+<li>Check that there is existing request between (<code>sender</code>, <code>P</code>) in <code>HrmpOpenChannelRequests</code></li>
+<li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_recipient_deposit</code>.</li>
+</ol>
+</li>
+<li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
+<ol>
+<li>Check that <code>P</code> is either <code>ch.sender</code> or <code>ch.recipient</code></li>
+<li>Check that <code>HrmpChannels</code> for <code>ch</code> exists.</li>
+<li>Check that <code>ch</code> is not in the <code>HrmpCloseChannelRequests</code> set.</li>
 </ol>
 </li>
 </ol>
@@ -391,6 +375,32 @@ upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
 <li>Ensure that <code>P</code> is present in <code>NeedsDispatch</code>.</li>
 </ol>
 </li>
+<li>If the message kind is <code>HrmpInitOpenChannel(recipient)</code>:
+<ol>
+<li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for the <code>P</code>.</li>
+<li>Append <code>(P, recipient)</code> to <code>HrmpOpenChannelRequestsList</code>.</li>
+<li>Add a new entry to <code>HrmpOpenChannelRequests</code> for <code>(sender, recipient)</code>
+<ol>
+<li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
+<li>Set <code>limit_used_places</code> to <code>config.hrmp_channel_max_places</code></li>
+<li>Set <code>limit_limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
+</ol>
+</li>
+<li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_sender_deposit</code></li>
+</ol>
+</li>
+<li>If the message kind is <code>HrmpAcceptOpenChannel(sender)</code>:
+<ol>
+<li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_recipient_deposit</code></li>
+<li>For the request in <code>HrmpOpenChannelRequests</code> identified by <code>(sender, P)</code>, set <code>confirmed</code> flag to <code>true</code>.</li>
+</ol>
+</li>
+<li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
+<ol>
+<li>Insert a new entry <code>Some(())</code> to <code>HrmpCloseChannelRequests</code> for <code>ch</code>.</li>
+<li>Append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
+</ol>
+</li>
 </ol>
 </li>
 </ul>
@@ -451,10 +461,10 @@ that could take place on the course of handling these dispatchables.</p>
 <li>If <code>P</code> is in <code>NextDispatchRoundStartWith</code>, then reset it to <code>None</code></li>
 </ol>
 <ul>
-<li>Note that we don't remove the open/close requests since they are gon die out naturally.</li>
+<li>Note that if we don't remove the open/close requests since they are going to die out naturally at the end of the session.</li>
 </ul>
 <ol>
-<li>For each request <code>R</code> in <code>HrmpOpenChannelRequests</code>:
+<li>For each channel designator <code>D</code> in <code>HrmpOpenChannelRequestsList</code> we query the request <code>R</code> from <code>HrmpOpenChannelRequests</code>:
 <ol>
 <li>if <code>R.confirmed = false</code>:
 <ol>
@@ -462,29 +472,38 @@ that could take place on the course of handling these dispatchables.</p>
 <li>if <code>R.age</code> reached a preconfigured time-to-live limit <code>config.hrmp_open_request_ttl</code>, then:
 <ol>
 <li>refund <code>R.sender_deposit</code> to the sender</li>
-<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>R.sender</code> by 1.</li>
+<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>D.sender</code> by 1.</li>
 <li>remove <code>R</code></li>
+<li>remove <code>D</code></li>
 </ol>
 </li>
 </ol>
 </li>
 <li>if <code>R.confirmed = true</code>,
 <ol>
-<li>check that <code>R.sender</code> and <code>R.recipient</code> are not offboarded.</li>
-<li>create a new channel <code>C</code> between <code>(R.sender, R.recipient)</code>.
+<li>if both <code>D.sender</code> and <code>D.recipient</code> are not offboarded.</li>
+<li>create a new channel <code>C</code> between <code>(D.sender, D.recipient)</code>.
 <ol>
-<li>Initialize the <code>C.sender_deposit</code> with <code>R.sender_deposit</code> and <code>C.recipient_deposit</code> with the value found in the configuration <code>config.hrmp_recipient_deposit</code>.</li>
+<li>Initialize the <code>C.sender_deposit</code> with <code>R.sender_deposit</code> and <code>C.recipient_deposit</code>
+with the value found in the configuration <code>config.hrmp_recipient_deposit</code>.</li>
 <li>Insert <code>sender</code> into the set <code>HrmpIngressChannelsIndex</code> for the <code>recipient</code>.</li>
 <li>Insert <code>recipient</code> into the set <code>HrmpEgressChannelsIndex</code> for the <code>sender</code>.</li>
 </ol>
 </li>
-<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>R.sender</code> by 1.</li>
+<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>D.sender</code> by 1.</li>
 <li>remove <code>R</code></li>
+<li>remove <code>D</code></li>
 </ol>
 </li>
 </ol>
 </li>
-<li>For each request <code>R</code> in <code>HrmpCloseChannelRequests</code> remove the channel identified by <code>R.id</code>, if exists.</li>
+<li>For each channel designator <code>D</code> in <code>HrmpCloseChannelRequestsList</code>
+<ol>
+<li>remove the channel identified by <code>D</code>, if exists.</li>
+<li>remove <code>D</code> from <code>HrmpCloseChannelRequests</code>.</li>
+<li>remove <code>D</code> from <code>HrmpCloseChannelRequestsList</code></li>
+</ol>
+</li>
 </ol>
 <p>To remove a channel <code>C</code> identified with a tuple <code>(sender, recipient)</code>:</p>
 <ol>
