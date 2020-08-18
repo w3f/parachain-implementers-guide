@@ -2348,7 +2348,7 @@ When another block finality notification is received:</p>
 <li>The <a href="node/utility/../../types/availability.html#proofofvalidity"><code>PoV</code></a>.</li>
 </ul>
 <h3><a class="header" href="#determining-parameters" id="determining-parameters">Determining Parameters</a></h3>
-<p>For a <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided. The <a href="node/utility/../../types/availability.html#omittedvalidationdata"><code>OmittedValidationData</code></a> can be deconstructed into the validation data.</p>
+<p>For a <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided. The <a href="node/utility/../../types/candidate.html#transientvalidationdata"><code>TransientValidationData</code></a> is optional, and is used to perform further checks on the outputs of validation.</p>
 <p>For a <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>, some more work needs to be done. Due to the uncertainty of Availability Cores (implemented in the <a href="node/utility/../../runtime/scheduler.html"><code>Scheduler</code></a> module of the runtime), a candidate at a particular relay-parent and for a particular para may have two different valid validation-data to be executed under depending on what is assumed to happen if the para is occupying a core at the onset of the new block. This is encoded as an <code>OccupiedCoreAssumption</code> in the runtime API.</p>
 <p>The way that we can determine which assumption the candidate is meant to be executed under is simply to do an exhaustive check of both possibilities based on the state of the relay-parent. First we fetch the validation data under the assumption that the block occupying becomes available. If the <code>validation_data_hash</code> of the <code>CandidateDescriptor</code> matches this validation data, we use that. Otherwise, if the <code>validation_data_hash</code> matches the validation data fetched under the <code>TimedOut</code> assumption, we use that. Otherwise, we return a <code>ValidationResult::Invalid</code> response and conclude.</p>
 <p>Then, we can fetch the validation code from the runtime based on which type of candidate this is. This gives us all the parameters. The descriptor and PoV come from the request itself, and the other parameters have been derived from the state.</p>
@@ -2361,7 +2361,7 @@ When another block finality notification is received:</p>
 <li>The collator signature is valid</li>
 <li>The PoV provided matches the <code>pov_hash</code> field of the descriptor</li>
 </ul>
-<p>After that, we can invoke the validation function. Lastly, we do some final checks on the output:</p>
+<p>After that, we can invoke the validation function. Lastly, if available, we do some final checks on the output using the <code>TransientValidationData</code>:</p>
 <ul>
 <li>The produced head-data is no larger than the maximum allowed.</li>
 <li>The produced code upgrade, if any, is no larger than the maximum allowed, and a code upgrade was allowed to be signaled.</li>
@@ -2672,7 +2672,7 @@ struct CandidateDescriptor {
 	/// The blake2-256 hash of the persisted validation data. These are extra parameters
 	/// derived from relay-chain state that influence the validity of the block which
 	/// must also be kept available for secondary checkers.
-	validation_data_hash: Hash,
+	persisted_validation_data_hash: Hash,
 	/// The blake2-256 hash of the pov-block.
 	pov_hash: Hash,
 	/// Signature on blake2-256 of components of this receipt:
@@ -2710,23 +2710,13 @@ either that the relay-chain should maintain all the required data accessible or 
 </span>struct PersistedValidationData {
 	/// The parent head-data.
 	parent_head: HeadData,
-	/// Whether the parachain is allowed to upgrade its validation code.
-	///
-	/// This is `Some` if so, and contains the number of the minimum relay-chain
-	/// height at which the upgrade will be applied, if an upgrade is signaled
-	/// now.
-	///
-	/// A parachain should enact its side of the upgrade at the end of the first
-	/// parablock executing in the context of a relay-chain block with at least this
-	/// height. This may be equal to the current perceived relay-chain block height, in
-	/// which case the code upgrade should be applied at the end of the signaling
-	/// block.
-	///
-	/// This informs a relay-chain backing check and the parachain logic.
-	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
-
 	/// The relay-chain block number this is in the context of. This informs the collator.
 	block_number: BlockNumber,
+	/// The relay-chain 
+	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
+	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
+	/// sender.
+	hrmp_mqc_heads: Vec&lt;(ParaId, Hash)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2746,10 +2736,20 @@ either that the relay-chain should maintain all the required data accessible or 
 	max_head_data_size: u32,
 	/// The balance of the parachain at the moment of validation.
 	balance: Balance,
-	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
-	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
-	/// sender. This informs the collator.
-	hrmp_mqc_heads: Vec&lt;(ParaId, Hash)&gt;,
+	/// Whether the parachain is allowed to upgrade its validation code.
+	///
+	/// This is `Some` if so, and contains the number of the minimum relay-chain
+	/// height at which the upgrade will be applied, if an upgrade is signaled
+	/// now.
+	///
+	/// A parachain should enact its side of the upgrade at the end of the first
+	/// parablock executing in the context of a relay-chain block with at least this
+	/// height. This may be equal to the current perceived relay-chain block height, in
+	/// which case the code upgrade should be applied at the end of the signaling
+	/// block.
+	///
+	/// This informs a relay-chain backing check and the parachain logic.
+	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2810,8 +2810,8 @@ struct CandidateCommitments {
 </span>struct ValidationOutputs {
 	/// The head-data produced by validation.
 	head_data: HeadData,
-	/// The validation data, persisted and transient.
-	validation_data: ValidationData,
+	/// The validation data, persisted.
+	validation_data: PersistedValidationData,
 	/// Messages directed to other paras routed via the relay chain.
 	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Upwards messages to the relay chain.
@@ -3388,11 +3388,13 @@ enum CandidateValidationMessage {
 	/// the para is not free at the relay-parent, an error is returned.
 	ValidateFromChainState(CandidateDescriptor, PoV, ResponseChannel&lt;Result&lt;ValidationResult&gt;&gt;),
 
-	/// Validate a candidate with provided parameters. Explicitly provide the `OmittedValidationData`
+	/// Validate a candidate with provided parameters. Explicitly provide the `PersistedValidationData`
 	/// and `ValidationCode` so this can do full validation without needing to access the state of
-	/// the relay-chain.
+	/// the relay-chain. Optionally provide the `TransientValidationData` which will lead to checks
+	/// on the output.
 	ValidateFromExhaustive(
-		OmittedValidationData,
+		PersistedValidationData,
+		Option&lt;TransientValidationData&gt;,
 		ValidationCode,
 		CandidateDescriptor,
 		PoV,
