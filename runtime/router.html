@@ -246,7 +246,7 @@ HrmpOpenChannelRequests: map HrmpChannelId =&gt; Option&lt;HrmpOpenChannelReques
 HrmpOpenChannelRequestsList: Vec&lt;HrmpChannelId&gt;;
 
 /// This mapping tracks how many open channel requests are inititated by a given sender para.
-/// Invariant: `HrmpOpenChannelRequestsList` should contain the same number of items that has `(X, _)`
+/// Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `(X, _)`
 /// as the number of `HrmpOpenChannelRequestCount` for `X`.
 HrmpOpenChannelRequestCount: map ParaId =&gt; u32;
 
@@ -276,7 +276,7 @@ HrmpEgressChannelsIndex: map ParaId =&gt; Vec&lt;ParaId&gt;;
 HrmpChannelContents: map HrmpChannelId =&gt; Vec&lt;InboundHrmpMessage&gt;;
 /// Maintains a mapping that can be used to answer the question:
 /// What paras sent a message at the given block number for a given reciever.
-/// Invariant: The vector is never empty.
+/// Invariant: The para ids vector is never empty.
 HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;;
 <span class="boring">}
 </span></code></pre></pre>
@@ -357,7 +357,7 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 <li><code>queue_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
 <ol>
 <li>For each horizontal message <code>HM</code> with the channel <code>C</code> identified by <code>(sender, HM.recipient)</code>:</li>
-<li>Append <code>HM</code> into <code>HrmpChannelContents</code> that corresponds to <code>C</code>.</li>
+<li>Append <code>HM</code> into <code>HrmpChannelContents</code> that corresponds to <code>C</code> with <code>sent_at</code> equals to the current block number.</li>
 <li>Locate or create an entry in <code>HrmpChannelDigests</code> for <code>HM.recipient</code> and append <code>sender</code> into the entry's list.</li>
 <li>Increment <code>C.used_places</code></li>
 <li>Increment <code>C.used_bytes</code> by <code>HM</code>'s payload size</li>
@@ -475,6 +475,7 @@ that could take place on the course of handling these dispatchables.</p>
 <li>Remove all <code>DownwardMessageQueues</code> of <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueueSize</code> of <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueues</code> of <code>P</code>.</li>
+<li>Remove <code>HrmpOpenChannelRequestCount</code> for <code>P</code></li>
 <li>Remove <code>P</code> if it exists in <code>NeedsDispatch</code>.</li>
 <li>If <code>P</code> is in <code>NextDispatchRoundStartWith</code>, then reset it to <code>None</code></li>
 </ol>
@@ -515,7 +516,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 </li>
 </ol>
 </li>
-<li>For each channel designator <code>D</code> in <code>HrmpCloseChannelRequestsList</code>
+<li>For each HRMP channel designator <code>D</code> in <code>HrmpCloseChannelRequestsList</code>
 <ol>
 <li>remove the channel identified by <code>D</code>, if exists.</li>
 <li>remove <code>D</code> from <code>HrmpCloseChannelRequests</code>.</li>
@@ -523,7 +524,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 </ol>
 </li>
 </ol>
-<p>To remove a channel <code>C</code> identified with a tuple <code>(sender, recipient)</code>:</p>
+<p>To remove a HRMP channel <code>C</code> identified with a tuple <code>(sender, recipient)</code>:</p>
 <ol>
 <li>Return <code>C.sender_deposit</code> to the <code>sender</code>.</li>
 <li>Return <code>C.recipient_deposit</code> to the <code>recipient</code>.</li>

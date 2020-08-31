@@ -236,6 +236,9 @@ This message ends up in the recipient's mailbox. A size of a horizontal message 
 }
 
 struct InboundHrmpMessage {
+	/// The block number at which this message was sent.
+	/// Specifically, it is the block number at which the candidate that sends this message was
+	/// enacted.
 	pub sent_at: BlockNumber,
 	/// The message payload.
 	pub data: Vec&lt;u8&gt;,
