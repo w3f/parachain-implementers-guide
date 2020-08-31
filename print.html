@@ -1120,7 +1120,10 @@ CurrentSessionIndex: SessionIndex;
 <p>The Router module is responsible for all messaging mechanisms supported between paras and the relay chain, specifically: UMP, DMP, HRMP and later XCMP.</p>
 <h2><a class="header" href="#storage-6" id="storage-6">Storage</a></h2>
 <p>Storage layout:</p>
-<pre><code class="language-rust ignore">/// Paras that are to be cleaned up at the end of the session.
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Paras that are to be cleaned up at the end of the session.
 /// The entries are sorted ascending by the para id.
 OutgoingParas: Vec&lt;ParaId&gt;;
 /// Dispatchable objects ready to be dispatched onto the relay chain. The messages are processed in FIFO order.
@@ -1138,10 +1141,14 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 NextDispatchRoundStartWith: Option&lt;ParaId&gt;;
 /// The downward messages addressed for a certain para.
 DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
-</code></pre>
+<span class="boring">}
+</span></code></pre></pre>
 <h3><a class="header" href="#hrmp" id="hrmp">HRMP</a></h3>
 <p>HRMP related structs:</p>
-<pre><code class="language-rust ignore">/// A description of a request to open an HRMP channel.
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// A description of a request to open an HRMP channel.
 struct HrmpOpenChannelRequest {
     /// Indicates if this request was confirmed by the recipient.
     confirmed: bool,
@@ -1180,9 +1187,13 @@ struct HrmpChannel {
     /// that no messages were previously added.
     mqc_head: Hash,
 }
-</code></pre>
+<span class="boring">}
+</span></code></pre></pre>
 <p>HRMP related storage layout</p>
-<pre><code class="language-rust ignore">/// The set of pending HRMP open channel requests.
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The set of pending HRMP open channel requests.
 ///
 /// The set is accompanied by a list for iteration.
 ///
@@ -1222,8 +1233,10 @@ HrmpEgressChannelsIndex: map ParaId =&gt; Vec&lt;ParaId&gt;;
 HrmpChannelContents: map HrmpChannelId =&gt; Vec&lt;InboundHrmpMessage&gt;;
 /// Maintains a mapping that can be used to answer the question:
 /// What paras sent a message at the given block number for a given reciever.
+/// Invariant: The vector is never empty.
 HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;;
-</code></pre>
+<span class="boring">}
+</span></code></pre></pre>
 <h2><a class="header" href="#initialization-3" id="initialization-3">Initialization</a></h2>
 <p>No initialization routine runs for this module.</p>
 <h2><a class="header" href="#routines-4" id="routines-4">Routines</a></h2>
@@ -1243,6 +1256,7 @@ upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
 <ol>
 <li>Check that the <code>P</code> is not <code>recipient</code>.</li>
 <li>Check that <code>recipient</code> is a valid para.</li>
+<li>Check that there is no existing channel for <code>(P, recipient)</code> in <code>HrmpChannels</code>.</li>
 <li>Check that there is no existing open channel request (<code>P</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
 <li>Check that the sum of the number of already opened HRMP channels by the <code>sender</code> (the size
 of the set found <code>HrmpEgressChannelsIndex</code> for <code>sender</code>) and the number of open requests by the
@@ -1253,7 +1267,11 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 </li>
 <li>If the message kind is <code>HrmpAcceptOpenChannel(sender)</code>:
 <ol>
-<li>Check that there is existing request between (<code>sender</code>, <code>P</code>) in <code>HrmpOpenChannelRequests</code></li>
+<li>Check that there is an existing request between (<code>sender</code>, <code>P</code>) in <code>HrmpOpenChannelRequests</code>
+<ol>
+<li>Check that it is not confirmed.</li>
+</ol>
+</li>
 <li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_recipient_deposit</code>.</li>
 </ol>
 </li>
@@ -2811,6 +2829,9 @@ struct CandidateDescriptor {
 <p>This information is derived from the chain state and will vary from para to para, although some of the fields may be the same for every para.</p>
 <p>Persisted validation data are generally derived from some relay-chain state to form inputs to the validation function, and as such need to be persisted by the availability system to avoid dependence on availability of the relay-chain state. The backing phase of the inclusion pipeline ensures that everything that is included in a valid fork of the relay-chain already adheres to the transient constraints.</p>
 <p>The validation data also serve the purpose of giving collators a means of ensuring that their produced candidate and the commitments submitted to the relay-chain alongside it will pass the checks done by the relay-chain when backing, and give validators the same understanding when determining whether to second or attest to a candidate.</p>
+<p>Furthermore, the validation data acts as a way to authorize the additional data the collator needs to pass to the validation
+function. For example, the validation function can check whether the incoming messages (e.g. downward messages) were actually
+sent by using the data provided in the validation data using so called MQC heads.</p>
 <p>Since the commitments of the validation function are checked by the relay-chain, secondary checkers can rely on the invariant that the relay-chain only includes para-blocks for which these checks have already been done. As such, there is no need for the validation data used to inform validators and collators about the checks the relay-chain will perform to be persisted by the availability system. Nevertheless, we expose it so the backing validators can validate the outputs of a candidate before voting to submit it to the relay-chain and so collators can collate candidates that satisfy the criteria implied these transient validation data.</p>
 <p>Design-wise we should maintain two properties about this data structure:</p>
 <ol>
@@ -2837,16 +2858,19 @@ either that the relay-chain should maintain all the required data accessible or 
 	parent_head: HeadData,
 	/// The relay-chain block number this is in the context of. This informs the collator.
 	block_number: BlockNumber,
-	/// The relay-chain 
 	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
 	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
 	/// sender.
+	///
+	/// The MQC heads will be used by the validation function to authorize the input messages passed
+	/// by the collator.
 	hrmp_mqc_heads: Vec&lt;(ParaId, Hash)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#transientvalidationdata" id="transientvalidationdata">TransientValidationData</a></h2>
 <p>These validation data are derived from some relay-chain state to check outputs of the validation function.</p>
+<p>It's worth noting that all the data is collected <strong>before</strong> the candidate execution.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -2875,6 +2899,53 @@ either that the relay-chain should maintain all the required data accessible or 
 	///
 	/// This informs a relay-chain backing check and the parachain logic.
 	code_upgrade_allowed: Option&lt;BlockNumber&gt;,
+	/// A copy of `config.max_upward_message_num_per_candidate` for checking that a candidate doesn't
+	/// send more messages that permitted.
+	config_max_upward_message_num_per_candidate: u32,
+	/// The number of messages pending of the downward message queue.
+	dmq_length: u32,
+	/// A part of transient validation data related to HRMP.
+	hrmp: HrmpTransientValidationData,
+}
+
+struct HrmpTransientValidationData {
+	/// A vector that enumerates the list of blocks in which there was at least one HRMP message
+	/// received.
+	///
+	/// The first number in the vector, if any, is always greater than the HRMP watermark. The
+	/// elements are ordered by ascending the block number. The vector doesn't contain duplicates.
+	digest: Vec&lt;BlockNumber&gt;,
+	/// The watermark of the HRMP. That is, the block number up to which (inclusive) all HRMP messages
+	/// sent to the parachain are processed.
+	watermark: BlockNumber,
+	/// A mapping that specifies if the parachain can send an HRMP message to the given recipient
+	/// channel. A candidate can send a message only to the recipients that are present in this
+	/// mapping. The number elements in this vector corresponds to the number of egress channels.
+	/// Since it's a mapping there can't be two items with same `ParaId`.
+	egress_limits: Vec&lt;(ParaId, HrmpChannelLimits)&gt;,
+	/// A vector of paras that have a channel to this para. The number of elements in this vector
+	/// correponds to the number of ingress channels. The items are ordered ascending by `ParaId`.
+	/// The vector doesn't contain two entries with the same `ParaId`.
+	ingress_senders: Vec&lt;ParaId&gt;,
+	/// A vector of open requests in which the para participates either as sender or recipient. The
+	/// items are ordered ascending by `HrmpChannelId`. The vector doesn't contain two entries
+	/// with the same `HrmpChannelId`.
+	open_requests: Vec&lt;(HrmpChannelId, HrmpAbridgedOpenChannelRequest)&gt;,
+	/// A vector of close requests in which the para participates either as sender or recipient.
+	/// The vector doesn't contain two entries with the same `HrmpChannelId`.
+	close_requests: Vec&lt;HrmpChannelId&gt;,
+}
+
+/// A shorter version of `HrmpOpenChannelRequest`.
+struct HrmpAbridgedOpenChannelRequest {
+	confirmed: bool,
+}
+
+struct HrmpChannelLimits {
+	/// Indicates if the channel is already full and cannot accept any more messages.
+	is_full: bool,
+	/// A message sent to the channel can occupy only that many bytes.
+	available_size: u32,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -3643,6 +3714,7 @@ unidirectional, meaning that <code>(A, B)</code> and <code>(B, A)</code> refer t
 that we use the first item tuple for the sender and the second for the recipient. Only one channel
 is allowed between two participants in one direction, i.e. there cannot be 2 different channels
 identified by <code>(A, B)</code>.</p>
+<p><code>HrmpChannelId</code> has a defined ordering: first <code>sender</code> and tie is resolved by <code>recipient</code>.</p>
 <pre><code class="language-rust ignore">struct HrmpChannelId {
     sender: ParaId,
     recipient: ParaId,
