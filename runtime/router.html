@@ -230,6 +230,8 @@ struct HrmpChannel {
     limit_used_places: u32,
     /// The maximum total size of the messages that can be pending in the channel at once.
     limit_used_bytes: u32,
+    /// The maximum message size that could be put into the channel.
+    limit_message_size: u32,
     /// The current number of messages pending in the channel.
     /// Invariant: should be less or equal to `limit_used_places`.
     used_places: u32,
@@ -314,9 +316,11 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
 </ol>
 </li>
-<li>If the message kind is <code>HrmpInitOpenChannel(recipient)</code>:
+<li>If the message kind is <code>HrmpInitOpenChannel(recipient, max_places, max_message_size)</code>:
 <ol>
 <li>Check that the <code>P</code> is not <code>recipient</code>.</li>
+<li>Check that <code>max_places</code> is less or equal to <code>config.hrmp_channel_max_places</code>.</li>
+<li>Check that <code>max_message_size</code> is less or equal to <code>config.hrmp_channel_max_message_size</code>.</li>
 <li>Check that <code>recipient</code> is a valid para.</li>
 <li>Check that there is no existing channel for <code>(P, recipient)</code> in <code>HrmpChannels</code>.</li>
 <li>Check that there is no existing open channel request (<code>P</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
@@ -369,6 +373,7 @@ minus 1.</li>
 <li>For each horizontal message <code>M</code> with the channel <code>C</code> identified by <code>(sender, M.recipient)</code> check:
 <ol>
 <li>exists</li>
+<li><code>M</code>'s payload size doesn't exceed a preconfigured limit <code>C.limit_message_size</code></li>
 <li><code>M</code>'s payload size summed with the <code>C.used_bytes</code> doesn't exceed a preconfigured limit <code>C.limit_used_bytes</code>.</li>
 <li><code>C.used_places + 1</code> doesn't exceed a preconfigured limit <code>C.limit_used_places</code>.</li>
 </ol>
@@ -417,15 +422,16 @@ minus 1.</li>
 <li>Ensure that <code>P</code> is present in <code>NeedsDispatch</code>.</li>
 </ol>
 </li>
-<li>If the message kind is <code>HrmpInitOpenChannel(recipient)</code>:
+<li>If the message kind is <code>HrmpInitOpenChannel(recipient, max_places, max_message_size)</code>:
 <ol>
 <li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for <code>P</code>.</li>
 <li>Append <code>(P, recipient)</code> to <code>HrmpOpenChannelRequestsList</code>.</li>
 <li>Add a new entry to <code>HrmpOpenChannelRequests</code> for <code>(sender, recipient)</code>
 <ol>
 <li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
-<li>Set <code>limit_used_places</code> to <code>config.hrmp_channel_max_places</code></li>
-<li>Set <code>limit_limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
+<li>Set <code>limit_used_places</code> to <code>max_places</code></li>
+<li>Set <code>limit_message_size</code> to <code>max_message_size</code></li>
+<li>Set <code>limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
 </ol>
 </li>
 <li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_sender_deposit</code></li>
