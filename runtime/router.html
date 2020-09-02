@@ -182,8 +182,23 @@ NeedsDispatch: Vec&lt;ParaId&gt;;
 /// This is the para that gets will get dispatched first during the next upward dispatchable queue
 /// execution round.
 NextDispatchRoundStartWith: Option&lt;ParaId&gt;;
-/// The downward messages addressed for a certain para.
-DownwardMessageQueues: map ParaId =&gt; Vec&lt;DownwardMessage&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<h3><a class="header" href="#downward-message-passing-dmp" id="downward-message-passing-dmp">Downward Message Passing (DMP)</a></h3>
+<p>Storage layout required for implementation of DMP.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// The downward messages addressed for a certain para.
+DownwardMessageQueues: map ParaId =&gt; Vec&lt;InboundDownwardMessage&gt;;
+/// A mapping that stores the downward message queue MQC head for each para.
+///
+/// Each link in this chain has a form:
+/// `(prev_head, B, H(M))`, where
+/// - `prev_head`: is the previous head hash.
+/// - `B`: is the relay-chain block number in which a message was appended.
+/// - `H(M)`: is the hash of the message being appended.
+DownwardMessageQueueHeads: map ParaId =&gt; Option&lt;Hash&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h3><a class="header" href="#hrmp" id="hrmp">HRMP</a></h3>
@@ -249,6 +264,10 @@ HrmpOpenChannelRequestsList: Vec&lt;HrmpChannelId&gt;;
 /// Invariant: `HrmpOpenChannelRequests` should contain the same number of items that has `(X, _)`
 /// as the number of `HrmpOpenChannelRequestCount` for `X`.
 HrmpOpenChannelRequestCount: map ParaId =&gt; u32;
+/// This mapping tracks how many open channel requests were accepted by a given recipient para.
+/// Invariant: `HrmpOpenChannelRequests` should contain the same number of items `(_, X)` with
+/// `confirmed` set to true, as the number of `HrmpAcceptedChannelRequestCount` for `X`.
+HrmpAcceptedChannelRequestCount: map ParaId =&gt; u32;
 
 /// A set of pending HRMP close channel requests that are going to be closed during the session change.
 /// Used for checking if a given channel is registered for closure.
@@ -285,7 +304,7 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
 <p>Candidate Acceptance Function:</p>
 <ul>
-<li><code>check_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;</code>:
+<li><code>check_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;</code>):
 <ol>
 <li>Checks that there are at most <code>config.max_upward_message_num_per_candidate</code> messages.</li>
 <li>Checks each upward message <code>M</code> individually depending on its kind:</li>
@@ -301,9 +320,9 @@ upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
 <li>Check that <code>recipient</code> is a valid para.</li>
 <li>Check that there is no existing channel for <code>(P, recipient)</code> in <code>HrmpChannels</code>.</li>
 <li>Check that there is no existing open channel request (<code>P</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
-<li>Check that the sum of the number of already opened HRMP channels by the <code>sender</code> (the size
-of the set found <code>HrmpEgressChannelsIndex</code> for <code>sender</code>) and the number of open requests by the
-<code>sender</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>sender</code>) doesn't exceed the limit of
+<li>Check that the sum of the number of already opened HRMP channels by the <code>P</code> (the size
+of the set found <code>HrmpEgressChannelsIndex</code> for <code>P</code>) and the number of open requests by the
+<code>P</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>P</code>) doesn't exceed the limit of
 channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
 <li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_sender_deposit</code></li>
 </ol>
@@ -316,6 +335,11 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 </ol>
 </li>
 <li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_recipient_deposit</code>.</li>
+<li>Check that the sum of the number of inbound HRMP channels opened to <code>P</code> (the size of the set
+found in <code>HrmpIngressChannelsIndex</code> for <code>P</code>) and the number of accepted open requests by the <code>P</code>
+(the value from <code>HrmpAcceptedChannelRequestCount</code> for <code>P</code>) doesn't exceed the limit of channels
+(<code>config.hrmp_max_parachain_inbound_channels</code> or <code>config.hrmp_max_parathread_inbound_channels</code>)
+minus 1.</li>
 </ol>
 </li>
 <li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
@@ -395,7 +419,7 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 </li>
 <li>If the message kind is <code>HrmpInitOpenChannel(recipient)</code>:
 <ol>
-<li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for the <code>P</code>.</li>
+<li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for <code>P</code>.</li>
 <li>Append <code>(P, recipient)</code> to <code>HrmpOpenChannelRequestsList</code>.</li>
 <li>Add a new entry to <code>HrmpOpenChannelRequests</code> for <code>(sender, recipient)</code>
 <ol>
@@ -411,12 +435,13 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 <ol>
 <li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_recipient_deposit</code></li>
 <li>For the request in <code>HrmpOpenChannelRequests</code> identified by <code>(sender, P)</code>, set <code>confirmed</code> flag to <code>true</code>.</li>
+<li>Increase <code>HrmpAcceptedChannelRequestCount</code> by 1 for <code>P</code>.</li>
 </ol>
 </li>
 <li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
 <ol>
-<li>Insert a new entry <code>Some(())</code> to <code>HrmpCloseChannelRequests</code> for <code>ch</code>.</li>
-<li>Append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
+<li>If not already there, insert a new entry <code>Some(())</code> to <code>HrmpCloseChannelRequests</code> for <code>ch</code>
+and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
 </ol>
 </li>
 </ol>
@@ -431,41 +456,42 @@ channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>conf
 any of dispatchables return an error.</p>
 <p><code>process_upward_dispatchables()</code>:</p>
 <ol>
-<li>
-<p>Initialize a cumulative weight counter <code>T</code> to 0</p>
-</li>
-<li>
-<p>Initialize a local in memory dictionary <code>R</code> that maps <code>ParaId</code> to a vector of <code>DispatchResult</code>.</p>
-</li>
-<li>
-<p>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:</p>
+<li>Initialize a cumulative weight counter <code>T</code> to 0</li>
+<li>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:
 <ol>
-<li>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></li>
-<li>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></li>
-<li>Decode <code>D</code> into a dispatchable. If failed append <code>DispatchResult::DecodeFailed</code> into <code>R</code> for <code>P</code>. Otherwise, if succeeded:
-<ol>
-<li>If <code>weight_of(D) &gt; config.dispatchable_upward_message_critical_weight</code> then append <code>DispatchResult::CriticalWeightExceeded</code> into <code>R</code> for <code>P</code>. Otherwise:</li>
-<li>Execute <code>D</code> and add the actual amount of weight consumed to <code>T</code>. Add the <code>DispatchResult</code> into <code>R</code> for <code>P</code>.</li>
-</ol>
+<li>
+<p>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></p>
 </li>
+<li>
+<p>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></p>
+</li>
+<li>
+<p>Decode <code>D</code> into a dispatchable. Otherwise, if succeeded:</p>
+<ol>
+<li>If <code>weight_of(D) &gt; config.dispatchable_upward_message_critical_weight</code> then skip the dispatchable. Otherwise:</li>
+<li>Execute <code>D</code> and add the actual amount of weight consumed to <code>T</code>.</li>
 <li>If <code>weight_of(D) + T &gt; config.preferred_dispatchable_upward_messages_step_weight</code>, set <code>NextDispatchRoundStartWith</code> to <code>P</code> and finish processing.</li>
 </ol>
 <blockquote>
 <p>NOTE that in practice we would need to approach the weight calculation more thoroughly, i.e. incorporate all operations
 that could take place on the course of handling these dispatchables.</p>
 </blockquote>
-<ol>
-<li>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</li>
-<li>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</li>
-</ol>
 </li>
 <li>
-<p>Then, for each <code>P</code> and the vector of <code>DispatchResult</code> in <code>R</code>:</p>
-<ol>
-<li>Obtain a message by wrapping the vector into <code>DownwardMessage::DispatchResult</code></li>
-<li>Append the resulting message to <code>DownwardMessageQueues</code> for <code>P</code>.</li>
+<p>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</p>
+</li>
+<li>
+<p>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</p>
+</li>
 </ol>
 </li>
+</ol>
+<p>Utility routines.</p>
+<p><code>queue_downward_message(P: ParaId, M: DownwardMessage)</code>:</p>
+<ol>
+<li>Wrap <code>M</code> into <code>InboundDownwardMessage</code> using the current block number for <code>sent_at</code>.</li>
+<li>Obtain a new MQC link for the resulting <code>InboundDownwardMessage</code> and replace <code>DownwardMessageQueueHeads</code> for <code>P</code> with the resulting hash.</li>
+<li>Add the resulting <code>InboundDownwardMessage</code> into <code>DownwardMessageQueues</code> for <code>P</code>.</li>
 </ol>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
 <ol>
@@ -473,9 +499,11 @@ that could take place on the course of handling these dispatchables.</p>
 <li>Remove all inbound channels of <code>P</code>, i.e. <code>(_, P)</code>,</li>
 <li>Remove all outbound channels of <code>P</code>, i.e. <code>(P, _)</code>,</li>
 <li>Remove all <code>DownwardMessageQueues</code> of <code>P</code>.</li>
+<li>Remove <code>DownwardMessageQueueHeads</code> for <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueueSize</code> of <code>P</code>.</li>
 <li>Remove <code>RelayDispatchQueues</code> of <code>P</code>.</li>
 <li>Remove <code>HrmpOpenChannelRequestCount</code> for <code>P</code></li>
+<li>Remove <code>HrmpAcceptedChannelRequestCount</code> for <code>P</code>.</li>
 <li>Remove <code>P</code> if it exists in <code>NeedsDispatch</code>.</li>
 <li>If <code>P</code> is in <code>NextDispatchRoundStartWith</code>, then reset it to <code>None</code></li>
 </ol>
@@ -510,6 +538,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 </ol>
 </li>
 <li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>D.sender</code> by 1.</li>
+<li>decrement <code>HrmpAcceptedChannelRequestCount</code> for <code>D.recipient</code> by 1.</li>
 <li>remove <code>R</code></li>
 <li>remove <code>D</code></li>
 </ol>
