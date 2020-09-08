@@ -175,20 +175,19 @@
 </ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
 <p>Overarching network protocol + job for every relay-parent</p>
-<blockquote>
-<p>TODO The Candidate Selection network protocol is currently intentionally unspecified pending further discussion.</p>
-</blockquote>
-<p>Several approaches have been selected, but all have some issues:</p>
-<ul>
-<li>The most straightforward approach is for this subsystem to simply second the first valid parablock candidate which it sees per relay head. However, that protocol is vulnerable to a single collator which, as an attack or simply through chance, gets its block candidate to the node more often than its fair share of the time.</li>
-<li>It may be possible to do some BABE-like selection algorithm to choose an &quot;Official&quot; collator for the round, but that is tricky because the collator which produces the PoV does not necessarily actually produce the block.</li>
-<li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
-<li>A variation of that scheme would be to randomly choose a number <code>I</code>, and have a fixed acceptance window <code>D</code> for parablock candidates. At the end of the period <code>D</code>, count <code>C</code>: the number of parablock candidates received. Second the one with index <code>I % C</code>. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
-</ul>
+<p>For the moment, the candidate selection algorithm is simply to second the first valid parablock candidate per relay head. See <a href="#future-work">Future Work</a>.</p>
 <h2><a class="header" href="#candidate-selection-job" id="candidate-selection-job">Candidate Selection Job</a></h2>
 <ul>
 <li>Aware of validator key and assignment</li>
 <li>One job for each relay-parent, which selects up to one collation for the Candidate Backing Subsystem</li>
+</ul>
+<h2><a class="header" href="#future-work" id="future-work">Future Work</a></h2>
+<p>Several approaches have been discussed, but all have some issues:</p>
+<ul>
+<li>The current approach is very straightforward. However, that protocol is vulnerable to a single collator which, as an attack or simply through chance, gets its block candidate to the node more often than its fair share of the time.</li>
+<li>It may be possible to do some BABE-like selection algorithm to choose an &quot;Official&quot; collator for the round, but that is tricky because the collator which produces the PoV does not necessarily actually produce the block.</li>
+<li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
+<li>A variation of that scheme would be to randomly choose a number <code>I</code>, and have a fixed acceptance window <code>D</code> for parablock candidates. At the end of the period <code>D</code>, count <code>C</code>: the number of parablock candidates received. Second the one with index <code>I % C</code>. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
 </ul>
 
                     </main>

@@ -1916,13 +1916,14 @@ struct CollationGenerationConfig {
 <blockquote>
 <p>TODO: note the incremental validation function Ximin proposes at https://github.com/paritytech/polkadot/issues/1348</p>
 </blockquote>
-<p>As this network protocol serves as a bridge between collators and validators, it communicates primarily with one subsystem on behalf of each. As a collator, this will receive messages from the <a href="node/collators/collation-generation.html"><code>CollationGeneration</code></a> subsystem. As a validator, this will communicate with the <a href="node/collators/../backing/candidate-backing.html"><code>CandidateBacking</code></a> subsystem.</p>
+<p>As this network protocol serves as a bridge between collators and validators, it communicates primarily with one subsystem on behalf of each. As a collator, this will receive messages from the <a href="node/collators/collation-generation.html"><code>CollationGeneration</code></a> subsystem. As a validator, this will communicate with the <a href="node/collators/../backing/candidate-backing.html"><code>CandidateBacking</code></a> and <a href="node/collators/../backing/candidate-selection.html"><code>CandidateSelection</code></a> subsystems.</p>
 <h2><a class="header" href="#protocol-1" id="protocol-1">Protocol</a></h2>
-<p>Input: <a href="node/collators/../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a></p>
+<p>Input: <a href="node/collators/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="node/collators/../../types/overseer-protocol.html#runtimeapimessage"><code>RuntimeApiMessage</code></a></li>
-<li><a href="node/collators/../../types/overseer-protocol.html#networkbridgemessage"><code>NetworkBridgeMessage</code></a></li>
+<li><a href="node/collators/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+<li><a href="node/collators/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></li>
+<li><a href="node/collators/../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></li>
 </ul>
 <h2><a class="header" href="#functionality-1" id="functionality-1">Functionality</a></h2>
 <p>This network protocol uses the <code>Collation</code> peer-set of the <a href="node/collators/../utility/network-bridge.html"><code>NetworkBridge</code></a>.</p>
@@ -1942,7 +1943,7 @@ struct CollationGenerationConfig {
 <ul>
 <li>Determine which core the para collated-on is assigned to.</li>
 <li>Determine the group on that core and the next group on that core.</li>
-<li>Issue a discovery request for the validators of the current group and the next group with<a href="node/collators/../../types/overseer-protocol.html#networkbridgemessage"><code>NetworkBridgeMessage</code></a><code>::ConnectToValidators</code>.</li>
+<li>Issue a discovery request for the validators of the current group and the next group with<a href="node/collators/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a><code>::ConnectToValidators</code>.</li>
 </ul>
 <p>Once connected to the relevant peers for the current group assigned to the core (transitively, the para), advertise the collation to any of them which advertise the relay-parent in their view (as provided by the <a href="node/collators/../utility/network-bridge.html">Network Bridge</a>). If any respond with a request for the full collation, provide it. Upon receiving a view update from any of these peers which includes a relay-parent for which we have a collation that they will find relevant, advertise the collation to them if we haven't already.</p>
 <h3><a class="header" href="#validators-1" id="validators-1">Validators</a></h3>
@@ -1950,9 +1951,13 @@ struct CollationGenerationConfig {
 <p><img src="node/collators/collator_protocol_1.generated.svg" alt="" /></p>
 <p>When peers connect to us, they can <code>Declare</code> that they represent a collator with given public key. Once they've declared that, they can begin to send advertisements of collations. The peers should not send us any advertisements for collations that are on a relay-parent outside of our view.</p>
 <p>The protocol tracks advertisements received and the source of the advertisement. The advertisement source is the <code>PeerId</code> of the peer who sent the message. We accept one advertisement per collator per source per relay-parent.</p>
-<p>As a validator, we will handle requests from other subsystems to fetch a collation on a specific <code>ParaId</code> and relay-parent. These requests are made with the <a href="node/collators/../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code>. To do so, we need to first check if we have already gathered a collation on that <code>ParaId</code> and relay-parent. If not, we need to select one of the advertisements and issue a request for it. If we've already issued a request, we shouldn't issue another one until the first has returned.</p>
+<p>As a validator, we will handle requests from other subsystems to fetch a collation on a specific <code>ParaId</code> and relay-parent. These requests are made with the <a href="node/collators/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code>. To do so, we need to first check if we have already gathered a collation on that <code>ParaId</code> and relay-parent. If not, we need to select one of the advertisements and issue a request for it. If we've already issued a request, we shouldn't issue another one until the first has returned.</p>
 <p>When acting on an advertisement, we issue a <code>WireMessage::RequestCollation</code>. If the request times out, we need to note the collator as being unreliable and reduce its priority relative to other collators. And then make another request - repeat until we get a response or the chain has moved on.</p>
-<p>As a validator, once the collation has been fetched some other subsystem will inspect and do deeper validation of the collation. The subsystem will report to this subsystem with a <a href="node/collators/../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a><code>::ReportCollator</code> or <code>NoteGoodCollation</code> message. In that case, if we are connected directly to the collator, we apply a cost to the <code>PeerId</code> associated with the collator and potentially disconnect or blacklist it.</p>
+<p>As a validator, once the collation has been fetched some other subsystem will inspect and do deeper validation of the collation. The subsystem will report to this subsystem with a <a href="node/collators/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::ReportCollator</code> or <code>NoteGoodCollation</code> message. In that case, if we are connected directly to the collator, we apply a cost to the <code>PeerId</code> associated with the collator and potentially disconnect or blacklist it.</p>
+<h3><a class="header" href="#interaction-with-a-hrefnodecollatorsbackingcandidate-selectionhtmlcandidate-selectiona" id="interaction-with-a-hrefnodecollatorsbackingcandidate-selectionhtmlcandidate-selectiona">Interaction with <a href="node/collators/../backing/candidate-selection.html">Candidate Selection</a></a></h3>
+<p>As collators advertise the availability, we notify the Candidate Selection subsystem with a <a href="node/collators/../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelection</code></a><code>::Collation</code> message. Note that this message is lightweight: it only contains the relay parent, para id, and collator id.</p>
+<p>At that point, the Candidate Selection algorithm is free to use an arbitrary algorithm to determine which if any of these messages to follow up on. It is expected to use the <a href="node/collators/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code> message to follow up.</p>
+<p>The intent behind this design is to minimize the total number of (large) collations which must be transmitted.</p>
 <h1><a class="header" href="#backing-subsystems" id="backing-subsystems">Backing Subsystems</a></h1>
 <p>The backing subsystems, when conceived as a black box, receive an arbitrary quantity of parablock candidates and associated proofs of validity from arbitrary untrusted collators. From these, they produce a bounded quantity of backable candidates which relay chain block authors may choose to include in a subsequent block.</p>
 <p>In broad strokes, the flow operates like this:</p>
@@ -1978,20 +1983,19 @@ struct CollationGenerationConfig {
 </ul>
 <h2><a class="header" href="#functionality-2" id="functionality-2">Functionality</a></h2>
 <p>Overarching network protocol + job for every relay-parent</p>
-<blockquote>
-<p>TODO The Candidate Selection network protocol is currently intentionally unspecified pending further discussion.</p>
-</blockquote>
-<p>Several approaches have been selected, but all have some issues:</p>
-<ul>
-<li>The most straightforward approach is for this subsystem to simply second the first valid parablock candidate which it sees per relay head. However, that protocol is vulnerable to a single collator which, as an attack or simply through chance, gets its block candidate to the node more often than its fair share of the time.</li>
-<li>It may be possible to do some BABE-like selection algorithm to choose an &quot;Official&quot; collator for the round, but that is tricky because the collator which produces the PoV does not necessarily actually produce the block.</li>
-<li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
-<li>A variation of that scheme would be to randomly choose a number <code>I</code>, and have a fixed acceptance window <code>D</code> for parablock candidates. At the end of the period <code>D</code>, count <code>C</code>: the number of parablock candidates received. Second the one with index <code>I % C</code>. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
-</ul>
+<p>For the moment, the candidate selection algorithm is simply to second the first valid parablock candidate per relay head. See <a href="node/backing/candidate-selection.html#future-work">Future Work</a>.</p>
 <h2><a class="header" href="#candidate-selection-job" id="candidate-selection-job">Candidate Selection Job</a></h2>
 <ul>
 <li>Aware of validator key and assignment</li>
 <li>One job for each relay-parent, which selects up to one collation for the Candidate Backing Subsystem</li>
+</ul>
+<h2><a class="header" href="#future-work-1" id="future-work-1">Future Work</a></h2>
+<p>Several approaches have been discussed, but all have some issues:</p>
+<ul>
+<li>The current approach is very straightforward. However, that protocol is vulnerable to a single collator which, as an attack or simply through chance, gets its block candidate to the node more often than its fair share of the time.</li>
+<li>It may be possible to do some BABE-like selection algorithm to choose an &quot;Official&quot; collator for the round, but that is tricky because the collator which produces the PoV does not necessarily actually produce the block.</li>
+<li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
+<li>A variation of that scheme would be to randomly choose a number <code>I</code>, and have a fixed acceptance window <code>D</code> for parablock candidates. At the end of the period <code>D</code>, count <code>C</code>: the number of parablock candidates received. Second the one with index <code>I % C</code>. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
 </ul>
 <h1><a class="header" href="#candidate-backing" id="candidate-backing">Candidate Backing</a></h1>
 <p>The Candidate Backing subsystem ensures every parablock considered for relay block inclusion has been seconded by at least one validator, and approved by a quorum. Parablocks for which no validator will assert correctness are discarded. If the block later proves invalid, the initial backers are slashable; this gives polkadot a rational threat model during subsequent stages.</p>
@@ -3366,6 +3370,8 @@ enum BitfieldSigningMessage { }
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
+  /// A candidate collation can be fetched from a collator and should be considered for seconding.
+  Collation(RelayParent, ParaId, CollatorId),
   /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
   Invalid(CandidateReceipt),
 }

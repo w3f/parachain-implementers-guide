@@ -167,13 +167,14 @@
 <blockquote>
 <p>TODO: note the incremental validation function Ximin proposes at https://github.com/paritytech/polkadot/issues/1348</p>
 </blockquote>
-<p>As this network protocol serves as a bridge between collators and validators, it communicates primarily with one subsystem on behalf of each. As a collator, this will receive messages from the <a href="collation-generation.html"><code>CollationGeneration</code></a> subsystem. As a validator, this will communicate with the <a href="../backing/candidate-backing.html"><code>CandidateBacking</code></a> subsystem.</p>
+<p>As this network protocol serves as a bridge between collators and validators, it communicates primarily with one subsystem on behalf of each. As a collator, this will receive messages from the <a href="collation-generation.html"><code>CollationGeneration</code></a> subsystem. As a validator, this will communicate with the <a href="../backing/candidate-backing.html"><code>CandidateBacking</code></a> and <a href="../backing/candidate-selection.html"><code>CandidateSelection</code></a> subsystems.</p>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
-<p>Input: <a href="../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a></p>
+<p>Input: <a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="../../types/overseer-protocol.html#runtimeapimessage"><code>RuntimeApiMessage</code></a></li>
-<li><a href="../../types/overseer-protocol.html#networkbridgemessage"><code>NetworkBridgeMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></li>
 </ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
 <p>This network protocol uses the <code>Collation</code> peer-set of the <a href="../utility/network-bridge.html"><code>NetworkBridge</code></a>.</p>
@@ -193,7 +194,7 @@
 <ul>
 <li>Determine which core the para collated-on is assigned to.</li>
 <li>Determine the group on that core and the next group on that core.</li>
-<li>Issue a discovery request for the validators of the current group and the next group with<a href="../../types/overseer-protocol.html#networkbridgemessage"><code>NetworkBridgeMessage</code></a><code>::ConnectToValidators</code>.</li>
+<li>Issue a discovery request for the validators of the current group and the next group with<a href="../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a><code>::ConnectToValidators</code>.</li>
 </ul>
 <p>Once connected to the relevant peers for the current group assigned to the core (transitively, the para), advertise the collation to any of them which advertise the relay-parent in their view (as provided by the <a href="../utility/network-bridge.html">Network Bridge</a>). If any respond with a request for the full collation, provide it. Upon receiving a view update from any of these peers which includes a relay-parent for which we have a collation that they will find relevant, advertise the collation to them if we haven't already.</p>
 <h3><a class="header" href="#validators" id="validators">Validators</a></h3>
@@ -201,9 +202,13 @@
 <p><img src="collator_protocol_1.generated.svg" alt="" /></p>
 <p>When peers connect to us, they can <code>Declare</code> that they represent a collator with given public key. Once they've declared that, they can begin to send advertisements of collations. The peers should not send us any advertisements for collations that are on a relay-parent outside of our view.</p>
 <p>The protocol tracks advertisements received and the source of the advertisement. The advertisement source is the <code>PeerId</code> of the peer who sent the message. We accept one advertisement per collator per source per relay-parent.</p>
-<p>As a validator, we will handle requests from other subsystems to fetch a collation on a specific <code>ParaId</code> and relay-parent. These requests are made with the <a href="../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code>. To do so, we need to first check if we have already gathered a collation on that <code>ParaId</code> and relay-parent. If not, we need to select one of the advertisements and issue a request for it. If we've already issued a request, we shouldn't issue another one until the first has returned.</p>
+<p>As a validator, we will handle requests from other subsystems to fetch a collation on a specific <code>ParaId</code> and relay-parent. These requests are made with the <a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code>. To do so, we need to first check if we have already gathered a collation on that <code>ParaId</code> and relay-parent. If not, we need to select one of the advertisements and issue a request for it. If we've already issued a request, we shouldn't issue another one until the first has returned.</p>
 <p>When acting on an advertisement, we issue a <code>WireMessage::RequestCollation</code>. If the request times out, we need to note the collator as being unreliable and reduce its priority relative to other collators. And then make another request - repeat until we get a response or the chain has moved on.</p>
-<p>As a validator, once the collation has been fetched some other subsystem will inspect and do deeper validation of the collation. The subsystem will report to this subsystem with a <a href="../../types/overseer-protocol.html#collatorprotocolmessage"><code>CollatorProtocolMessage</code></a><code>::ReportCollator</code> or <code>NoteGoodCollation</code> message. In that case, if we are connected directly to the collator, we apply a cost to the <code>PeerId</code> associated with the collator and potentially disconnect or blacklist it.</p>
+<p>As a validator, once the collation has been fetched some other subsystem will inspect and do deeper validation of the collation. The subsystem will report to this subsystem with a <a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::ReportCollator</code> or <code>NoteGoodCollation</code> message. In that case, if we are connected directly to the collator, we apply a cost to the <code>PeerId</code> associated with the collator and potentially disconnect or blacklist it.</p>
+<h3><a class="header" href="#interaction-with-a-hrefbackingcandidate-selectionhtmlcandidate-selectiona" id="interaction-with-a-hrefbackingcandidate-selectionhtmlcandidate-selectiona">Interaction with <a href="../backing/candidate-selection.html">Candidate Selection</a></a></h3>
+<p>As collators advertise the availability, we notify the Candidate Selection subsystem with a <a href="../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelection</code></a><code>::Collation</code> message. Note that this message is lightweight: it only contains the relay parent, para id, and collator id.</p>
+<p>At that point, the Candidate Selection algorithm is free to use an arbitrary algorithm to determine which if any of these messages to follow up on. It is expected to use the <a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code> message to follow up.</p>
+<p>The intent behind this design is to minimize the total number of (large) collations which must be transmitted.</p>
 
                     </main>
 

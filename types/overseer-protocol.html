@@ -282,6 +282,8 @@ enum BitfieldSigningMessage { }
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
+  /// A candidate collation can be fetched from a collator and should be considered for seconding.
+  Collation(RelayParent, ParaId, CollatorId),
   /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
   Invalid(CandidateReceipt),
 }
