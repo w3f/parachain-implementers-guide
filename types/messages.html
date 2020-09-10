@@ -252,9 +252,10 @@ struct InboundHrmpMessage {
 }
 </code></pre>
 <h2><a class="header" href="#downward-message" id="downward-message">Downward Message</a></h2>
-<p><code>DownwardMessage</code>- is a message that goes down from the relay chain to a parachain. Such a message
+<p><code>DownwardMessage</code> - is a message that goes down from the relay chain to a parachain. Such a message
 could be seen as a notification, however, it is conceivable that they might be used by the relay
 chain to send a request to the parachain (likely, through the <code>ParachainSpecific</code> variant).</p>
+<p>The serialized size of the message is limited by the <code>config.critical_downward_message_size</code> parameter.</p>
 <pre><code class="language-rust ignore">enum DownwardMessage {
 	/// Some funds were transferred into the parachain's account. The hash is the identifier that
 	/// was given with the transfer.

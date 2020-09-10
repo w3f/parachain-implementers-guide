@@ -1323,7 +1323,12 @@ minus 1.</li>
 <ol>
 <li><code>new_hrmp_watermark</code> should be strictly greater than the value of <code>HrmpWatermarks</code> for <code>P</code> (if any).</li>
 <li><code>new_hrmp_watermark</code> must not be greater than the context's block number.</li>
-<li>in <code>HrmpChannelDigests</code> for <code>P</code> an entry with the block number equal to <code>new_hrmp_watermark</code> should exist.</li>
+<li><code>new_hrmp_watermark</code> should be either
+<ol>
+<li>equal to the context's block number</li>
+<li>or in <code>HrmpChannelDigests</code> for <code>P</code> an entry with the block number should exist</li>
+</ol>
+</li>
 </ol>
 </li>
 <li><code>verify_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
@@ -1453,6 +1458,7 @@ that could take place on the course of handling these dispatchables.</p>
 <p>Utility routines.</p>
 <p><code>queue_downward_message(P: ParaId, M: DownwardMessage)</code>:</p>
 <ol>
+<li>Check if the serialized size of <code>M</code> exceeds the <code>config.critical_downward_message_size</code>. If so, return an error.</li>
 <li>Wrap <code>M</code> into <code>InboundDownwardMessage</code> using the current block number for <code>sent_at</code>.</li>
 <li>Obtain a new MQC link for the resulting <code>InboundDownwardMessage</code> and replace <code>DownwardMessageQueueHeads</code> for <code>P</code> with the resulting hash.</li>
 <li>Add the resulting <code>InboundDownwardMessage</code> into <code>DownwardMessageQueues</code> for <code>P</code>.</li>
@@ -3711,6 +3717,13 @@ enum CandidateValidationMessage {
 	pub dispatchable_upward_message_critical_weight: u32,
 	/// The maximum number of messages that a candidate can contain.
 	pub max_upward_message_num_per_candidate: u32,
+	/// The maximum size of a message that can be put in a downward message queue.
+	///
+	/// Since we require receiving at least one DMP message the obvious upper bound of the size is
+	/// the PoV size. Of course, there is a lot of other different things that a parachain may
+	/// decide to do with its PoV so this value in practice will be picked as a fraction of the PoV
+	/// size.
+	pub critical_downward_message_size: u32,
 	/// Number of sessions after which an HRMP open channel request expires.
 	pub hrmp_open_request_ttl: u32,
 	/// The deposit that the sender should provide for opening an HRMP channel.
@@ -3858,9 +3871,10 @@ struct InboundHrmpMessage {
 }
 </code></pre>
 <h2><a class="header" href="#downward-message" id="downward-message">Downward Message</a></h2>
-<p><code>DownwardMessage</code>- is a message that goes down from the relay chain to a parachain. Such a message
+<p><code>DownwardMessage</code> - is a message that goes down from the relay chain to a parachain. Such a message
 could be seen as a notification, however, it is conceivable that they might be used by the relay
 chain to send a request to the parachain (likely, through the <code>ParachainSpecific</code> variant).</p>
+<p>The serialized size of the message is limited by the <code>config.critical_downward_message_size</code> parameter.</p>
 <pre><code class="language-rust ignore">enum DownwardMessage {
 	/// Some funds were transferred into the parachain's account. The hash is the identifier that
 	/// was given with the transfer.

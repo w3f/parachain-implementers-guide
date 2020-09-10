@@ -365,7 +365,12 @@ minus 1.</li>
 <ol>
 <li><code>new_hrmp_watermark</code> should be strictly greater than the value of <code>HrmpWatermarks</code> for <code>P</code> (if any).</li>
 <li><code>new_hrmp_watermark</code> must not be greater than the context's block number.</li>
-<li>in <code>HrmpChannelDigests</code> for <code>P</code> an entry with the block number equal to <code>new_hrmp_watermark</code> should exist.</li>
+<li><code>new_hrmp_watermark</code> should be either
+<ol>
+<li>equal to the context's block number</li>
+<li>or in <code>HrmpChannelDigests</code> for <code>P</code> an entry with the block number should exist</li>
+</ol>
+</li>
 </ol>
 </li>
 <li><code>verify_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
@@ -495,6 +500,7 @@ that could take place on the course of handling these dispatchables.</p>
 <p>Utility routines.</p>
 <p><code>queue_downward_message(P: ParaId, M: DownwardMessage)</code>:</p>
 <ol>
+<li>Check if the serialized size of <code>M</code> exceeds the <code>config.critical_downward_message_size</code>. If so, return an error.</li>
 <li>Wrap <code>M</code> into <code>InboundDownwardMessage</code> using the current block number for <code>sent_at</code>.</li>
 <li>Obtain a new MQC link for the resulting <code>InboundDownwardMessage</code> and replace <code>DownwardMessageQueueHeads</code> for <code>P</code> with the resulting hash.</li>
 <li>Add the resulting <code>InboundDownwardMessage</code> into <code>DownwardMessageQueues</code> for <code>P</code>.</li>
