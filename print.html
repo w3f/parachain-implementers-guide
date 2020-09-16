@@ -1112,7 +1112,7 @@ CurrentSessionIndex: SessionIndex;
 <li>Invoke <code>Scheduler::schedule(freed)</code></li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
-<li>Call the <code>Router::process_upward_dispatchables</code> routine to execute all messages in upward dispatch queues.</li>
+<li>Call the <code>Router::process_pending_upward_dispatchables</code> routine to execute all messages in upward dispatch queues.</li>
 <li>If all of the above succeeds, set <code>Included</code> to <code>Some(())</code>.</li>
 </ol>
 </li>
@@ -1120,24 +1120,32 @@ CurrentSessionIndex: SessionIndex;
 <h1><a class="header" href="#router-module" id="router-module">Router Module</a></h1>
 <p>The Router module is responsible for all messaging mechanisms supported between paras and the relay chain, specifically: UMP, DMP, HRMP and later XCMP.</p>
 <h2><a class="header" href="#storage-6" id="storage-6">Storage</a></h2>
-<p>Storage layout:</p>
+<p>General storage entries</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Paras that are to be cleaned up at the end of the session.
 /// The entries are sorted ascending by the para id.
 OutgoingParas: Vec&lt;ParaId&gt;;
-/// Dispatchable objects ready to be dispatched onto the relay chain. The messages are processed in FIFO order.
-/// This is subject to `max_upward_queue_count` and
-/// `watermark_queue_size` from `HostConfiguration`.
-RelayDispatchQueues: map ParaId =&gt; Vec&lt;RawDispatchable&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<h3><a class="header" href="#upward-message-passing-ump" id="upward-message-passing-ump">Upward Message Passing (UMP)</a></h3>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Dispatchable objects ready to be dispatched onto the relay chain. The messages are processed in FIFO order.
+RelayDispatchQueues: map ParaId =&gt; Vec&lt;(ParachainDispatchOrigin, RawDispatchable)&gt;;
 /// Size of the dispatch queues. Caches sizes of the queues in `RelayDispatchQueue`.
 /// First item in the tuple is the count of messages and second
 /// is the total length (in bytes) of the message payloads.
+///
+/// Note that this is an auxilary mapping: it's possible to tell the byte size  and the number of
+/// messages only looking at `RelayDispatchQueues`. This mapping is separate to avoid the cost of
+/// loading the whole message queue if only the total size and count are required.
 RelayDispatchQueueSize: map ParaId =&gt; (u32, u32);
 /// The ordered list of `ParaId`s that have a `RelayDispatchQueue` entry.
 NeedsDispatch: Vec&lt;ParaId&gt;;
-/// This is the para that gets will get dispatched first during the next upward dispatchable queue
+/// This is the para that will get dispatched first during the next upward dispatchable queue
 /// execution round.
 NextDispatchRoundStartWith: Option&lt;ParaId&gt;;
 <span class="boring">}
@@ -1153,7 +1161,7 @@ DownwardMessageQueues: map ParaId =&gt; Vec&lt;InboundDownwardMessage&gt;;
 ///
 /// Each link in this chain has a form:
 /// `(prev_head, B, H(M))`, where
-/// - `prev_head`: is the previous head hash.
+/// - `prev_head`: is the previous head hash or zero if none.
 /// - `B`: is the relay-chain block number in which a message was appended.
 /// - `H(M)`: is the hash of the message being appended.
 DownwardMessageQueueHeads: map ParaId =&gt; Option&lt;Hash&gt;;
@@ -1348,12 +1356,15 @@ minus 1.</li>
 <ul>
 <li><code>queue_outbound_hrmp(sender: ParaId, Vec&lt;OutboundHrmpMessage&gt;)</code>:
 <ol>
-<li>For each horizontal message <code>HM</code> with the channel <code>C</code> identified by <code>(sender, HM.recipient)</code>:</li>
+<li>For each horizontal message <code>HM</code> with the channel <code>C</code> identified by <code>(sender, HM.recipient)</code>:
+<ol>
 <li>Append <code>HM</code> into <code>HrmpChannelContents</code> that corresponds to <code>C</code> with <code>sent_at</code> equals to the current block number.</li>
 <li>Locate or create an entry in <code>HrmpChannelDigests</code> for <code>HM.recipient</code> and append <code>sender</code> into the entry's list.</li>
 <li>Increment <code>C.used_places</code></li>
 <li>Increment <code>C.used_bytes</code> by <code>HM</code>'s payload size</li>
 <li>Append a new link to the MQC and save the new head in <code>C.mqc_head</code>. Note that the current block number as of enactment is used for the link.</li>
+</ol>
+</li>
 </ol>
 </li>
 <li><code>prune_hrmp(recipient, new_hrmp_watermark)</code>:
@@ -1423,20 +1434,13 @@ and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
 </ol>
 <p>The following routine is meant to execute pending entries in upward dispatchable queues. This function doesn't fail, even if
 any of dispatchables return an error.</p>
-<p><code>process_upward_dispatchables()</code>:</p>
+<p><code>process_pending_upward_dispatchables()</code>:</p>
 <ol>
 <li>Initialize a cumulative weight counter <code>T</code> to 0</li>
-<li>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:
-<ol>
-<li>
-<p>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></p>
-</li>
-<li>
-<p>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></p>
-</li>
-<li>
-<p>Decode <code>D</code> into a dispatchable. Otherwise, if succeeded:</p>
-<ol>
+<li>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:</li>
+<li>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></li>
+<li>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></li>
+<li>Decode <code>D</code> into a dispatchable. Otherwise, if succeeded:</li>
 <li>If <code>weight_of(D) &gt; config.dispatchable_upward_message_critical_weight</code> then skip the dispatchable. Otherwise:</li>
 <li>Execute <code>D</code> and add the actual amount of weight consumed to <code>T</code>.</li>
 <li>If <code>weight_of(D) + T &gt; config.preferred_dispatchable_upward_messages_step_weight</code>, set <code>NextDispatchRoundStartWith</code> to <code>P</code> and finish processing.</li>
@@ -1445,15 +1449,9 @@ any of dispatchables return an error.</p>
 <p>NOTE that in practice we would need to approach the weight calculation more thoroughly, i.e. incorporate all operations
 that could take place on the course of handling these dispatchables.</p>
 </blockquote>
-</li>
-<li>
-<p>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</p>
-</li>
-<li>
-<p>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</p>
-</li>
-</ol>
-</li>
+<ol>
+<li>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</li>
+<li>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</li>
 </ol>
 <p>Utility routines.</p>
 <p><code>queue_downward_message(P: ParaId, M: DownwardMessage)</code>:</p>
@@ -1465,7 +1463,8 @@ that could take place on the course of handling these dispatchables.</p>
 </ol>
 <h2><a class="header" href="#session-change-5" id="session-change-5">Session Change</a></h2>
 <ol>
-<li>Drain <code>OutgoingParas</code>. For each <code>P</code> happened to be in the list:</li>
+<li>Drain <code>OutgoingParas</code>. For each <code>P</code> happened to be in the list:
+<ol>
 <li>Remove all inbound channels of <code>P</code>, i.e. <code>(_, P)</code>,</li>
 <li>Remove all outbound channels of <code>P</code>, i.e. <code>(P, _)</code>,</li>
 <li>Remove all <code>DownwardMessageQueues</code> of <code>P</code>.</li>
@@ -1480,7 +1479,7 @@ that could take place on the course of handling these dispatchables.</p>
 <ul>
 <li>Note that if we don't remove the open/close requests since they are going to die out naturally at the end of the session.</li>
 </ul>
-<ol>
+</li>
 <li>For each channel designator <code>D</code> in <code>HrmpOpenChannelRequestsList</code> we query the request <code>R</code> from <code>HrmpOpenChannelRequests</code>:
 <ol>
 <li>if <code>R.confirmed = false</code>:
@@ -2909,7 +2908,7 @@ either that the relay-chain should maintain all the required data accessible or 
 	///
 	/// The DMQ MQC head will be used by the validation function to authorize the downward messages
 	/// passed by the collator.
-	dmq_mqc_head: Hash,
+	dmq_mqc_head: Option&lt;Hash&gt;,
 	/// The list of MQC heads for the inbound channels paired with the sender para ids. This
 	/// vector is sorted ascending by the para id and doesn't contain multiple entries with the same
 	/// sender.
@@ -3706,8 +3705,7 @@ enum CandidateValidationMessage {
 	///
 	/// NOTE that this is a soft limit and could be exceeded.
 	pub preferred_dispatchable_upward_messages_step_weight: u32,
-	/// Any dispatchable upward message that requests more than the critical amount is rejected
-	/// with `DispatchResult::CriticalWeightExceeded`.
+	/// Any dispatchable upward message that requests more than the critical amount is rejected.
 	///
 	/// The parameter value is picked up so that no dispatchable can make the block weight exceed
 	/// the total budget. I.e. that the sum of `preferred_dispatchable_upward_messages_step_weight`
@@ -3783,7 +3781,7 @@ struct BlockFinalizationEvent {
 <p>There is also HRMP (Horizontally Relay-routed Message Passing) which provides the same functionality
 although with smaller scalability potential.</p>
 <h2><a class="header" href="#hrmpchannelid" id="hrmpchannelid">HrmpChannelId</a></h2>
-<p>A type that uniquely identifies a HRMP channel. A HRMP channel is established between two paras.
+<p>A type that uniquely identifies an HRMP channel. An HRMP channel is established between two paras.
 In text, we use the notation <code>(A, B)</code> to specify a channel between A and B. The channels are
 unidirectional, meaning that <code>(A, B)</code> and <code>(B, A)</code> refer to different channels. The convention is
 that we use the first item tuple for the sender and the second for the recipient. Only one channel
