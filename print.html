@@ -1881,7 +1881,7 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 
 struct CollationGenerationConfig {
   key: CollatorPair,
-  collator: Box&lt;dyn Fn(&amp;GlobalValidationData, &amp;LocalValidationData) -&gt; Box&lt;dyn Future&lt;Output = Collation&gt;&gt;&gt;
+  collator: Box&lt;dyn Fn(&amp;ValidationData) -&gt; Box&lt;dyn Future&lt;Output = Collation&gt;&gt;&gt;
   para_id: ParaId,
 }
 <span class="boring">}
