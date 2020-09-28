@@ -3612,6 +3612,8 @@ It receives updates from the network bridge and signed statements to share with 
 	/// The statement distribution subsystem assumes that the statement should be correctly
 	/// signed.
 	Share(Hash, SignedFullStatement),
+	/// Register a listener to be notified on any new statements.
+	RegisterStatementListener(ResponseChannel&lt;SignedFullStatement&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>
