@@ -2734,11 +2734,14 @@ type CollationV1Message = ProtocolMessage&lt;CollationProtocolV1&gt;;
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the collation peer-set.</li>
 </ul>
 <h3><a class="header" href="#connecttovalidators" id="connecttovalidators">ConnectToValidators</a></h3>
+<blockquote>
+<p>TODO: Currently, this request is limited to the validators in the current session.</p>
+</blockquote>
 <ul>
 <li>Determine the DHT keys to use for each validator based on the relay-chain state and Runtime API.</li>
 <li>Recover the Peer IDs of the validators from the DHT. There may be more than one peer ID per validator.</li>
-<li>Accumulate all <code>(ValidatorId, PeerId)</code> pairs and send on the response channel.</li>
-<li>Feed all Peer IDs to peer set manager the underlying network provides, indicating the expected peer-set.</li>
+<li>Send all <code>(ValidatorId, PeerId)</code> pairs on the response channel.</li>
+<li>Feed all Peer IDs to peer set manager the underlying network provides.</li>
 </ul>
 <h2><a class="header" href="#event-handlers" id="event-handlers">Event Handlers</a></h2>
 <p>Network bridge event handlers are the intended recipients of particular network protocol messages. These are each a variant of a message to be sent via the overseer.</p>
@@ -3469,11 +3472,25 @@ enum NetworkBridgeMessage {
 	SendValidationMessage([PeerId], ValidationProtocolV1),
 	/// Send a message to one or more peers on the collation peerset.
 	SendCollationMessage([PeerId], ValidationProtocolV1),
-	/// Connect to peers who represent the given `ValidatorId`s at the given relay-parent.
+	/// Connect to peers who represent the given `validator_ids`.
 	///
-	/// Also accepts a response channel by which the issuer can learn the `PeerId`s of those
-	/// validators.
-	ConnectToValidators(PeerSet, [ValidatorId], ResponseChannel&lt;[(ValidatorId, PeerId)]&gt;&gt;),
+	/// Also ask the network to stay connected to these peers at least
+	/// until the request is revoked.
+	ConnectToValidators {
+		/// Ids of the validators to connect to.
+		validator_ids: Vec&lt;AuthorityDiscoveryId&gt;,
+		/// Response sender by which the issuer can learn the `PeerId`s of
+		/// the validators as they are connected.
+		/// The response is sent immediately for already connected peers.
+		connected: ResponseStream&lt;(AuthorityDiscoveryId, PeerId)&gt;,
+		/// By revoking the request the caller allows the network to
+		/// free some peer slots thus freeing the resources.
+		/// It doesn't necessarily lead to peers disconnection though.
+		/// The revokation is enacted on in the next connection request.
+		///
+		/// This can be done by sending to the channel or dropping the sender.
+		revoke: ReceiverChannel&lt;()&gt;,
+	},
 }
 <span class="boring">}
 </span></code></pre></pre>

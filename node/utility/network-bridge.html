@@ -232,11 +232,14 @@ type CollationV1Message = ProtocolMessage&lt;CollationProtocolV1&gt;;
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the collation peer-set.</li>
 </ul>
 <h3><a class="header" href="#connecttovalidators" id="connecttovalidators">ConnectToValidators</a></h3>
+<blockquote>
+<p>TODO: Currently, this request is limited to the validators in the current session.</p>
+</blockquote>
 <ul>
 <li>Determine the DHT keys to use for each validator based on the relay-chain state and Runtime API.</li>
 <li>Recover the Peer IDs of the validators from the DHT. There may be more than one peer ID per validator.</li>
-<li>Accumulate all <code>(ValidatorId, PeerId)</code> pairs and send on the response channel.</li>
-<li>Feed all Peer IDs to peer set manager the underlying network provides, indicating the expected peer-set.</li>
+<li>Send all <code>(ValidatorId, PeerId)</code> pairs on the response channel.</li>
+<li>Feed all Peer IDs to peer set manager the underlying network provides.</li>
 </ul>
 <h2><a class="header" href="#event-handlers" id="event-handlers">Event Handlers</a></h2>
 <p>Network bridge event handlers are the intended recipients of particular network protocol messages. These are each a variant of a message to be sent via the overseer.</p>
