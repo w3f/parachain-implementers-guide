@@ -1874,14 +1874,21 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct Collation {
-  /// Hash of `CandidateCommitments` as understood by the collator.
-  pub commitments_hash: Hash,
+  /// Fees paid from the chain to the relay chain validators.
+  pub fees: Balance,
+  /// Messages destined to be interpreted by the Relay chain itself.
+  pub upward_messages: Vec&lt;UpwardMessage&gt;,
+  /// New validation code.
+  pub new_validation_code: Option&lt;ValidationCode&gt;,
+  /// The head-data produced as a result of execution.
+  pub head_data: HeadData,
+  /// Proof to verify the state transition of the parachain.
   pub proof_of_validity: PoV,
 }
 
 struct CollationGenerationConfig {
   key: CollatorPair,
-  collator: Box&lt;dyn Fn(&amp;ValidationData) -&gt; Box&lt;dyn Future&lt;Output = Collation&gt;&gt;&gt;
+  collator: Box&lt;dyn Fn(&amp;ValidationData) -&gt; Box&lt;dyn Future&lt;Output = Option&lt;Collation&gt;&gt;&gt;&gt;
   para_id: ParaId,
 }
 <span class="boring">}
