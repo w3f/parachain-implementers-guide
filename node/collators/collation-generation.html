@@ -196,7 +196,7 @@ struct CollationGenerationConfig {
   /// Collate will be called with the relay chain hash the parachain should build 
   /// a block on and the `ValidationData` that provides information about the state
   /// of the parachain on the relay chain.
-  collator: Box&lt;dyn Fn(Hash, &amp;ValidationData) -&gt; Box&lt;dyn Future&lt;Output = Option&lt;Collation&gt;&gt;&gt;&gt;
+  collator: Box&lt;dyn Fn(Hash, &amp;ValidationData) -&gt; Pin&lt;Box&lt;dyn Future&lt;Output = Option&lt;Collation&gt;&gt;&gt;&gt;&gt;
   para_id: ParaId,
 }
 <span class="boring">}
