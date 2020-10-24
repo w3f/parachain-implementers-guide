@@ -180,7 +180,7 @@
 <li>The <a href="../../types/availability.html#proofofvalidity"><code>PoV</code></a>.</li>
 </ul>
 <h3><a class="header" href="#determining-parameters" id="determining-parameters">Determining Parameters</a></h3>
-<p>For a <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided. The <a href="../../types/candidate.html#transientvalidationdata"><code>TransientValidationData</code></a> is optional, and is used to perform further checks on the outputs of validation.</p>
+<p>For a <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided.</p>
 <p>For a <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>, some more work needs to be done. Due to the uncertainty of Availability Cores (implemented in the <a href="../../runtime/scheduler.html"><code>Scheduler</code></a> module of the runtime), a candidate at a particular relay-parent and for a particular para may have two different valid validation-data to be executed under depending on what is assumed to happen if the para is occupying a core at the onset of the new block. This is encoded as an <code>OccupiedCoreAssumption</code> in the runtime API.</p>
 <p>The way that we can determine which assumption the candidate is meant to be executed under is simply to do an exhaustive check of both possibilities based on the state of the relay-parent. First we fetch the validation data under the assumption that the block occupying becomes available. If the <code>validation_data_hash</code> of the <code>CandidateDescriptor</code> matches this validation data, we use that. Otherwise, if the <code>validation_data_hash</code> matches the validation data fetched under the <code>TimedOut</code> assumption, we use that. Otherwise, we return a <code>ValidationResult::Invalid</code> response and conclude.</p>
 <p>Then, we can fetch the validation code from the runtime based on which type of candidate this is. This gives us all the parameters. The descriptor and PoV come from the request itself, and the other parameters have been derived from the state.</p>
@@ -193,12 +193,8 @@
 <li>The collator signature is valid</li>
 <li>The PoV provided matches the <code>pov_hash</code> field of the descriptor</li>
 </ul>
-<p>After that, we can invoke the validation function. Lastly, if available, we do some final checks on the output using the <code>TransientValidationData</code>:</p>
-<ul>
-<li>The produced head-data is no larger than the maximum allowed.</li>
-<li>The produced code upgrade, if any, is no larger than the maximum allowed, and a code upgrade was allowed to be signaled.</li>
-<li>The amount and size of produced upward messages is not too large.</li>
-</ul>
+<h3><a class="header" href="#checking-validation-outputs" id="checking-validation-outputs">Checking Validation Outputs</a></h3>
+<p>If we can assume the presence of the relay-chain state (that is, during processing <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>) we can run all the checks that the relay-chain would run at the inclusion time thus confirming that the candidate will be accepted.</p>
 
                     </main>
 
