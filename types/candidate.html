@@ -399,8 +399,6 @@ struct HrmpChannelLimits {
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
 #[cfg_attr(feature = &quot;std&quot;, derive(Debug, Default))]
 struct CandidateCommitments {
-	/// Fees paid from the chain to the relay chain validators.
-	fees: Balance,
 	/// Messages directed to other paras routed via the relay chain.
 	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Messages destined to be interpreted by the Relay chain itself.
@@ -445,8 +443,6 @@ struct CandidateCommitments {
 	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Upwards messages to the relay chain.
 	upwards_messages: Vec&lt;UpwardsMessage&gt;,
-	/// Fees paid to the validators of the relay-chain.
-	fees: Balance,
 	/// The new validation code submitted by the execution, if any.
 	new_validation_code: Option&lt;ValidationCode&gt;,
 	/// The number of messages processed from the DMQ.
