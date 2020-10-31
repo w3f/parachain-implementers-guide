@@ -1,0 +1,502 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Approval Voting - The Polkadot Parachain Host Implementers' Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="../../favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="../../favicon.png">
+        
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../../index.html">Preamble</a></li><li class="chapter-item expanded "><a href="../../whence-parachains.html"><strong aria-hidden="true">1.</strong> Whence Parachains</a></li><li class="chapter-item expanded "><a href="../../protocol-overview.html"><strong aria-hidden="true">2.</strong> Protocol Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../protocol-approval.html"><strong aria-hidden="true">2.1.</strong> Approval Process</a></li></ol></li><li class="chapter-item expanded "><a href="../../architecture.html"><strong aria-hidden="true">3.</strong> Architecture Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../messaging.html"><strong aria-hidden="true">3.1.</strong> Messaging Overview</a></li></ol></li><li class="chapter-item expanded "><a href="../../runtime/index.html"><strong aria-hidden="true">4.</strong> Runtime Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../runtime/approvals_inherent.html"><strong aria-hidden="true">4.1.</strong> ApprovalsInherent Module</a></li><li class="chapter-item expanded "><a href="../../runtime/initializer.html"><strong aria-hidden="true">4.2.</strong> Initializer Module</a></li><li class="chapter-item expanded "><a href="../../runtime/configuration.html"><strong aria-hidden="true">4.3.</strong> Configuration Module</a></li><li class="chapter-item expanded "><a href="../../runtime/disputes.html"><strong aria-hidden="true">4.4.</strong> Disputes Module</a></li><li class="chapter-item expanded "><a href="../../runtime/paras.html"><strong aria-hidden="true">4.5.</strong> Paras Module</a></li><li class="chapter-item expanded "><a href="../../runtime/scheduler.html"><strong aria-hidden="true">4.6.</strong> Scheduler Module</a></li><li class="chapter-item expanded "><a href="../../runtime/inclusion.html"><strong aria-hidden="true">4.7.</strong> Inclusion Module</a></li><li class="chapter-item expanded "><a href="../../runtime/inclusioninherent.html"><strong aria-hidden="true">4.8.</strong> InclusionInherent Module</a></li><li class="chapter-item expanded "><a href="../../runtime/router.html"><strong aria-hidden="true">4.9.</strong> Router Module</a></li><li class="chapter-item expanded "><a href="../../runtime/session_info.html"><strong aria-hidden="true">4.10.</strong> Session Info Module</a></li></ol></li><li class="chapter-item expanded "><a href="../../runtime-api/index.html"><strong aria-hidden="true">5.</strong> Runtime APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../runtime-api/validators.html"><strong aria-hidden="true">5.1.</strong> Validators</a></li><li class="chapter-item expanded "><a href="../../runtime-api/validator-groups.html"><strong aria-hidden="true">5.2.</strong> Validator Groups</a></li><li class="chapter-item expanded "><a href="../../runtime-api/availability-cores.html"><strong aria-hidden="true">5.3.</strong> Availability Cores</a></li><li class="chapter-item expanded "><a href="../../runtime-api/persisted-validation-data.html"><strong aria-hidden="true">5.4.</strong> Persisted Validation Data</a></li><li class="chapter-item expanded "><a href="../../runtime-api/full-validation-data.html"><strong aria-hidden="true">5.5.</strong> Full Validation Data</a></li><li class="chapter-item expanded "><a href="../../runtime-api/session-index.html"><strong aria-hidden="true">5.6.</strong> Session Index</a></li><li class="chapter-item expanded "><a href="../../runtime-api/validation-code.html"><strong aria-hidden="true">5.7.</strong> Validation Code</a></li><li class="chapter-item expanded "><a href="../../runtime-api/candidate-pending-availability.html"><strong aria-hidden="true">5.8.</strong> Candidate Pending Availability</a></li><li class="chapter-item expanded "><a href="../../runtime-api/candidate-events.html"><strong aria-hidden="true">5.9.</strong> Candidate Events</a></li></ol></li><li class="chapter-item expanded "><a href="../../node/index.html"><strong aria-hidden="true">6.</strong> Node Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/subsystems-and-jobs.html"><strong aria-hidden="true">6.1.</strong> Subsystems and Jobs</a></li><li class="chapter-item expanded "><a href="../../node/overseer.html"><strong aria-hidden="true">6.2.</strong> Overseer</a></li><li class="chapter-item expanded "><a href="../../node/collators/index.html"><strong aria-hidden="true">6.3.</strong> Collators</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/collators/collation-generation.html"><strong aria-hidden="true">6.3.1.</strong> Collation Generation</a></li><li class="chapter-item expanded "><a href="../../node/collators/collator-protocol.html"><strong aria-hidden="true">6.3.2.</strong> Collator Protocol</a></li></ol></li><li class="chapter-item expanded "><a href="../../node/backing/index.html"><strong aria-hidden="true">6.4.</strong> Backing Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/backing/candidate-selection.html"><strong aria-hidden="true">6.4.1.</strong> Candidate Selection</a></li><li class="chapter-item expanded "><a href="../../node/backing/candidate-backing.html"><strong aria-hidden="true">6.4.2.</strong> Candidate Backing</a></li><li class="chapter-item expanded "><a href="../../node/backing/statement-distribution.html"><strong aria-hidden="true">6.4.3.</strong> Statement Distribution</a></li><li class="chapter-item expanded "><a href="../../node/backing/pov-distribution.html"><strong aria-hidden="true">6.4.4.</strong> PoV Distribution</a></li></ol></li><li class="chapter-item expanded "><a href="../../node/availability/index.html"><strong aria-hidden="true">6.5.</strong> Availability Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/availability/availability-distribution.html"><strong aria-hidden="true">6.5.1.</strong> Availability Distribution</a></li><li class="chapter-item expanded "><a href="../../node/availability/availability-recovery.html"><strong aria-hidden="true">6.5.2.</strong> Availability Recovery</a></li><li class="chapter-item expanded "><a href="../../node/availability/bitfield-distribution.html"><strong aria-hidden="true">6.5.3.</strong> Bitfield Distribution</a></li><li class="chapter-item expanded "><a href="../../node/availability/bitfield-signing.html"><strong aria-hidden="true">6.5.4.</strong> Bitfield Signing</a></li></ol></li><li class="chapter-item expanded "><a href="../../node/approval/index.html"><strong aria-hidden="true">6.6.</strong> Approval Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/approval/approval-voting.html" class="active"><strong aria-hidden="true">6.6.1.</strong> Approval Voting</a></li><li class="chapter-item expanded "><a href="../../node/approval/approval-networking.html"><strong aria-hidden="true">6.6.2.</strong> Approval Networking</a></li><li class="chapter-item expanded "><a href="../../node/approval/dispute-participation.html"><strong aria-hidden="true">6.6.3.</strong> Dispute Participation</a></li></ol></li><li class="chapter-item expanded "><a href="../../node/utility/index.html"><strong aria-hidden="true">6.7.</strong> Utility Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../node/utility/availability-store.html"><strong aria-hidden="true">6.7.1.</strong> Availability Store</a></li><li class="chapter-item expanded "><a href="../../node/utility/candidate-validation.html"><strong aria-hidden="true">6.7.2.</strong> Candidate Validation</a></li><li class="chapter-item expanded "><a href="../../node/utility/provisioner.html"><strong aria-hidden="true">6.7.3.</strong> Provisioner</a></li><li class="chapter-item expanded "><a href="../../node/utility/network-bridge.html"><strong aria-hidden="true">6.7.4.</strong> Network Bridge</a></li><li class="chapter-item expanded "><a href="../../node/utility/misbehavior-arbitration.html"><strong aria-hidden="true">6.7.5.</strong> Misbehavior Arbitration</a></li><li class="chapter-item expanded "><a href="../../node/utility/peer-set-manager.html"><strong aria-hidden="true">6.7.6.</strong> Peer Set Manager</a></li><li class="chapter-item expanded "><a href="../../node/utility/runtime-api.html"><strong aria-hidden="true">6.7.7.</strong> Runtime API Requests</a></li><li class="chapter-item expanded "><a href="../../node/utility/chain-api.html"><strong aria-hidden="true">6.7.8.</strong> Chain API Requests</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../../types/index.html"><strong aria-hidden="true">7.</strong> Data Structures and Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../../types/candidate.html"><strong aria-hidden="true">7.1.</strong> Candidate</a></li><li class="chapter-item expanded "><a href="../../types/backing.html"><strong aria-hidden="true">7.2.</strong> Backing</a></li><li class="chapter-item expanded "><a href="../../types/availability.html"><strong aria-hidden="true">7.3.</strong> Availability</a></li><li class="chapter-item expanded "><a href="../../types/overseer-protocol.html"><strong aria-hidden="true">7.4.</strong> Overseer and Subsystem Protocol</a></li><li class="chapter-item expanded "><a href="../../types/runtime.html"><strong aria-hidden="true">7.5.</strong> Runtime</a></li><li class="chapter-item expanded "><a href="../../types/chain.html"><strong aria-hidden="true">7.6.</strong> Chain</a></li><li class="chapter-item expanded "><a href="../../types/messages.html"><strong aria-hidden="true">7.7.</strong> Messages</a></li><li class="chapter-item expanded "><a href="../../types/network.html"><strong aria-hidden="true">7.8.</strong> Network</a></li><li class="chapter-item expanded "><a href="../../types/approval.html"><strong aria-hidden="true">7.9.</strong> Approvals</a></li></ol></li><li class="chapter-item expanded "><a href="../../glossary.html">Glossary</a></li><li class="chapter-item expanded affix "><a href="../../further-reading.html">Further Reading</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">The Polkadot Parachain Host Implementers' Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#approval-voting" id="approval-voting">Approval Voting</a></h1>
+<p>Reading the <a href="../../protocol-approval.html">section on the approval protocol</a> will likely be necessary to understand the aims of this subsystem.</p>
+<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<p>Input:</p>
+<ul>
+<li><code>ApprovalVotingMessage::CheckAndImportAssignment</code></li>
+<li><code>ApprovalVotingMessage::CheckAndImportApproval</code></li>
+<li><code>ApprovalVotingMessage::ApprovedAncestor</code></li>
+</ul>
+<p>Output:</p>
+<ul>
+<li><code>ApprovalNetworkingMessage::DistributeAssignment</code></li>
+<li><code>ApprovalNetworkingMessage::DistributeApproval</code></li>
+<li><code>RuntimeApiMessage::Request</code></li>
+<li><code>ChainApiMessage</code></li>
+<li><code>AvailabilityRecoveryMessage::Recover</code></li>
+<li><code>CandidateExecutionMessage::ValidateFromExhaustive</code></li>
+</ul>
+<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<p>The approval voting subsystem is responsible for casting votes and determining approval of candidates and as a result, blocks.</p>
+<p>This subsystem wraps a database which is used to store metadata about unfinalized blocks and the candidates within them. Candidates may appear in multiple blocks, and assignment criteria are chosen differently based on the hash of the block they appear in.</p>
+<h2><a class="header" href="#database-schema" id="database-schema">Database Schema</a></h2>
+<p>The database schema is designed with the following goals in mind:</p>
+<ol>
+<li>To provide an easy index from unfinalized blocks to candidates</li>
+<li>To provide a lookup from candidate hash to approval status</li>
+<li>To be easy to clear on start-up. What has happened while we were offline is unimportant.</li>
+<li>To be fast to clear entries outdated by finality</li>
+</ol>
+<p>Structs:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct TrancheEntry {
+    tranche: DelayTranche,
+    // assigned validators who have not yet approved, and the instant we received
+    // their assignment.
+    assignments: Vec&lt;(ValidatorIndex, Tick)&gt;,
+}
+
+struct OurAssignment {
+  cert: AssignmentCert,
+  tranche: DelayTranche,
+  validator_index: ValidatorIndex,
+  triggered: bool,
+}
+
+struct ApprovalEntry {
+    tranches: Vec&lt;TrancheEntry&gt;, // sorted ascending by tranche number.
+    backing_group: GroupIndex,
+    // When the next wakeup for this entry should occur. This is either to
+    // check a no-show or to check if we need to broadcast an assignment.
+    next_wakeup: Tick,
+    our_assignment: Option&lt;OurAssignment&gt;,
+    assignments: Bitfield, // n_validators bits
+    approved: bool,
+}
+
+struct CandidateEntry {
+    candidate: CandidateReceipt,
+    session: SessionIndex,
+    // Assignments are based on blocks, so we need to track assignments separately
+    // based on the block we are looking at.
+    block_assignments: HashMap&lt;Hash, ApprovalEntry&gt;,
+    approvals: Bitfield, // n_validators bits
+}
+
+struct BlockEntry {
+    block_hash: Hash,
+    session: SessionIndex,
+    slot: SlotNumber,
+    received_late_by: Duration,
+    // random bytes derived from the VRF submitted within the block by the block
+    // author as a credential and used as input to approval assignment criteria.
+    relay_vrf_story: [u8; 32],
+    // The candidates included as-of this block and the index of the core they are
+    // leaving. Sorted ascending by core index.
+    candidates: Vec&lt;(CoreIndex, Hash)&gt;,
+    // A bitfield where the i'th bit corresponds to the i'th candidate in `candidates`.
+    // The i'th bit is `true` iff the candidate has been approved in the context of
+    // this block. The block can be considered approved has all bits set to 1
+    approved_bitfield: Bitfield,
+    rotation_offset: GroupIndex,
+    children: Vec&lt;Hash&gt;,
+}
+
+// slot_duration * 2 + DelayTranche gives the number of delay tranches since the
+// unix epoch.
+type Tick = u64;
+
+struct TrackerEntry 
+
+struct StoredBlockRange(BlockNumber, BlockNumber)
+<span class="boring">}
+</span></code></pre></pre>
+<p>In the schema, we map</p>
+<pre><code>&quot;StoredBlocks&quot; =&gt; StoredBlockRange
+BlockNumber =&gt; Vec&lt;BlockHash&gt;
+BlockHash =&gt; BlockEntry
+CandidateHash =&gt; CandidateEntry
+</code></pre>
+<h2><a class="header" href="#logic" id="logic">Logic</a></h2>
+<p>In-memory state:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct ApprovalVoteRequest {
+  validator_index: ValidatorIndex,
+  block_hash: Hash,
+  candidate_index: u32,
+}
+
+struct State {
+    earliest_session: SessionIndex,
+    session_info: Vec&lt;SessionInfo&gt;,
+    keystore: KeyStorePtr,
+    wakeups: BTreeMap&lt;Tick, Vec&lt;(Hash, Hash)&gt;&gt;, // Tick -&gt; [(Relay Block, Candidate Hash)]
+    
+    // These are connected to each other.
+    approval_vote_tx: mpsc::Sender&lt;ApprovalVoteRequest&gt;,
+    approval_vote_rx: mpsc::Receiver&lt;ApprovalVoteRequest&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p><a href="../../runtime/session_info.html"><code>SessionInfo</code></a></p>
+<p>On start-up, we clear everything currently stored by the database. This is done by loading the <code>StoredBlockRange</code>, iterating through each block number, iterating through each block hash, and iterating through each candidate referenced by each block. Although this is <code>O(o*n*p)</code>, we don't expect to have more than a few unfinalized blocks at any time and in extreme cases, a few thousand. The clearing operation should be relatively fast as a result.</p>
+<p>Main loop:</p>
+<ul>
+<li>Each iteration, select over all of
+<ul>
+<li>The next <code>Tick</code> in <code>wakeups</code>: trigger <code>wakeup_process</code> for each <code>(Hash, Hash)</code> pair scheduled under the <code>Tick</code> and then remove all entries under the <code>Tick</code>.</li>
+<li>The next message from the overseer: handle the message as described in the <a href="#incoming-messages">Incoming Messages section</a></li>
+<li>The next request from <code>approval_vote_rx</code>: handle with <code>issue_approval</code></li>
+</ul>
+</li>
+</ul>
+<h3><a class="header" href="#incoming-messages" id="incoming-messages">Incoming Messages</a></h3>
+<h4><a class="header" href="#overseersignalblockfinalized" id="overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
+<p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the ChainApi subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendents of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>.</p>
+<h4><a class="header" href="#overseersignalactiveleavesupdate" id="overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
+<p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
+<ul>
+<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. </li>
+<li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps. We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks. </li>
+<li>We also note how late we appear to have received the block. We create a <code>BlockEntry</code> for each block and a <code>CandidateEntry</code> for each candidate obtained from <code>CandidateIncluded</code> events after making a <code>RuntimeApiRequest::CandidateEvents</code> request.</li>
+<li>Ensure that the <code>CandidateEntry</code> contains a <code>block_assignments</code> entry for the block, with the correct backing group set.</li>
+<li>If a validator in this session, compute and assign <code>our_assignment</code> for the <code>block_assignments</code>
+<ul>
+<li>Only if not a member of the backing group.</li>
+<li>Run <code>RelayVRFModulo</code> and <code>RelayVRFDelay</code> according to the <a href="../../protocol-approval.html#assignment-criteria">the approvals protocol section</a></li>
+</ul>
+</li>
+<li>invoke <code>process_wakeup(relay_block, candidate)</code> for each new candidate in each new block - this will automatically broadcast a 0-tranche assignment, kick off approval work, and schedule the next delay.</li>
+</ul>
+<h4><a class="header" href="#approvalvotingmessagecheckandimportassignment" id="approvalvotingmessagecheckandimportassignment"><code>ApprovalVotingMessage::CheckAndImportAssignment</code></a></h4>
+<p>On receiving a <code>ApprovalVotingMessage::CheckAndImportAssignment</code> message, we check the assignment cert against the block entry. The cert itself contains information necessary to determine the candidate that is being assigned-to. In detail:</p>
+<ul>
+<li>Load the <code>BlockEntry</code> for the relay-parent referenced by the message. If there is none, return <code>VoteCheckResult::Report</code>.</li>
+<li>Fetch the <code>SessionInfo</code> for the session of the block</li>
+<li>Determine the assignment key of the validator based on that.</li>
+<li>Check the assignment cert
+<ul>
+<li>If the cert kind is <code>RelayVRFModulo</code>, then the certificate is valid as long as <code>sample &lt; session_info.relay_vrf_samples</code> and the VRF is valid for the validator's key with the input <code>block_entry.relay_vrf_story ++ sample.encode()</code> as described with <a href="../../protocol-approval.html#assignment-criteria">the approvals protocol section</a>. We set <code>core_index = vrf.make_bytes().to_u32() % session_info.n_cores</code>. If the <code>BlockEntry</code> causes inclusion of a candidate at <code>core_index</code>, then this is a valid assignment for the candidate at <code>core_index</code> and has delay tranche 0. Otherwise, it can be ignored.</li>
+<li>If the cert kind is <code>RelayVRFDelay</code>, then we check if the VRF is valid for the validator's key with the input <code>block_entry.relay_vrf_story ++ cert.core_index.encode()</code> as described in <a href="../../protocol-approval.html#assignment-criteria">the approvals protocol section</a>. The cert can be ignored if the block did not cause inclusion of a candidate on that core index. Otherwise, this is a valid assignment for the included candidate. The delay tranche for the assignment is determined by reducing <code>(vrf.make_bytes().to_u64() % (session_info.n_delay_tranches + session_info.zeroth_delay_tranche_width)).saturating_sub(session_info.zeroth_delay_tranche_width)</code>.</li>
+<li><code>import_checked_assignment</code></li>
+<li>return the appropriate <code>VoteCheckResult</code> on the response channel.</li>
+</ul>
+</li>
+</ul>
+<h4><a class="header" href="#approvalvotingmessagecheckandimportapproval" id="approvalvotingmessagecheckandimportapproval"><code>ApprovalVotingMessage::CheckAndImportApproval</code></a></h4>
+<p>On receiving a <code>CheckAndImportApproval(indirect_approval_vote, response_channel)</code> message:</p>
+<ul>
+<li>Fetch the <code>BlockEntry</code> from the indirect approval vote's <code>block_hash</code>. If none, return <code>VoteCheckResult::Bad</code>.</li>
+<li>Fetch the <code>CandidateEntry</code> from the indirect approval vote's <code>candidate_index</code>. If the block did not trigger inclusion of enough candidates, return <code>VoteCheckResult::Bad</code>.</li>
+<li>Construct a <code>SignedApprovalVote</code> using the candidate hash and check against the validator's approval key, based on the session info of the block. If invalid or no such validator, return <code>VoteCheckResult::Bad</code>.</li>
+<li>Send <code>VoteCheckResult::Accepted</code>,</li>
+<li><code>import_checked_approval(BlockEntry, CandidateEntry, ValidatorIndex)</code></li>
+</ul>
+<h4><a class="header" href="#approvalvotingmessageapprovedancestor" id="approvalvotingmessageapprovedancestor"><code>ApprovalVotingMessage::ApprovedAncestor</code></a></h4>
+<p>On receiving an <code>ApprovedAncestor(Hash, BlockNumber, response_channel)</code>:</p>
+<ul>
+<li>Iterate over the ancestry of the hash all the way back to block number given, starting from the provided block hash.</li>
+<li>Keep track of an <code>all_approved_max: Option&lt;Hash&gt;</code>.</li>
+<li>For each block hash encountered, load the <code>BlockEntry</code> associated. If any are not found, return <code>None</code> on the response channel and conclude.</li>
+<li>If the block entry's <code>approval_bitfield</code> has all bits set to 1 and <code>all_approved_max == None</code>, set <code>all_approved_max = Some(current_hash)</code>.</li>
+<li>If the block entry's <code>approval_bitfield</code> has any 0 bits, set <code>all_approved_max = None</code>.</li>
+<li>After iterating all ancestry, return <code>all_approved_max</code>.</li>
+</ul>
+<h3><a class="header" href="#utility" id="utility">Utility</a></h3>
+<h4><a class="header" href="#import_checked_assignment" id="import_checked_assignment"><code>import_checked_assignment</code></a></h4>
+<ul>
+<li>Load the candidate in question and access the <code>approval_entry</code> for the block hash the cert references.</li>
+<li>Ensure the validator index is not part of the backing group for the candidate.</li>
+<li>Ensure the validator index is not present in the approval entry already.</li>
+<li>Create a tranche entry for the delay tranche in the approval entry and note the assignment within it.</li>
+<li>Note the candidate index within the approval entry.</li>
+</ul>
+<h4><a class="header" href="#import_checked_approvalblockentry-candidateentry-validatorindex" id="import_checked_approvalblockentry-candidateentry-validatorindex"><code>import_checked_approval(BlockEntry, CandidateEntry, ValidatorIndex)</code></a></h4>
+<ul>
+<li>Set the corresponding bit of the <code>approvals</code> bitfield in the <code>CandidateEntry</code> to <code>1</code>.</li>
+<li>For each <code>ApprovalEntry</code> in the <code>CandidateEntry</code> (typically only 1), check whether the validator is assigned as a checker.
+<ul>
+<li>If so, set <code>n_tranches = tranches_to_approve(approval_entry)</code>.</li>
+<li>If <code>check_approval(block_entry, approval_entry, n_tranches)</code> is true, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
+</ul>
+</li>
+</ul>
+<h4><a class="header" href="#tranches_to_approveapproval_entry---tranches" id="tranches_to_approveapproval_entry---tranches"><code>tranches_to_approve(approval_entry) -&gt; tranches</code></a></h4>
+<ul>
+<li>Determine the amount of tranches <code>n_tranches</code> our view of the protocol requires of this approval entry
+<ul>
+<li>First, take tranches until we have at least <code>session_info.needed_approvals</code>. Call the number of tranches taken <code>k</code></li>
+<li>Then, count no-shows in tranches <code>0..k</code>. For each no-show, we require another checker. Take new tranches until each no-show is covered, so now we've taken <code>l</code> tranches. e.g. if there are 2 no-shows, we might only need to take 1 additional tranche with &gt;= 2 assignments. Or we might need to take 3 tranches, where one is empty and the other two have 1 assignment each.</li>
+<li>Count no-shows in tranches <code>k..l</code> and for each of those, take tranches until all no-shows are covered. Repeat so on until either
+<ul>
+<li>We run out of tranches to take, having not received any assignments past a certain point. In this case we set <code>n_tranches</code> to a special value <code>ALL</code> which indicates that new assignments are needed.</li>
+<li>All no-shows are covered. Set <code>n_tranches</code> to the number of tranches taken</li>
+</ul>
+</li>
+<li>return <code>n_tranches</code></li>
+</ul>
+</li>
+</ul>
+<h4><a class="header" href="#check_approvalblock_entry-approval_entry-n_tranches---bool" id="check_approvalblock_entry-approval_entry-n_tranches---bool"><code>check_approval(block_entry, approval_entry, n_tranches) -&gt; bool</code></a></h4>
+<ul>
+<li>If <code>n_tranches</code> is ALL, return false</li>
+<li>Otherwise, if all validators in <code>n_tranches</code> have approved, return <code>true</code>. If any validator in these tranches has not yet approved but is not yet considered a no-show, return <code>false</code>.</li>
+</ul>
+<h4><a class="header" href="#process_wakeuprelay_block-candidate_hash" id="process_wakeuprelay_block-candidate_hash"><code>process_wakeup(relay_block, candidate_hash)</code></a></h4>
+<ul>
+<li>Load the <code>BlockEntry</code> and <code>CandidateEntry</code> from disk. If either is not present, this may have lost a race with finality and can be ignored. Also load the <code>ApprovalEntry</code> for the block and candidate.</li>
+<li>Set <code>n_tranches = tranches_to_approve(approval_entry)</code></li>
+<li>If <code>OurAssignment</code> has tranche <code>&lt;= n_tranches</code>, the tranche is live according to our local clock (based against block slot), and we have not triggered the assignment already
+<ul>
+<li>Import to <code>ApprovalEntry</code></li>
+<li>Broadcast on network with an <code>ApprovalNetworkingMessage::DistributeAssignment</code>.</li>
+<li>Kick off approval work with <code>launch_approval</code></li>
+</ul>
+</li>
+<li>Schedule another wakeup based on <code>next_wakeup</code></li>
+</ul>
+<h4><a class="header" href="#next_wakeupapproval_entry-candidate_entry" id="next_wakeupapproval_entry-candidate_entry"><code>next_wakeup(approval_entry, candidate_entry)</code>:</a></h4>
+<ul>
+<li>Return the earlier of our next no-show timeout or the tranche of our assignment, if not yet triggered</li>
+<li>Our next no-show timeout is computed by finding the earliest-received assignment within <code>n_tranches</code> for which we have not received an approval and adding <code>to_ticks(session_info.no_show_slots)</code> to it.</li>
+</ul>
+<h4><a class="header" href="#launch_approvalsessionindex-candidatedescriptor-validatorindex-block_hash-candidate_index" id="launch_approvalsessionindex-candidatedescriptor-validatorindex-block_hash-candidate_index"><code>launch_approval(SessionIndex, CandidateDescriptor, ValidatorIndex, block_hash, candidate_index)</code>:</a></h4>
+<ul>
+<li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
+<li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, response_sender)</code></li>
+<li>Load the historical validation code of the parachain (TODO: https://github.com/paritytech/polkadot/issues/1877)</li>
+<li>Spawn a background task with a clone of <code>approval_vote_tx</code>
+<ul>
+<li>Wait for the available data</li>
+<li>Issue a <code>CandidateValidationMessage::ValidateFromExhaustive</code> message</li>
+<li>Wait for the result of validation</li>
+<li>If valid, issue a message on <code>approval_vote_tx</code> detailing the request.</li>
+</ul>
+</li>
+</ul>
+<h4><a class="header" href="#issue_approvalrequest" id="issue_approvalrequest"><code>issue_approval(request)</code>:</a></h4>
+<ul>
+<li>Fetch the block entry and candidate entry. Ignore if <code>None</code> - we've probably just lost a race with finality.</li>
+<li>Construct a <code>SignedApprovalVote</code> with the validator index for the session.</li>
+<li>Transform into an <code>IndirectSignedApprovalVote</code> using the <code>block_hash</code> and <code>candidate_index</code> from the request.</li>
+<li><code>import_checked_approval(block_entry, candidate_entry, validator_index)</code></li>
+<li>Dispatch an <code>ApprovalNetworkingMessage::DistributeApproval</code> message.</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="../../node/approval/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="../../node/approval/approval-networking.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="../../node/approval/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="../../node/approval/approval-networking.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="../../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="../../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
