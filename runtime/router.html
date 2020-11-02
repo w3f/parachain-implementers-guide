@@ -179,20 +179,36 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// Dispatchable objects ready to be dispatched onto the relay chain. The messages are processed in FIFO order.
-RelayDispatchQueues: map ParaId =&gt; Vec&lt;(ParachainDispatchOrigin, RawDispatchable)&gt;;
+</span>/// The messages waiting to be handled by the relay-chain originating from a certain parachain.
+///
+/// Note that some upward messages might have been already processed by the inclusion logic. E.g.
+/// channel management messages.
+///
+/// The messages are processed in FIFO order.
+RelayDispatchQueues: map ParaId =&gt; Vec&lt;UpwardMessage&gt;;
 /// Size of the dispatch queues. Caches sizes of the queues in `RelayDispatchQueue`.
+///
 /// First item in the tuple is the count of messages and second
 /// is the total length (in bytes) of the message payloads.
 ///
-/// Note that this is an auxilary mapping: it's possible to tell the byte size  and the number of
+/// Note that this is an auxilary mapping: it's possible to tell the byte size and the number of
 /// messages only looking at `RelayDispatchQueues`. This mapping is separate to avoid the cost of
 /// loading the whole message queue if only the total size and count are required.
-RelayDispatchQueueSize: map ParaId =&gt; (u32, u32);
+///
+/// Invariant:
+/// - The set of keys should exactly match the set of keys of `RelayDispatchQueues`.
+RelayDispatchQueueSize: map ParaId =&gt; (u32, u32); // (num_messages, total_bytes)
 /// The ordered list of `ParaId`s that have a `RelayDispatchQueue` entry.
+///
+/// Invariant:
+/// - The set of items from this vector should be exactly the set of the keys in
+///   `RelayDispatchQueues` and `RelayDispatchQueueSize`.
 NeedsDispatch: Vec&lt;ParaId&gt;;
-/// This is the para that will get dispatched first during the next upward dispatchable queue
+/// This is the para that gets dispatched first during the next upward dispatchable queue
 /// execution round.
+///
+/// Invariant:
+/// - If `Some(para)`, then `para` must be present in `NeedsDispatch`.
 NextDispatchRoundStartWith: Option&lt;ParaId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
@@ -321,50 +337,8 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <li><code>check_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;</code>):
 <ol>
 <li>Checks that there are at most <code>config.max_upward_message_num_per_candidate</code> messages.</li>
-<li>Checks each upward message <code>M</code> individually depending on its kind:</li>
-<li>If the message kind is <code>Dispatchable</code>:
-<ol>
-<li>Verify that <code>RelayDispatchQueueSize</code> for <code>P</code> has enough capacity for the message (NOTE that should include all processed
-upward messages of the <code>Dispatchable</code> kind up to this point!)</li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpInitOpenChannel(recipient, max_places, max_message_size)</code>:
-<ol>
-<li>Check that the <code>P</code> is not <code>recipient</code>.</li>
-<li>Check that <code>max_places</code> is less or equal to <code>config.hrmp_channel_max_places</code>.</li>
-<li>Check that <code>max_message_size</code> is less or equal to <code>config.hrmp_channel_max_message_size</code>.</li>
-<li>Check that <code>recipient</code> is a valid para.</li>
-<li>Check that there is no existing channel for <code>(P, recipient)</code> in <code>HrmpChannels</code>.</li>
-<li>Check that there is no existing open channel request (<code>P</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
-<li>Check that the sum of the number of already opened HRMP channels by the <code>P</code> (the size
-of the set found <code>HrmpEgressChannelsIndex</code> for <code>P</code>) and the number of open requests by the
-<code>P</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>P</code>) doesn't exceed the limit of
-channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
-<li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_sender_deposit</code></li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpAcceptOpenChannel(sender)</code>:
-<ol>
-<li>Check that there is an existing request between (<code>sender</code>, <code>P</code>) in <code>HrmpOpenChannelRequests</code>
-<ol>
-<li>Check that it is not confirmed.</li>
-</ol>
-</li>
-<li>Check that <code>P</code>'s balance is more or equal to <code>config.hrmp_recipient_deposit</code>.</li>
-<li>Check that the sum of the number of inbound HRMP channels opened to <code>P</code> (the size of the set
-found in <code>HrmpIngressChannelsIndex</code> for <code>P</code>) and the number of accepted open requests by the <code>P</code>
-(the value from <code>HrmpAcceptedChannelRequestCount</code> for <code>P</code>) doesn't exceed the limit of channels
-(<code>config.hrmp_max_parachain_inbound_channels</code> or <code>config.hrmp_max_parathread_inbound_channels</code>)
-minus 1.</li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
-<ol>
-<li>Check that <code>P</code> is either <code>ch.sender</code> or <code>ch.recipient</code></li>
-<li>Check that <code>HrmpChannels</code> for <code>ch</code> exists.</li>
-<li>Check that <code>ch</code> is not in the <code>HrmpCloseChannelRequests</code> set.</li>
-</ol>
-</li>
+<li>Checks that no message exceeds <code>config.max_upward_message_size</code>.</li>
+<li>Verify that <code>RelayDispatchQueueSize</code> for <code>P</code> has enough capacity for the messages</li>
 </ol>
 </li>
 <li><code>check_processed_downward_messages(P: ParaId, processed_downward_messages)</code>:
@@ -434,40 +408,11 @@ minus 1.</li>
 </li>
 <li><code>enact_upward_messages(P: ParaId, Vec&lt;UpwardMessage&gt;)</code>:
 <ol>
-<li>Process all upward messages in order depending on their kinds:</li>
-<li>If the message kind is <code>Dispatchable</code>:
+<li>Process each upward message <code>M</code> in order:
 <ol>
 <li>Append the message to <code>RelayDispatchQueues</code> for <code>P</code></li>
 <li>Increment the size and the count in <code>RelayDispatchQueueSize</code> for <code>P</code>.</li>
 <li>Ensure that <code>P</code> is present in <code>NeedsDispatch</code>.</li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpInitOpenChannel(recipient, max_places, max_message_size)</code>:
-<ol>
-<li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for <code>P</code>.</li>
-<li>Append <code>(P, recipient)</code> to <code>HrmpOpenChannelRequestsList</code>.</li>
-<li>Add a new entry to <code>HrmpOpenChannelRequests</code> for <code>(sender, recipient)</code>
-<ol>
-<li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
-<li>Set <code>limit_used_places</code> to <code>max_places</code></li>
-<li>Set <code>limit_message_size</code> to <code>max_message_size</code></li>
-<li>Set <code>limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
-</ol>
-</li>
-<li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_sender_deposit</code></li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpAcceptOpenChannel(sender)</code>:
-<ol>
-<li>Reserve the deposit for the <code>P</code> according to <code>config.hrmp_recipient_deposit</code></li>
-<li>For the request in <code>HrmpOpenChannelRequests</code> identified by <code>(sender, P)</code>, set <code>confirmed</code> flag to <code>true</code>.</li>
-<li>Increase <code>HrmpAcceptedChannelRequestCount</code> by 1 for <code>P</code>.</li>
-</ol>
-</li>
-<li>If the message kind is <code>HrmpCloseChannel(ch)</code>:
-<ol>
-<li>If not already there, insert a new entry <code>Some(())</code> to <code>HrmpCloseChannelRequests</code> for <code>ch</code>
-and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
 </ol>
 </li>
 </ol>
@@ -478,35 +423,90 @@ and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
 <ol>
 <li>Add the para into the <code>OutgoingParas</code> vector maintaining the sorted order.</li>
 </ol>
-<p>The following routine is meant to execute pending entries in upward dispatchable queues. This function doesn't fail, even if
-any of dispatchables return an error.</p>
-<p><code>process_pending_upward_dispatchables()</code>:</p>
+<p>The following routine is meant to execute pending entries in upward message queues. This function doesn't fail, even if
+dispatcing any of individual upward messages returns an error.</p>
+<p><code>process_pending_upward_messages()</code>:</p>
 <ol>
 <li>Initialize a cumulative weight counter <code>T</code> to 0</li>
 <li>Iterate over items in <code>NeedsDispatch</code> cyclically, starting with <code>NextDispatchRoundStartWith</code>. If the item specified is <code>None</code> start from the beginning. For each <code>P</code> encountered:</li>
-<li>Dequeue <code>D</code> the first dispatchable <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></li>
+<li>Dequeue the first upward message <code>D</code> from <code>RelayDispatchQueues</code> for <code>P</code></li>
 <li>Decrement the size of the message from <code>RelayDispatchQueueSize</code> for <code>P</code></li>
-<li>Decode <code>D</code> into a dispatchable. Otherwise, if succeeded:</li>
-<li>If <code>weight_of(D) &gt; config.dispatchable_upward_message_critical_weight</code> then skip the dispatchable. Otherwise:</li>
-<li>Execute <code>D</code> and add the actual amount of weight consumed to <code>T</code>.</li>
-<li>If <code>weight_of(D) + T &gt; config.preferred_dispatchable_upward_messages_step_weight</code>, set <code>NextDispatchRoundStartWith</code> to <code>P</code> and finish processing.</li>
-</ol>
-<blockquote>
-<p>NOTE that in practice we would need to approach the weight calculation more thoroughly, i.e. incorporate all operations
-that could take place on the course of handling these dispatchables.</p>
-</blockquote>
-<ol>
+<li>Delegate processing of the message to the runtime. The weight consumed is added to <code>T</code>.</li>
+<li>If <code>T &gt;= config.preferred_dispatchable_upward_messages_step_weight</code>, set <code>NextDispatchRoundStartWith</code> to <code>P</code> and finish processing.</li>
 <li>If <code>RelayDispatchQueues</code> for <code>P</code> became empty, remove <code>P</code> from <code>NeedsDispatch</code>.</li>
 <li>If <code>NeedsDispatch</code> became empty then finish processing and set <code>NextDispatchRoundStartWith</code> to <code>None</code>.</li>
 </ol>
+<blockquote>
+<p>NOTE that in practice we would need to approach the weight calculation more thoroughly, i.e. incorporate all operations
+that could take place on the course of handling these upward messages.</p>
+</blockquote>
 <p>Utility routines.</p>
 <p><code>queue_downward_message(P: ParaId, M: DownwardMessage)</code>:</p>
 <ol>
-<li>Check if the serialized size of <code>M</code> exceeds the <code>config.critical_downward_message_size</code>. If so, return an error.</li>
+<li>Check if the size of <code>M</code> exceeds the <code>config.max_downward_message_size</code>. If so, return an error.</li>
 <li>Wrap <code>M</code> into <code>InboundDownwardMessage</code> using the current block number for <code>sent_at</code>.</li>
 <li>Obtain a new MQC link for the resulting <code>InboundDownwardMessage</code> and replace <code>DownwardMessageQueueHeads</code> for <code>P</code> with the resulting hash.</li>
 <li>Add the resulting <code>InboundDownwardMessage</code> into <code>DownwardMessageQueues</code> for <code>P</code>.</li>
 </ol>
+<h2><a class="header" href="#entry-points" id="entry-points">Entry-points</a></h2>
+<p>The following entry-points are meant to be used for HRMP channel management.</p>
+<p>Those entry-points are meant to be called from a parachain. <code>origin</code> is defined as the <code>ParaId</code> of
+the parachain executed the message.</p>
+<ul>
+<li><code>hrmp_init_open_channel(recipient, max_places, max_message_size)</code>:
+<ol>
+<li>Check that the <code>origin</code> is not <code>recipient</code>.</li>
+<li>Check that <code>max_places</code> is less or equal to <code>config.hrmp_channel_max_places</code> and greater than zero.</li>
+<li>Check that <code>max_message_size</code> is less or equal to <code>config.hrmp_channel_max_message_size</code> and greater than zero.</li>
+<li>Check that <code>recipient</code> is a valid para.</li>
+<li>Check that there is no existing channel for <code>(origin, recipient)</code> in <code>HrmpChannels</code>.</li>
+<li>Check that there is no existing open channel request (<code>origin</code>, <code>recipient</code>) in <code>HrmpOpenChannelRequests</code>.</li>
+<li>Check that the sum of the number of already opened HRMP channels by the <code>origin</code> (the size
+of the set found <code>HrmpEgressChannelsIndex</code> for <code>origin</code>) and the number of open requests by the
+<code>origin</code> (the value from <code>HrmpOpenChannelRequestCount</code> for <code>origin</code>) doesn't exceed the limit of
+channels (<code>config.hrmp_max_parachain_outbound_channels</code> or <code>config.hrmp_max_parathread_outbound_channels</code>) minus 1.</li>
+<li>Check that <code>origin</code>'s balance is more or equal to <code>config.hrmp_sender_deposit</code></li>
+<li>Reserve the deposit for the <code>origin</code> according to <code>config.hrmp_sender_deposit</code></li>
+<li>Increase <code>HrmpOpenChannelRequestCount</code> by 1 for <code>origin</code>.</li>
+<li>Append <code>(origin, recipient)</code> to <code>HrmpOpenChannelRequestsList</code>.</li>
+<li>Add a new entry to <code>HrmpOpenChannelRequests</code> for <code>(origin, recipient)</code>
+<ol>
+<li>Set <code>sender_deposit</code> to <code>config.hrmp_sender_deposit</code></li>
+<li>Set <code>limit_used_places</code> to <code>max_places</code></li>
+<li>Set <code>limit_message_size</code> to <code>max_message_size</code></li>
+<li>Set <code>limit_used_bytes</code> to <code>config.hrmp_channel_max_size</code></li>
+</ol>
+</li>
+</ol>
+</li>
+<li><code>hrmp_accept_open_channel(sender)</code>:
+<ol>
+<li>Check that there is an existing request between (<code>sender</code>, <code>origin</code>) in <code>HrmpOpenChannelRequests</code>
+<ol>
+<li>Check that it is not confirmed.</li>
+</ol>
+</li>
+<li>Check that the sum of the number of inbound HRMP channels opened to <code>origin</code> (the size of the set
+found in <code>HrmpIngressChannelsIndex</code> for <code>origin</code>) and the number of accepted open requests by the <code>origin</code>
+(the value from <code>HrmpAcceptedChannelRequestCount</code> for <code>origin</code>) doesn't exceed the limit of channels
+(<code>config.hrmp_max_parachain_inbound_channels</code> or <code>config.hrmp_max_parathread_inbound_channels</code>)
+minus 1.</li>
+<li>Check that <code>origin</code>'s balance is more or equal to <code>config.hrmp_recipient_deposit</code>.</li>
+<li>Reserve the deposit for the <code>origin</code> according to <code>config.hrmp_recipient_deposit</code></li>
+<li>For the request in <code>HrmpOpenChannelRequests</code> identified by <code>(sender, P)</code>, set <code>confirmed</code> flag to <code>true</code>.</li>
+<li>Increase <code>HrmpAcceptedChannelRequestCount</code> by 1 for <code>origin</code>.</li>
+</ol>
+</li>
+<li><code>hrmp_close_channel(ch)</code>:
+<ol>
+<li>Check that <code>origin</code> is either <code>ch.sender</code> or <code>ch.recipient</code></li>
+<li>Check that <code>HrmpChannels</code> for <code>ch</code> exists.</li>
+<li>Check that <code>ch</code> is not in the <code>HrmpCloseChannelRequests</code> set.</li>
+<li>If not already there, insert a new entry <code>Some(())</code> to <code>HrmpCloseChannelRequests</code> for <code>ch</code>
+and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
+</ol>
+</li>
+</ul>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
 <ol>
 <li>Drain <code>OutgoingParas</code>. For each <code>P</code> happened to be in the list:

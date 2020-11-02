@@ -170,7 +170,10 @@ although with smaller scalability potential.</p>
 <h2><a class="header" href="#vertical-message-passing" id="vertical-message-passing">Vertical Message Passing</a></h2>
 <p>Types required for message passing between the relay-chain and a parachain.</p>
 <p>Actual contents of the messages is specified by the XCM standard.</p>
-<pre><code class="language-rust ignore">/// A message sent from the relay-chain down to a parachain.
+<pre><code class="language-rust ignore">/// A message sent from a parachain to the relay-chain.
+type UpwardMessage = Vec&lt;u8&gt;;
+
+/// A message sent from the relay-chain down to a parachain.
 ///
 /// The size of the message is limited by the `config.max_downward_message_size`
 /// parameter.
@@ -185,6 +188,7 @@ struct InboundDownwardMessage {
 	pub msg: DownwardMessage,
 }
 </code></pre>
+<h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
 <h2><a class="header" href="#hrmpchannelid" id="hrmpchannelid">HrmpChannelId</a></h2>
 <p>A type that uniquely identifies an HRMP channel. An HRMP channel is established between two paras.
 In text, we use the notation <code>(A, B)</code> to specify a channel between A and B. The channels are
@@ -196,61 +200,6 @@ identified by <code>(A, B)</code>.</p>
 <pre><code class="language-rust ignore">struct HrmpChannelId {
     sender: ParaId,
     recipient: ParaId,
-}
-</code></pre>
-<h2><a class="header" href="#upward-message" id="upward-message">Upward Message</a></h2>
-<p>A type of messages dispatched from a parachain to the relay chain.</p>
-<pre><code class="language-rust ignore">enum ParachainDispatchOrigin {
-	/// As a simple `Origin::Signed`, using `ParaId::account_id` as its value. This is good when
-	/// interacting with standard modules such as `balances`.
-	Signed,
-	/// As the special `Origin::Parachain(ParaId)`. This is good when interacting with parachain-
-	/// aware modules which need to succinctly verify that the origin is a parachain.
-	Parachain,
-	/// As the simple, superuser `Origin::Root`. This can only be done on specially permissioned
-	/// parachains.
-	Root,
-}
-
-/// An opaque byte buffer that encodes an entrypoint and the arguments that should be
-/// provided to it upon the dispatch.
-///
-/// NOTE In order to be executable the byte buffer should be decoded which potentially can fail if
-/// the encoding was changed.
-type RawDispatchable = Vec&lt;u8&gt;;
-
-enum UpwardMessage {
-	/// This upward message is meant to schedule execution of a provided dispatchable.
-	Dispatchable {
-		/// The origin with which the dispatchable should be executed.
-		origin: ParachainDispatchOrigin,
-		/// The dispatchable to be executed in its raw form.
-		dispatchable: RawDispatchable,
-	},
-	/// A message for initiation of opening a new HRMP channel between the origin para and the
-	/// given `recipient`.
-	///
-	/// Let `origin` be the parachain that sent this upward message. In that case the channel
-	/// to be opened is (`origin` -&gt; `recipient`).
-	HrmpInitOpenChannel {
-		/// The receiving party in the channel.
-		recipient: ParaId,
-		/// How many messages can be stored in the channel at most.
-		max_places: u32,
-		/// The maximum size of a message in this channel.
-		max_message_size: u32,
-	},
-	/// A message that is meant to confirm the HRMP open channel request initiated earlier by the
-	/// `HrmpInitOpenChannel` by the given `sender`.
-	///
-	/// Let `origin` be the parachain that sent this upward message. In that case the channel
-	/// (`origin` -&gt; `sender`) will be opened during the session change.
-	HrmpAcceptOpenChannel(ParaId),
-	/// A message for closing the specified existing channel `ch`.
-	///
-	/// The channel to be closed is `(ch.sender -&gt; ch.recipient)`. The parachain that sent this
-	/// upward message must be either `ch.sender` or `ch.recipient`.
-	HrmpCloseChannel(HrmpChannelId),
 }
 </code></pre>
 <h2><a class="header" href="#horizontal-message" id="horizontal-message">Horizontal Message</a></h2>

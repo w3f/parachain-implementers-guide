@@ -186,7 +186,7 @@
 <li>Invoke <code>Scheduler::schedule(freed)</code></li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
-<li>Call the <code>Router::process_pending_upward_dispatchables</code> routine to execute all messages in upward dispatch queues.</li>
+<li>Call the <code>Router::process_pending_upward_messages</code> routine to execute all messages in upward dispatch queues.</li>
 <li>If all of the above succeeds, set <code>Included</code> to <code>Some(())</code>.</li>
 </ol>
 </li>
