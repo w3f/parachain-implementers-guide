@@ -2700,7 +2700,7 @@ struct State {
 <ul>
 <li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
 <li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, response_sender)</code></li>
-<li>Load the historical validation code of the parachain (TODO: https://github.com/paritytech/polkadot/issues/1877)</li>
+<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::HistoricalValidationCode(</code>descriptor.para_id<code>, </code>descriptor.relay_parent<code>)</code> against the state of <code>block_hash</code>.</li>
 <li>Spawn a background task with a clone of <code>approval_vote_tx</code>
 <ul>
 <li>Wait for the available data</li>
@@ -4022,7 +4022,9 @@ enum ProvisionerMessage {
 	SessionIndex(ResponseChannel&lt;SessionIndex&gt;),
 	/// Get the validation code for a specific para, using the given occupied core assumption.
 	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
-	/// Get the persisted validation data at the state of a given block for a specific para,
+	/// Fetch the historical validation code used by a para for candidates executed in 
+	/// the context of a given block height in the current chain.
+	HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
 	/// with the given occupied core assumption.
 	PersistedValidationData(
 		ParaId,
