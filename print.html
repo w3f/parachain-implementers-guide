@@ -2100,7 +2100,7 @@ struct CollationGenerationConfig {
 <h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
 <li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::GetBackedCandidates</code>, get all backable candidates from the statement table and send them back.</li>
-<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
+<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request. After successfully dispatching the <code>Seconded</code> statement we have to distribute the PoV.</li>
 <li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the <code>PoVDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
 </ul>
 <blockquote>
@@ -2132,16 +2132,18 @@ struct CollationGenerationConfig {
   }
   CandidateBackingMessage::Second(hash, candidate) =&gt; {
     if candidate is unknown and in local assignment {
-      spawn_validation_work(candidate, parachain head, validation function)
+      if spawn_validation_work(candidate, parachain head, validation function).await == Valid {
+        send(DistributePoV(pov))
+      }
     }
   }
   CandidateBackingMessage::Statement(hash, statement) =&gt; {
     // count to the votes on this candidate
-	if let Statement::Seconded(candidate) = statement {
-	  if candidate.parachain_id == our_assignment {
-	    spawn_validation_work(candidate, parachain head, validation function)
-	  }
-	}
+    if let Statement::Seconded(candidate) = statement {
+      if candidate.parachain_id == our_assignment {
+        spawn_validation_work(candidate, parachain head, validation function)
+      }
+    }
   }
 }
 <span class="boring">}
@@ -2169,11 +2171,13 @@ struct CollationGenerationConfig {
 </span></code></pre></pre>
 <h3><a class="header" href="#fetch-pov-block" id="fetch-pov-block">Fetch Pov Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
-Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FecthPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
+Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FetchPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
+<h3><a class="header" href="#distribute-pov-block" id="distribute-pov-block">Distribute Pov Block</a></h3>
+<p>Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::DistributePoV(relay_parent, candidate_descriptor, pov)</code>.</p>
 <h3><a class="header" href="#validate-pov-block" id="validate-pov-block">Validate PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
-<h3><a class="header" href="#distribute-signed-statemnet" id="distribute-signed-statemnet">Distribute Signed Statemnet</a></h3>
+<h3><a class="header" href="#distribute-signed-statement" id="distribute-signed-statement">Distribute Signed Statement</a></h3>
 <p>Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>StatementDistributionMessage</code></a><code>::Share(relay_parent, SignedFullStatement)</code>.</p>
 <h1><a class="header" href="#statement-distribution" id="statement-distribution">Statement Distribution</a></h1>
 <p>The Statement Distribution Subsystem is responsible for distributing statements about seconded candidates between validators.</p>
@@ -2230,14 +2234,14 @@ We also track how many statements we have received per peer, per candidate, and 
 <li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
 </ul>
 <h2><a class="header" href="#functionality-5" id="functionality-5">Functionality</a></h2>
-<p>This network protocol is responsible for distributing <a href="node/backing/../../types/availability.html#proof-of-validity"><code>PoV</code>s</a> by gossip. Since PoVs are heavy in practice, gossip is far from the most efficient way to distribute them. In the future, this should be replaced by a better network protocol that finds validators who have validated the block and connects to them directly. This protocol is descrbied.</p>
+<p>This network protocol is responsible for distributing <a href="node/backing/../../types/availability.html#proof-of-validity"><code>PoV</code>s</a> by gossip. Since PoVs are heavy in practice, gossip is far from the most efficient way to distribute them. In the future, this should be replaced by a better network protocol that finds validators who have validated the block and connects to them directly. This protocol is described.</p>
 <p>This protocol is described in terms of &quot;us&quot; and our peers, with the understanding that this is the procedure that any honest node will run. It has the following goals:</p>
 <ul>
 <li>We never have to buffer an unbounded amount of data</li>
 <li>PoVs will flow transitively across a network of honest nodes, stemming from the validators that originally seconded candidates requiring those PoVs.</li>
 </ul>
 <p>As we are gossiping, we need to track which PoVs our peers are waiting for to avoid sending them data that they are not expecting. It is not reasonable to expect our peers to buffer unexpected PoVs, just as we will not buffer unexpected PoVs. So notifying our peers about what is being awaited is key. However it is important that the notifications system is also bounded.</p>
-<p>For this, in order to avoid reaching into the internals of the <a href="node/backing/statement-distribution.html">Statement Distribution</a> Subsystem, we can rely on an expected propery of candidate backing: that each validator can second up to 2 candidates per chain head. This will typically be only one, because they are only supposed to issue one, but they can equivocate if they are willing to  be slashed. So we can set a cap on the number of PoVs each peer is allowed to notify us that they are waiting for at a given relay-parent. This cap will be twice the number of validators at that relay-parent. In practice, this is a very lax upper bound that can be reduced much further if desired.</p>
+<p>For this, in order to avoid reaching into the internals of the <a href="node/backing/statement-distribution.html">Statement Distribution</a> Subsystem, we can rely on an expected property of candidate backing: that each validator can second up to 2 candidates per chain head. This will typically be only one, because they are only supposed to issue one, but they can equivocate if they are willing to  be slashed. So we can set a cap on the number of PoVs each peer is allowed to notify us that they are waiting for at a given relay-parent. This cap will be twice the number of validators at that relay-parent. In practice, this is a very lax upper bound that can be reduced much further if desired.</p>
 <p>The view update mechanism of the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a> ensures that peers are only allowed to consider a certain set of relay-parents as live. So this bounding mechanism caps the amount of data we need to store per peer at any time at <code>sum({ 2 * n_validators_at_head(head) * sizeof(hash) for head in view_heads })</code>. Additionally, peers should only be allowed to notify us of PoV hashes they are waiting for in the context of relay-parents in our own local view, which means that <code>n_validators_at_head</code> is implied to be <code>0</code> for relay-parents not in our own local view.</p>
 <p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>ActiveLeavesUpdate</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="node/backing/../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
 <p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::FetchPoV variant. Proper operation of this subsystem depends on the descriptors passed faithfully representing candidates which have been seconded by other validators.</p>
@@ -3589,7 +3593,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span><span class="boring">fn main() {
 </span>struct AvailableData {
     /// The Proof-of-Validation of the candidate.
-    pov: PoV,
+    pov: Arc&lt;PoV&gt;,
     /// The persisted validation data used to check the candidate.
     validation_data: PersistedValidationData,
 }

@@ -196,7 +196,7 @@
 <h3><a class="header" href="#on-receiving-candidatebackingmessage" id="on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
 <li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::GetBackedCandidates</code>, get all backable candidates from the statement table and send them back.</li>
-<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request. After successfully dispatching the <code>Seconded</code> statement we have to distribute the PoV.</li>
 <li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the <code>PoVDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
 </ul>
 <blockquote>
@@ -228,16 +228,18 @@
   }
   CandidateBackingMessage::Second(hash, candidate) =&gt; {
     if candidate is unknown and in local assignment {
-      spawn_validation_work(candidate, parachain head, validation function)
+      if spawn_validation_work(candidate, parachain head, validation function).await == Valid {
+        send(DistributePoV(pov))
+      }
     }
   }
   CandidateBackingMessage::Statement(hash, statement) =&gt; {
     // count to the votes on this candidate
-	if let Statement::Seconded(candidate) = statement {
-	  if candidate.parachain_id == our_assignment {
-	    spawn_validation_work(candidate, parachain head, validation function)
-	  }
-	}
+    if let Statement::Seconded(candidate) = statement {
+      if candidate.parachain_id == our_assignment {
+        spawn_validation_work(candidate, parachain head, validation function)
+      }
+    }
   }
 }
 <span class="boring">}
@@ -265,11 +267,13 @@
 </span></code></pre></pre>
 <h3><a class="header" href="#fetch-pov-block" id="fetch-pov-block">Fetch Pov Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
-Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FecthPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
+Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FetchPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
+<h3><a class="header" href="#distribute-pov-block" id="distribute-pov-block">Distribute Pov Block</a></h3>
+<p>Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::DistributePoV(relay_parent, candidate_descriptor, pov)</code>.</p>
 <h3><a class="header" href="#validate-pov-block" id="validate-pov-block">Validate PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
-<h3><a class="header" href="#distribute-signed-statemnet" id="distribute-signed-statemnet">Distribute Signed Statemnet</a></h3>
+<h3><a class="header" href="#distribute-signed-statement" id="distribute-signed-statement">Distribute Signed Statement</a></h3>
 <p>Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>StatementDistributionMessage</code></a><code>::Share(relay_parent, SignedFullStatement)</code>.</p>
 
                     </main>

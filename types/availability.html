@@ -199,7 +199,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span><span class="boring">fn main() {
 </span>struct AvailableData {
     /// The Proof-of-Validation of the candidate.
-    pov: PoV,
+    pov: Arc&lt;PoV&gt;,
     /// The persisted validation data used to check the candidate.
     validation_data: PersistedValidationData,
 }
