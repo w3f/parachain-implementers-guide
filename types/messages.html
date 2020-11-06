@@ -196,7 +196,6 @@ unidirectional, meaning that <code>(A, B)</code> and <code>(B, A)</code> refer t
 that we use the first item tuple for the sender and the second for the recipient. Only one channel
 is allowed between two participants in one direction, i.e. there cannot be 2 different channels
 identified by <code>(A, B)</code>.</p>
-<p><code>HrmpChannelId</code> has a defined ordering: first <code>sender</code> and tie is resolved by <code>recipient</code>.</p>
 <pre><code class="language-rust ignore">struct HrmpChannelId {
     sender: ParaId,
     recipient: ParaId,

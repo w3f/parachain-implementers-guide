@@ -290,6 +290,9 @@ OutgoingParas: Vec&lt;ParaId&gt;;
 <p><code>is_parathread(ParaId) -&gt; bool</code>: Returns true if the para ID references any live parathread.</p>
 </li>
 <li>
+<p><code>is_valid_para(ParaId) -&gt; bool</code>: Returns true if the para ID references either a live parathread or live parachain.</p>
+</li>
+<li>
 <p><code>last_code_upgrade(id: ParaId, include_future: bool) -&gt; Option&lt;BlockNumber&gt;</code>: The block number of the last scheduled upgrade of the requested para. Includes future upgrades if the flag is set. This is the <code>expected_at</code> number, not the <code>activated_at</code> number.</p>
 </li>
 <li>
