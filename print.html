@@ -2671,9 +2671,7 @@ struct BlockEntry {
 // unix epoch.
 type Tick = u64;
 
-struct TrackerEntry 
-
-struct StoredBlockRange(BlockNumber, BlockNumber)
+struct StoredBlockRange(BlockNumber, BlockNumber);
 <span class="boring">}
 </span></code></pre></pre>
 <p>In the schema, we map</p>
@@ -2683,6 +2681,12 @@ BlockHash =&gt; BlockEntry
 CandidateHash =&gt; CandidateEntry
 </code></pre>
 <h2><a class="header" href="#logic" id="logic">Logic</a></h2>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>const APPROVAL_SESSIONS: SessionIndex = 6;
+<span class="boring">}
+</span></code></pre></pre>
 <p>In-memory state:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2724,7 +2728,17 @@ struct State {
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
 <li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. </li>
-<li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps. We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks. </li>
+<li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps.</li>
+<li>We use the RuntimeApiSubsystem to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
+<ul>
+<li>We fetch the set of candidates included by each block by dispatching a <code>RuntimeApiRequest::CandidateEvents</code> and checking the <code>CandidateIncluded</code> events.</li>
+<li>We fetch the session of the block by dispatching a <code>session_index_for_child</code> request with the parent-hash of the block.</li>
+<li>If the <code>session index - APPROVAL_SESSIONS &gt; state.earliest_session</code>, then bump <code>state.earliest_sessions</code> to that amount and prune earlier sessions.</li>
+<li>If the session isn't in our <code>state.session_info</code>, load the session info for it and for all sessions since the earliest-session, including the earliest-session, if that is missing. And it can be, just after pruning, if we've done a big jump forward, as is the case when we've just finished chain synchronization.</li>
+<li>If any of the runtime API calls fail, we just warn and skip the block.</li>
+</ul>
+</li>
+<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks. </li>
 <li>We also note how late we appear to have received the block. We create a <code>BlockEntry</code> for each block and a <code>CandidateEntry</code> for each candidate obtained from <code>CandidateIncluded</code> events after making a <code>RuntimeApiRequest::CandidateEvents</code> request.</li>
 <li>Ensure that the <code>CandidateEntry</code> contains a <code>block_assignments</code> entry for the block, with the correct backing group set.</li>
 <li>If a validator in this session, compute and assign <code>our_assignment</code> for the <code>block_assignments</code>
