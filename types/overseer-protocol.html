@@ -586,14 +586,8 @@ enum ProvisionerMessage {
 	Validators(ResponseChannel&lt;Vec&lt;ValidatorId&gt;&gt;),
 	/// Get the validator groups and rotation info.
 	ValidatorGroups(ResponseChannel&lt;(Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, GroupRotationInfo)&gt;),
-	/// Get the session index for children of the block. This can be used to construct a signing
-	/// context.
-	SessionIndex(ResponseChannel&lt;SessionIndex&gt;),
-	/// Get the validation code for a specific para, using the given occupied core assumption.
-	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
-	/// Fetch the historical validation code used by a para for candidates executed in
-	/// the context of a given block height in the current chain.
-	HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
+	/// Get information about all availability cores.
+	AvailabilityCores(ResponseChannel&lt;Vec&lt;CoreState&gt;&gt;),
 	/// with the given occupied core assumption.
 	PersistedValidationData(
 		ParaId,
@@ -612,12 +606,25 @@ enum ProvisionerMessage {
 		CandidateCommitments,
 		RuntimeApiSender&lt;bool&gt;,
 	),
-	/// Get information about all availability cores.
-	AvailabilityCores(ResponseChannel&lt;Vec&lt;CoreState&gt;&gt;),
+	/// Get the session index for children of the block. This can be used to construct a signing
+	/// context.
+	SessionIndexForChild(ResponseChannel&lt;SessionIndex&gt;),
+	/// Get the validation code for a specific para, using the given occupied core assumption.
+	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
+	/// Fetch the historical validation code used by a para for candidates executed in
+	/// the context of a given block height in the current chain.
+	HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
 	/// Get a committed candidate receipt for all candidates pending availability.
 	CandidatePendingAvailability(ParaId, ResponseChannel&lt;Option&lt;CommittedCandidateReceipt&gt;&gt;),
 	/// Get all events concerning candidates in the last block.
 	CandidateEvents(ResponseChannel&lt;Vec&lt;CandidateEvent&gt;&gt;),
+	/// Get the session info for the given session, if stored.
+	SessionInfo(SessionIndex, ResponseChannel&lt;Option&lt;SessionInfo&gt;&gt;),
+	/// Get all the pending inbound messages in the downward message queue for a para.
+	DmqContents(ParaId, ResponseChannel&lt;Vec&lt;InboundDownwardMessage&lt;BlockNumber&gt;&gt;&gt;),
+	/// Get the contents of all channels addressed to the given recipient. Channels that have no
+	/// messages in them are also included.
+	InboundHrmpChannelsContents(ParaId, ResponseChannel&lt;BTreeMap&lt;ParaId, Vec&lt;InboundHrmpMessage&lt;BlockNumber&gt;&gt;&gt;&gt;),
 }
 
 enum RuntimeApiMessage {

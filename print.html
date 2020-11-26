@@ -521,7 +521,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <li>Paras</li>
 <li>Scheduler</li>
 <li>Inclusion</li>
-<li>Validity</li>
+<li>SessionInfo</li>
 <li>DMP</li>
 <li>UMP</li>
 <li>HRMP</li>
@@ -1680,11 +1680,11 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
     // no-show.
     no_show_slots: u32,
     /// The number of validators needed to approve a block.
-	needed_approvals: u32,
+    needed_approvals: u32,
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>Storage Layout: </p>
+<p>Storage Layout:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1696,7 +1696,6 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 </span></code></pre></pre>
 <h2><a class="header" href="#session-change-8" id="session-change-8">Session Change</a></h2>
 <ol>
-<li>Update the <code>CurrentSessionIndex</code>.</li>
 <li>Update <code>EarliestStoredSession</code> based on <code>config.dispute_period</code> and remove all entries from <code>Sessions</code> from the previous value up to the new value.</li>
 <li>Create a new entry in <code>Sessions</code> with information about the current session.</li>
 </ol>
@@ -4366,14 +4365,8 @@ enum ProvisionerMessage {
 	Validators(ResponseChannel&lt;Vec&lt;ValidatorId&gt;&gt;),
 	/// Get the validator groups and rotation info.
 	ValidatorGroups(ResponseChannel&lt;(Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, GroupRotationInfo)&gt;),
-	/// Get the session index for children of the block. This can be used to construct a signing
-	/// context.
-	SessionIndex(ResponseChannel&lt;SessionIndex&gt;),
-	/// Get the validation code for a specific para, using the given occupied core assumption.
-	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
-	/// Fetch the historical validation code used by a para for candidates executed in
-	/// the context of a given block height in the current chain.
-	HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
+	/// Get information about all availability cores.
+	AvailabilityCores(ResponseChannel&lt;Vec&lt;CoreState&gt;&gt;),
 	/// with the given occupied core assumption.
 	PersistedValidationData(
 		ParaId,
@@ -4392,12 +4385,25 @@ enum ProvisionerMessage {
 		CandidateCommitments,
 		RuntimeApiSender&lt;bool&gt;,
 	),
-	/// Get information about all availability cores.
-	AvailabilityCores(ResponseChannel&lt;Vec&lt;CoreState&gt;&gt;),
+	/// Get the session index for children of the block. This can be used to construct a signing
+	/// context.
+	SessionIndexForChild(ResponseChannel&lt;SessionIndex&gt;),
+	/// Get the validation code for a specific para, using the given occupied core assumption.
+	ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
+	/// Fetch the historical validation code used by a para for candidates executed in
+	/// the context of a given block height in the current chain.
+	HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
 	/// Get a committed candidate receipt for all candidates pending availability.
 	CandidatePendingAvailability(ParaId, ResponseChannel&lt;Option&lt;CommittedCandidateReceipt&gt;&gt;),
 	/// Get all events concerning candidates in the last block.
 	CandidateEvents(ResponseChannel&lt;Vec&lt;CandidateEvent&gt;&gt;),
+	/// Get the session info for the given session, if stored.
+	SessionInfo(SessionIndex, ResponseChannel&lt;Option&lt;SessionInfo&gt;&gt;),
+	/// Get all the pending inbound messages in the downward message queue for a para.
+	DmqContents(ParaId, ResponseChannel&lt;Vec&lt;InboundDownwardMessage&lt;BlockNumber&gt;&gt;&gt;),
+	/// Get the contents of all channels addressed to the given recipient. Channels that have no
+	/// messages in them are also included.
+	InboundHrmpChannelsContents(ParaId, ResponseChannel&lt;BTreeMap&lt;ParaId, Vec&lt;InboundHrmpMessage&lt;BlockNumber&gt;&gt;&gt;&gt;),
 }
 
 enum RuntimeApiMessage {
@@ -4497,6 +4503,9 @@ pub enum CandidateValidationMessage {
 	pub validation_upgrade_frequency: BlockNumber,
 	/// The delay, in blocks, before a validation upgrade is applied.
 	pub validation_upgrade_delay: BlockNumber,
+	/// The acceptance period, in blocks. This is the amount of blocks after availability that validators
+	/// and fishermen have to perform secondary checks or issue reports.
+	pub acceptance_period: BlockNumber,
 	/// The maximum validation code size, in bytes.
 	pub max_code_size: u32,
 	/// The maximum head-data size, in bytes.
@@ -4522,6 +4531,8 @@ pub enum CandidateValidationMessage {
 	/// submitting an approval vote before a validator is considered a no-show.
 	/// Must be at least 1.
 	pub no_show_slots: u32,
+	/// The number of delay tranches in total.
+	pub n_delay_tranches: u32,
 	/// The width of the zeroth delay tranche for approval assignments. This many delay tranches
 	/// beyond 0 are all consolidated to form a wide 0 tranche.
 	pub zeroth_delay_tranche_width: u32,

@@ -193,11 +193,11 @@
     // no-show.
     no_show_slots: u32,
     /// The number of validators needed to approve a block.
-	needed_approvals: u32,
+    needed_approvals: u32,
 }
 <span class="boring">}
 </span></code></pre></pre>
-<p>Storage Layout: </p>
+<p>Storage Layout:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -209,7 +209,6 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 </span></code></pre></pre>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
 <ol>
-<li>Update the <code>CurrentSessionIndex</code>.</li>
 <li>Update <code>EarliestStoredSession</code> based on <code>config.dispute_period</code> and remove all entries from <code>Sessions</code> from the previous value up to the new value.</li>
 <li>Create a new entry in <code>Sessions</code> with information about the current session.</li>
 </ol>
