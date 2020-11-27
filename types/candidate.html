@@ -238,6 +238,8 @@ struct CandidateDescriptor {
 	persisted_validation_data_hash: Hash,
 	/// The blake2-256 hash of the pov-block.
 	pov_hash: Hash,
+	/// The root of a block's erasure encoding Merkle tree.
+	erasure_root: Hash,
 	/// Signature on blake2-256 of components of this receipt:
 	/// The parachain index, the relay parent, the validation data hash, and the pov_hash.
 	signature: CollatorSignature,
@@ -403,8 +405,6 @@ struct CandidateCommitments {
 	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
 	/// Messages destined to be interpreted by the Relay chain itself.
 	upward_messages: Vec&lt;UpwardMessage&gt;,
-	/// The root of a block's erasure encoding Merkle tree.
-	erasure_root: Hash,
 	/// New validation code.
 	new_validation_code: Option&lt;ValidationCode&gt;,
 	/// The head-data produced as a result of execution.
@@ -426,29 +426,6 @@ struct CandidateCommitments {
 	parent_hash: Hash,
 	/// The session index this signature is in the context of.
 	session_index: SessionIndex,
-}
-<span class="boring">}
-</span></code></pre></pre>
-<h2><a class="header" href="#validation-outputs" id="validation-outputs">Validation Outputs</a></h2>
-<p>This struct encapsulates the outputs of candidate validation.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>struct ValidationOutputs {
-	/// The head-data produced by validation.
-	head_data: HeadData,
-	/// The validation data, persisted.
-	validation_data: PersistedValidationData,
-	/// Messages directed to other paras routed via the relay chain.
-	horizontal_messages: Vec&lt;OutboundHrmpMessage&gt;,
-	/// Upwards messages to the relay chain.
-	upwards_messages: Vec&lt;UpwardsMessage&gt;,
-	/// The new validation code submitted by the execution, if any.
-	new_validation_code: Option&lt;ValidationCode&gt;,
-	/// The number of messages processed from the DMQ.
-	processed_downward_messages: u32,
-	/// The mark which specifies the block number up to which all inbound HRMP messages are processed.
-	hrmp_watermark: BlockNumber,
 }
 <span class="boring">}
 </span></code></pre></pre>
