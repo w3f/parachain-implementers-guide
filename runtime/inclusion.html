@@ -227,7 +227,7 @@ CurrentSessionIndex: SessionIndex;
 </ol>
 </li>
 <li>
-<p><code>process_candidates(BackedCandidates, scheduled: Vec&lt;CoreAssignment&gt;, group_validators: Fn(GroupIndex) -&gt; Option&lt;Vec&lt;ValidatorIndex&gt;&gt;)</code>:</p>
+<p><code>process_candidates(parent_storage_root, BackedCandidates, scheduled: Vec&lt;CoreAssignment&gt;, group_validators: Fn(GroupIndex) -&gt; Option&lt;Vec&lt;ValidatorIndex&gt;&gt;)</code>:</p>
 <ol>
 <li>check that each candidate corresponds to a scheduled core and that they are ordered in the same order the cores appear in assignments in <code>scheduled</code>.</li>
 <li>check that <code>scheduled</code> is sorted ascending by <code>CoreIndex</code>, without duplicates.</li>
