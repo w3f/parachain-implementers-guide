@@ -3596,11 +3596,11 @@ type CollationV1Message = ProtocolMessage&lt;CollationProtocolV1&gt;;
 <ul>
 <li>Adjust peer reputation according to cost or benefit provided</li>
 </ul>
-<h3><a class="header" href="#sendvalidationmessage" id="sendvalidationmessage">SendValidationMessage</a></h3>
+<h3><a class="header" href="#sendvalidationmessage--sendvalidationmessages" id="sendvalidationmessage--sendvalidationmessages">SendValidationMessage / SendValidationMessages</a></h3>
 <ul>
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the validation peer-set.</li>
 </ul>
-<h3><a class="header" href="#sendcollationmessage" id="sendcollationmessage">SendCollationMessage</a></h3>
+<h3><a class="header" href="#sendcollationmessage--sendcollationmessages" id="sendcollationmessage--sendcollationmessages">SendCollationMessage / SendCollationMessages</a></h3>
 <ul>
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the collation peer-set.</li>
 </ul>
@@ -4278,9 +4278,9 @@ enum AvailabilityRecoveryMessage {
 	/// Query a specific availability chunk of the candidate's erasure-coding by validator index.
 	/// Returns the chunk and its inclusion proof against the candidate's erasure-root.
 	QueryChunk(CandidateHash, ValidatorIndex, ResponseChannel&lt;Option&lt;AvailabilityChunkAndProof&gt;&gt;),
-	/// Store a specific chunk of the candidate's erasure-coding by validator index, with an
+	/// Store a specific chunk of the candidate's erasure-coding, with an
 	/// accompanying proof.
-	StoreChunk(CandidateHash, ValidatorIndex, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),
+	StoreChunk(CandidateHash, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),
 	/// Store `AvailableData`. If `ValidatorIndex` is provided, also store this validator's
 	/// `AvailabilityChunkAndProof`.
 	StoreAvailableData(CandidateHash, Option&lt;ValidatorIndex&gt;, u32, AvailableData, ResponseChannel&lt;Result&lt;()&gt;&gt;),
@@ -4424,7 +4424,11 @@ enum NetworkBridgeMessage {
 	/// Send a message to one or more peers on the validation peerset.
 	SendValidationMessage([PeerId], ValidationProtocolV1),
 	/// Send a message to one or more peers on the collation peerset.
-	SendCollationMessage([PeerId], ValidationProtocolV1),
+	SendCollationMessage([PeerId], CollationProtocolV1),
+	/// Send multiple validation messages.
+	SendValidationMessages([([PeerId, ValidationProtocolV1])]),
+	/// Send multiple collation messages.
+	SendCollationMessages([([PeerId, ValidationProtocolV1])]),
 	/// Connect to peers who represent the given `validator_ids`.
 	///
 	/// Also ask the network to stay connected to these peers at least
