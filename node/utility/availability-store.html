@@ -171,23 +171,52 @@
 <li>Availability chunks of candidates that were backed and noted available on-chain.</li>
 </ul>
 <p>For each of these data we have pruning rules that determine how long we need to keep that data available.</p>
-<p>PoV hypothetically only need to be kept around until the block where the data was made fully available is finalized. However, disputes can revert finality, so we need to be a bit more conservative. We should keep the PoV until a block that finalized availability of it has been finalized for 1 day.</p>
-<blockquote>
-<p>TODO: arbitrary, but extracting <code>acceptance_period</code> is kind of hard here...</p>
-</blockquote>
-<p>Availability chunks need to be kept available until the dispute period for the corresponding candidate has ended. We can accomplish this by using the same criterion as the above, plus a delay. This gives us a pruning condition of the block finalizing availability of the chunk being final for 1 day + 1 hour.</p>
-<blockquote>
-<p>TODO: again, concrete acceptance-period would be nicer here, but complicates things</p>
-</blockquote>
+<p>PoV hypothetically only need to be kept around until the block where the data was made fully available is finalized. However, disputes can revert finality, so we need to be a bit more conservative and we add a delay. We should keep the PoV until a block that finalized availability of it has been finalized for 1 day + 1 hour.</p>
+<p>Availability chunks need to be kept available until the dispute period for the corresponding candidate has ended. We can accomplish this by using the same criterion as the above. This gives us a pruning condition of the block finalizing availability of the chunk being final for 1 day + 1 hour.</p>
 <p>There is also the case where a validator commits to make a PoV available, but the corresponding candidate is never backed. In this case, we keep the PoV available for 1 hour.</p>
-<blockquote>
-<p>TODO: ideally would be an upper bound on how far back contextual execution is OK.</p>
-</blockquote>
-<p>There may be multiple competing blocks all ending the availability phase for a particular candidate. Until (and slightly beyond) finality, it will be unclear which of those is actually the canonical chain, so the pruning records for PoVs and Availability chunks should keep track of all such blocks.</p>
-<h2><a class="header" href="#lifetime-of-the-pov-in-the-storage" id="lifetime-of-the-pov-in-the-storage">Lifetime of the PoV in the storage</a></h2>
+<p>There may be multiple competing blocks all ending the availability phase for a particular candidate. Until finality, it will be unclear which of those is actually the canonical chain, so the pruning records for PoVs and Availability chunks should keep track of all such blocks.</p>
+<h2><a class="header" href="#lifetime-of-the-block-data-and-chunks-in-storage" id="lifetime-of-the-block-data-and-chunks-in-storage">Lifetime of the block data and chunks in storage</a></h2>
 <p><img src="availability_store_0.generated.svg" alt="" /></p>
-<h2><a class="header" href="#lifetime-of-the-chunk-in-the-storage" id="lifetime-of-the-chunk-in-the-storage">Lifetime of the chunk in the storage</a></h2>
-<p><img src="availability_store_1.generated.svg" alt="" /></p>
+<h2><a class="header" href="#database-schema" id="database-schema">Database Schema</a></h2>
+<p>We use an underlying Key-Value database where we assume we have the following operations available:</p>
+<ul>
+<li><code>write(key, value)</code></li>
+<li><code>read(key) -&gt; Option&lt;value&gt;</code></li>
+<li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
+</ul>
+<p>We use this database to encode the following schema:</p>
+<pre><code>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
+(&quot;chunk&quot;, CandidateHash, u32) -&gt; Option&lt;ErasureChunk&gt;
+(&quot;meta&quot;, CandidateHash) -&gt; Option&lt;CandidateMeta&gt;
+
+(&quot;unfinalized&quot;, BlockNumber, BlockHash, CandidateHash) -&gt; Option&lt;()&gt;
+(&quot;prune_by_time&quot;, Timestamp, CandidateHash) -&gt; Option&lt;()&gt;
+</code></pre>
+<p>Timestamps are the wall-clock seconds since unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
+<p>The meta information that we track per-candidate is defined as the <code>CandidateMeta</code> struct</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct CandidateMeta {
+  state: State,
+  data_available: bool,
+  chunks_stored: Bitfield,
+}
+
+enum State {
+  /// Candidate data was first observed at the given time but is not available in any block.
+  Unavailable(Timestamp),
+  /// The candidate was first observed at the given time and was included in the given list of unfinalized blocks, which may be
+  /// empty. The timestamp here is not used for pruning. Either one of these blocks will be finalized or the state will regress to
+  /// `State::Unavailable`, in which case the same timestamp will be reused.
+  Unfinalized(Timestamp, Vec&lt;(BlockNumber, BlockHash)&gt;),
+  /// Candidate data has appeared in a finalized block and did so at the given time.
+  Finalized(Timestamp)
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>We maintain the invariant that if a candidate has a meta entry, its available data exists on disk if <code>data_available</code> is true. All chunks mentioned in the meta entry are available.</p>
+<p>Additionally, there is exactly one <code>prune_by_time</code> entry which holds the candidate hash unless the state is <code>Unfinalized</code>. There may be zero, one, or many &quot;unfinalized&quot; keys with the given candidate, and this will correspond to the <code>state</code> of the meta entry.</p>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <p>Output:</p>
@@ -195,89 +224,88 @@
 <li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 </ul>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
-<p>On <code>ActiveLeavesUpdate</code>:</p>
 <p>For each head in the <code>activated</code> list:</p>
 <ul>
-<li>Note any new candidates backed in the block. Update pruning records for any stored <code>PoVBlock</code>s.</li>
-<li>Note any newly-included candidates backed in the block. Update pruning records for any stored availability chunks.</li>
+<li>Note any new candidates backed in the block. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
+<li>Note any new candidate included in the block. Update the <code>CandidateMeta</code> for each, performing a transition from <code>Unavailable</code> to <code>Unfinalized</code> if necessary. That includes removing the <code>&quot;prune_by_time&quot;</code> entry. Add the block hash and number to the state, if unfinalized. Add an <code>&quot;unfinalized&quot;</code> entry for the block and candidate.</li>
+<li>The <code>CandidateEvent</code> runtime API can be used for this purpose.</li>
+<li>TODO: load all ancestors of the head back to the finalized block so we don't miss anything if import notifications are missed. If a <code>StoreChunk</code> message is received for a candidate which has no entry, then we will prematurely lose the data.</li>
 </ul>
-<p>On <code>OverseerSignal::BlockFinalized(_)</code> events:</p>
+<p>On <code>OverseerSignal::BlockFinalized(finalized)</code> events:</p>
 <ul>
-<li>Handle all pruning based on the newly-finalized block.</li>
-</ul>
-<p>On <code>QueryPoV</code> message:</p>
+<li>for each key in <code>iter_with_prefix(&quot;unfinalized&quot;)</code>
 <ul>
-<li>Return the PoV block, if any, for that candidate hash.</li>
+<li>Stop if the key is beyond <code>(&quot;unfinalized, finalized)</code></li>
+<li>For each block number f that we encounter, load the finalized hash for that block.
+<ul>
+<li>The state of each <code>CandidateMeta</code> we encounter here must be <code>Unfinalized</code>, since we loaded the candidate from an <code>&quot;unfinalized&quot;</code> key.</li>
+<li>For each candidate that we encounter under <code>f</code> and the finalized block hash,
+<ul>
+<li>Update the <code>CandidateMeta</code> to have <code>State::Finalized</code>.  Remove all <code>&quot;unfinalized&quot;</code> entries from the old <code>Unfinalized</code> state.</li>
+<li>Register a <code>&quot;prune_by_time&quot;</code> entry for the candidate based on the current time + 1 day + 1 hour.</li>
 </ul>
+</li>
+<li>For each candidate that we encounter under <code>f</code> which is not under the finalized block hash,
+<ul>
+<li>Remove all entries under <code>f</code> in the <code>Unfinalized</code> state.</li>
+<li>If the <code>CandidateMeta</code> has state <code>Unfinalized</code> with an empty list of blocks, downgrade to <code>Unavailable</code> and re-schedule pruning under the timestamp + 1 hour. We do not prune here as the candidate still may be included in a descendent of the finalized chain.</li>
+</ul>
+</li>
+<li>Remove all <code>&quot;unfinalized&quot;</code> keys under <code>f</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Update last_finalized = finalized.</li>
+</ul>
+<p>This is roughly <code>O(n * m)</code> where n is the number of blocks finalized since the last update, and <code>m</code> is the number of parachains.</p>
+<p>On <code>QueryAvailableData</code> message:</p>
+<ul>
+<li>Query <code>(&quot;available&quot;, candidate_hash)</code></li>
+</ul>
+<p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+<p>On <code>QueryDataAvailability</code> message:</p>
+<ul>
+<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and <code>data_available == true</code>.</li>
+</ul>
+<p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
 <p>On <code>QueryChunk</code> message:</p>
 <ul>
-<li>Determine if we have the chunk indicated by the parameters and return it and its inclusion proof via the response channel if so.</li>
+<li>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></li>
 </ul>
+<p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+<p>On `QueryChunkAvailability message:</p>
+<ul>
+<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</li>
+</ul>
+<p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
 <p>On <code>StoreChunk</code> message:</p>
 <ul>
-<li>Store the chunk along with its inclusion proof under the candidate hash and validator index.</li>
+<li>If there is a <code>CandidateMeta</code> under the candidate hash, set the bit of the erasure-chunk in the <code>chunks_stored</code> bitfield to <code>1</code>. If it was not <code>1</code> already, write the chunk under <code>(&quot;chunk&quot;, candidate_hash, chunk_index)</code>.</li>
 </ul>
-<p>On <code>StorePoV</code> message:</p>
+<p>This is <code>O(n)</code> in the size of the chunk.</p>
+<p>On <code>StoreAvailableData</code> message:</p>
 <ul>
-<li>Store the block, if the validator index is provided, store the respective chunk as well.</li>
+<li>If there is no <code>CandidateMeta</code> under the candidate hash, create it with <code>State::Unavailable(now)</code>. Load the <code>CandidateMeta</code> otherwise.</li>
+<li>Store <code>data</code> under <code>(&quot;available&quot;, candidate_hash)</code> and set <code>data_available</code> to true.</li>
+<li>Store each chunk under <code>(&quot;chunk&quot;, candidate_hash, index)</code> and set every bit in <code>chunks_stored</code> to <code>1</code>.</li>
 </ul>
-<p>On finality event:</p>
+<p>This is <code>O(n)</code> in the size of the data as the aggregate size of the chunks is proportional to the data.</p>
+<p>Every 5 minutes, run a pruning routine:</p>
 <ul>
-<li>For the finalized block and any earlier block (if any) update pruning records of <code>PoV</code>s and chunks to keep them for respective periods after finality.</li>
-</ul>
-<h3><a class="header" href="#note-any-backed-included-and-timedout-candidates-in-the-block-by-hash" id="note-any-backed-included-and-timedout-candidates-in-the-block-by-hash">Note any backed, included and timedout candidates in the block by <code>hash</code>.</a></h3>
+<li>for each key in <code>iter_with_prefix(&quot;prune_by_time&quot;)</code>:
 <ul>
-<li>Create a <code>(sender, receiver)</code> pair.</li>
-<li>Dispatch a <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a><code>::Request(hash, RuntimeApiRequest::CandidateEvents(sender)</code> and listen on the receiver for a response.</li>
-<li>For every event in the response:<code>CandidateEvent::CandidateIncluded</code>.
-<ul>
-<li>For every <code>CandidateEvent::CandidateBacked</code> do nothing</li>
-<li>For every <code>CandidateEvent::CandidateIncluded</code> update pruning records of any blocks that the node stored previously.</li>
-<li>For every <code>CandidateEvent::CandidateTimedOut</code> use pruning records to prune the data; delete the info from records.</li>
+<li>If the key is beyond (&quot;prune_by_time&quot;, now), return.</li>
+<li>Remove the key.</li>
+<li>Extract <code>candidate_hash</code> from the key.</li>
+<li>Load and remove the <code>(&quot;meta&quot;, candidate_hash)</code></li>
+<li>For each erasure chunk bit set, remove <code>(&quot;chunk&quot;, candidate_hash, bit_index)</code>.</li>
+<li>If <code>data_available</code>, remove `(&quot;available&quot;, candidate_hash)</li>
 </ul>
 </li>
 </ul>
-<h2><a class="header" href="#schema" id="schema">Schema</a></h2>
-<h3><a class="header" href="#pov-pruning" id="pov-pruning">PoV pruning</a></h3>
-<p>We keep a record about every PoV we keep, tracking its state and the time after which this PoV should be pruned.</p>
-<p>As the state of the <code>Candidate</code> changes, so does the <code>Prune At</code> time according to the rules defined earlier.</p>
-<table><thead><tr><th>Record 1</th><th>..</th><th>Record N</th></tr></thead><tbody>
-<tr><td>CandidateHash1</td><td>..</td><td>CandidateHashN</td></tr>
-<tr><td>Prune At</td><td>..</td><td>Prune At</td></tr>
-<tr><td>CandidateState</td><td>..</td><td>CandidateState</td></tr>
-</tbody></table>
-<h3><a class="header" href="#chunk-pruning" id="chunk-pruning">Chunk pruning</a></h3>
-<p>Chunk pruning is organized in a similar schema as PoV pruning.</p>
-<table><thead><tr><th>Record 1</th><th>..</th><th>Record N</th></tr></thead><tbody>
-<tr><td>CandidateHash1</td><td>..</td><td>CandidateHashN</td></tr>
-<tr><td>Prune At</td><td>..</td><td>Prune At</td></tr>
-<tr><td>CandidateState</td><td>..</td><td>CandidateState</td></tr>
-</tbody></table>
-<h3><a class="header" href="#included-blocks-caching" id="included-blocks-caching">Included blocks caching</a></h3>
-<p>In order to process finality events correctly we need to cache the set of parablocks included into each relay block beginning with the last finalized block and up to the most recent heads. We have to cache this data since we are only able to query this info from the state for the <code>k</code> last blocks where <code>k</code> is a relatively small number (for more info see <code>Assumptions</code>)</p>
-<p>These are used to update Chunk pruning and PoV pruning records upon finality:
-When another block finality notification is received:</p>
-<ul>
-<li>For any record older than this block:
-<ul>
-<li>Update pruning</li>
-<li>Remove the record</li>
-</ul>
-</li>
-</ul>
-<table><thead><tr><th>Relay Block N</th><th>..</th><th>Chain Head 1</th><th>Chain Head 2</th></tr></thead><tbody>
-<tr><td>CandidateN_1 Included</td><td>..</td><td>Candidate1_1 Included</td><td>Candidate2_1 Included</td></tr>
-<tr><td>CandidateN_2 Included</td><td>..</td><td>Candidate1_2 Included</td><td>Candidete2_2 Included</td></tr>
-<tr><td>..</td><td>..</td><td>..</td><td>..</td></tr>
-<tr><td>CandidateN_M Included</td><td>..</td><td>Candidate1_K Included</td><td>Candidate2_L Included</td></tr>
-</tbody></table>
-<blockquote>
-<p>TODO: It's likely we will have to have a way to go from block hash to <code>BlockNumber</code> to make this work.</p>
-</blockquote>
-<h3><a class="header" href="#blocks" id="blocks">Blocks</a></h3>
-<p>Blocks are simply stored as <code>(Hash, AvailableData)</code> key-value pairs.</p>
-<h3><a class="header" href="#chunks" id="chunks">Chunks</a></h3>
-<p>Chunks are stored as <code>(Hash, Vec&lt;ErasureChunk&gt;)</code> key-value pairs.</p>
+<p>This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
+to be run very often.</p>
 <h2><a class="header" href="#basic-scenarios-to-test" id="basic-scenarios-to-test">Basic scenarios to test</a></h2>
 <p>Basically we need to test the correctness of data flow through state FSMs described earlier. These tests obviously assume that some mocking of time is happening.</p>
 <ul>

@@ -334,12 +334,12 @@ enum AvailabilityRecoveryMessage {
 	QueryDataAvailability(CandidateHash, ResponseChannel&lt;bool&gt;),
 	/// Query a specific availability chunk of the candidate's erasure-coding by validator index.
 	/// Returns the chunk and its inclusion proof against the candidate's erasure-root.
-	QueryChunk(CandidateHash, ValidatorIndex, ResponseChannel&lt;Option&lt;AvailabilityChunkAndProof&gt;&gt;),
+	QueryChunk(CandidateHash, ValidatorIndex, ResponseChannel&lt;Option&lt;ErasureChunk&gt;&gt;),
 	/// Store a specific chunk of the candidate's erasure-coding, with an
 	/// accompanying proof.
-	StoreChunk(CandidateHash, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),
+	StoreChunk(CandidateHash, ErasureChunk, ResponseChannel&lt;Result&lt;()&gt;&gt;),
 	/// Store `AvailableData`. If `ValidatorIndex` is provided, also store this validator's
-	/// `AvailabilityChunkAndProof`.
+	/// `ErasureChunk`.
 	StoreAvailableData(CandidateHash, Option&lt;ValidatorIndex&gt;, u32, AvailableData, ResponseChannel&lt;Result&lt;()&gt;&gt;),
 }
 <span class="boring">}
