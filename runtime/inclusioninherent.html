@@ -184,7 +184,8 @@
 <li>Hash the parent header and make sure that it corresponds to the block hash of the parent (tracked by the <code>frame_system</code> FRAME module),</li>
 <li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it, and add timed-out cores to the free cores, annotated with <code>FreedReason::TimedOut</code>.</li>
-<li>Invoke <code>Scheduler::schedule(freed)</code></li>
+<li>Invoke <code>Scheduler::clear</code></li>
+<li>Invoke <code>Scheduler::schedule(freed, System::current_block())</code></li>
 <li>Extract <code>parent_storage_root</code> from the parent header,</li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(parent_storage_root, backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>

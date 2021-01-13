@@ -164,7 +164,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1><a class="header" href="#validator-groups" id="validator-groups">Validator Groups</a></h1>
-<p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set.</p>
+<p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set and this is assumed to be as-of the child of the block whose state is being queried.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -172,7 +172,7 @@
 struct GroupRotationInfo {
     session_start_block: BlockNumber,
     group_rotation_frequency: BlockNumber,
-    now: BlockNumber,
+    now: BlockNumber, // The successor of the block in whose state this runtime API is queried.
 }
 
 impl GroupRotationInfo {

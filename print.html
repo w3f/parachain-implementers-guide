@@ -890,6 +890,9 @@ ParathreadClaimIndex: Vec&lt;ParaId&gt;;
 /// The block number where the session start occurred. Used to track how many group rotations have occurred.
 SessionStartBlock: BlockNumber;
 /// Currently scheduled cores - free but up to be occupied.
+/// The value contained here will not be valid after the end of a block. 
+/// Runtime APIs should be used to determine scheduled cores
+/// for the upcoming block.
 Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <span class="boring">}
 </span></code></pre></pre>
@@ -897,7 +900,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <p>Session changes are the only time that configuration can change, and the <a href="runtime/configuration.html">Configuration module</a>'s session-change logic is handled before this module's. We also lean on the behavior of the <a href="runtime/inclusion.html">Inclusion module</a> which clears all its occupied cores on session change. Thus we don't have to worry about cores being occupied across session boundaries and it is safe to re-size the <code>AvailabilityCores</code> bitfield.</p>
 <p>Actions:</p>
 <ol>
-<li>Set <code>SessionStartBlock</code> to current block number.</li>
+<li>Set <code>SessionStartBlock</code> to current block number + 1, as session changes are applied at the end of the block.</li>
 <li>Clear all <code>Some</code> members of <code>AvailabilityCores</code>. Return all parathread claims to queue with retries un-incremented.</li>
 <li>Set <code>configuration = Configuration::configuration()</code> (see <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a>)</li>
 <li>Determine the number of cores &amp; validator groups as <code>n_cores</code>. This is the maximum of
@@ -919,15 +922,12 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li>Also prune all parathread claims corresponding to de-registered parathreads.</li>
 <li>all pruned claims should have their entry removed from the parathread index.</li>
 <li>assign all non-pruned claims to new cores if the number of parathread cores has changed between the <code>new_config</code> and <code>old_config</code> of the <code>SessionChangeNotification</code>.</li>
-<li>Assign claims in equal balance across all cores if rebalancing, and set the <code>next_core</code> of the <code>ParathreadQueue</code> by incrementing the relative index of the last assigned core and taking it modulo the number of parathread cores.</li>
+<li>Assign claims in equal balance across all cores if rebalancing, and set the <code>next_core</code> of the <code>ParathreadQueue</code> by incrementing the relative index of the last assigned core and taking it modulo the number of parathread cores. </li>
 </ul>
 </li>
 </ol>
 <h2><a class="header" href="#initialization-2" id="initialization-2">Initialization</a></h2>
-<ol>
-<li>Free all scheduled cores and return parathread claims to queue, with retries incremented.</li>
-<li>Schedule free cores using the <code>schedule(Vec::new())</code>.</li>
-</ol>
+<p>No initialization routine runs for this module.</p>
 <h2><a class="header" href="#finalization-2" id="finalization-2">Finalization</a></h2>
 <p>No finalization routine runs for this module.</p>
 <h2><a class="header" href="#routines-2" id="routines-2">Routines</a></h2>
@@ -941,13 +941,13 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li>The claim is then added to the claim index.</li>
 </ul>
 </li>
-<li><code>schedule(Vec&lt;(CoreIndex, FreedReason)&gt;)</code>: schedule new core assignments, with a parameter indicating previously-occupied cores which are to be considered returned and why they are being returned.
+<li><code>schedule(Vec&lt;(CoreIndex, FreedReason)&gt;, now: BlockNumber)</code>: schedule new core assignments, with a parameter indicating previously-occupied cores which are to be considered returned and why they are being returned.
 <ul>
 <li>All freed parachain cores should be assigned to their respective parachain</li>
 <li>All freed parathread cores whose reason for freeing was <code>FreedReason::Concluded</code> should have the claim removed from the claim index.</li>
 <li>All freed parathread cores whose reason for freeing was <code>FreedReason::TimedOut</code> should have the claim added to the parathread queue again without retries incremented</li>
 <li>All freed parathread cores should take the next parathread entry from the queue.</li>
-<li>The i'th validator group will be assigned to the <code>(i+k)%n</code>'th core at any point in time, where <code>k</code> is the number of rotations that have occurred in the session, and <code>n</code> is the total number of cores. This makes upcoming rotations within the same session predictable.</li>
+<li>The i'th validator group will be assigned to the <code>(i+k)%n</code>'th core at any point in time, where <code>k</code> is the number of rotations that have occurred in the session, and <code>n</code> is the total number of cores. This makes upcoming rotations within the same session predictable. Rotations are based off of <code>now</code>.</li>
 </ul>
 </li>
 <li><code>scheduled() -&gt; Vec&lt;CoreAssignment&gt;</code>: Get currently scheduled core assignments.</li>
@@ -962,9 +962,14 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li><code>core_para(CoreIndex) -&gt; ParaId</code>: return the currently-scheduled or occupied ParaId for the given core.</li>
 <li><code>group_validators(GroupIndex) -&gt; Option&lt;Vec&lt;ValidatorIndex&gt;&gt;</code>: return all validators in a given group, if the group index is valid for this session.</li>
 <li><code>availability_timeout_predicate() -&gt; Option&lt;impl Fn(CoreIndex, BlockNumber) -&gt; bool&gt;</code>: returns an optional predicate that should be used for timing out occupied cores. if <code>None</code>, no timing-out should be done. The predicate accepts the index of the core, and the block number since which it has been occupied. The predicate should be implemented based on the time since the last validator group rotation, and the respective parachain and parathread timeouts, i.e. only within <code>max(config.chain_availability_period, config.thread_availability_period)</code> of the last rotation would this return <code>Some</code>.</li>
-<li><code>group_rotation_info() -&gt; GroupRotationInfo</code>: Returns a helper for determining group rotation.</li>
+<li><code>group_rotation_info(now: BlockNumber) -&gt; GroupRotationInfo</code>: Returns a helper for determining group rotation.</li>
 <li><code>next_up_on_available(CoreIndex) -&gt; Option&lt;ScheduledCore&gt;</code>: Return the next thing that will be scheduled on this core assuming it is currently occupied and the candidate occupying it became available. Returns in <code>ScheduledCore</code> format (todo: link to Runtime APIs page; linkcheck doesn't allow this right now). For parachains, this is always the ID of the parachain and no specified collator. For parathreads, this is based on the next item in the <code>ParathreadQueue</code> assigned to that core, and is <code>None</code> if there isn't one.</li>
 <li><code>next_up_on_time_out(CoreIndex) -&gt; Option&lt;ScheduledCore&gt;</code>: Return the next thing that will be scheduled on this core assuming it is currently occupied and the candidate occupying it timed out. Returns in <code>ScheduledCore</code> format (todo: link to Runtime APIs page; linkcheck doesn't allow this right now). For parachains, this is always the ID of the parachain and no specified collator. For parathreads, this is based on the next item in the <code>ParathreadQueue</code> assigned to that core, or if there isn't one, the claim that is currently occupying the core. Otherwise <code>None</code>.</li>
+<li><code>clear()</code>:
+<ul>
+<li>Free all scheduled cores and return parathread claims to queue, with retries incremented. Skip parathreads which no longer exist under paras.</li>
+</ul>
+</li>
 </ul>
 <h1><a class="header" href="#inclusion-module" id="inclusion-module">Inclusion Module</a></h1>
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
@@ -1115,7 +1120,8 @@ CurrentSessionIndex: SessionIndex;
 <li>Hash the parent header and make sure that it corresponds to the block hash of the parent (tracked by the <code>frame_system</code> FRAME module),</li>
 <li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it, and add timed-out cores to the free cores, annotated with <code>FreedReason::TimedOut</code>.</li>
-<li>Invoke <code>Scheduler::schedule(freed)</code></li>
+<li>Invoke <code>Scheduler::clear</code></li>
+<li>Invoke <code>Scheduler::schedule(freed, System::current_block())</code></li>
 <li>Extract <code>parent_storage_root</code> from the parent header,</li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(parent_storage_root, backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
@@ -1773,7 +1779,7 @@ enum OccupiedCoreAssumption {
 <span class="boring">}
 </span></code></pre></pre>
 <h1><a class="header" href="#validator-groups-1" id="validator-groups-1">Validator Groups</a></h1>
-<p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set.</p>
+<p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set and this is assumed to be as-of the child of the block whose state is being queried.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -1781,7 +1787,7 @@ enum OccupiedCoreAssumption {
 struct GroupRotationInfo {
     session_start_block: BlockNumber,
     group_rotation_frequency: BlockNumber,
-    now: BlockNumber,
+    now: BlockNumber, // The successor of the block in whose state this runtime API is queried.
 }
 
 impl GroupRotationInfo {
@@ -1805,7 +1811,7 @@ fn validator_groups(at: Block) -&gt; (Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, Grou
 <span class="boring">}
 </span></code></pre></pre>
 <h1><a class="header" href="#availability-cores-1" id="availability-cores-1">Availability Cores</a></h1>
-<p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block.</p>
+<p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block. </p>
 <p>See also the <a href="runtime-api/../runtime/scheduler.html">Scheduler Module</a> for a high-level description of what an availability core is and why it exists.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -1813,7 +1819,7 @@ fn validator_groups(at: Block) -&gt; (Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, Grou
 </span>fn availability_cores(at: Block) -&gt; Vec&lt;CoreState&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<p>This is all the information that a validator needs about scheduling for the current block. It includes all information on <a href="runtime-api/../runtime/scheduler.html">Scheduler</a> core-assignments and <a href="runtime-api/../runtime/inclusion.html">Inclusion</a> state of blocks occupying availability cores. It includes data necessary to determine not only which paras are assigned now, but which cores are likely to become freed after processing bitfields, and exactly which bitfields would be necessary to make them so.</p>
+<p>This is all the information that a validator needs about scheduling for the current block. It includes all information on <a href="runtime-api/../runtime/scheduler.html">Scheduler</a> core-assignments and <a href="runtime-api/../runtime/inclusion.html">Inclusion</a> state of blocks occupying availability cores. It includes data necessary to determine not only which paras are assigned now, but which cores are likely to become freed after processing bitfields, and exactly which bitfields would be necessary to make them so.  The implementation of this runtime API should invoke <code>Scheduler::clear</code> and <code>Scheduler::schedule(Vec::new(), current_block_number + 1)</code> to ensure that scheduling is accurate.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
