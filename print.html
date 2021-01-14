@@ -3591,7 +3591,7 @@ to be run very often.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>enum ProtocolMessage&lt;M&gt; {
+</span>enum WireMessage&lt;M&gt; {
 	ProtocolMessage(M),
 	ViewUpdate(View),
 }
@@ -3601,8 +3601,8 @@ to be run very often.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>type ValidationV1Message = ProtocolMessage&lt;ValidationProtocolV1&gt;;
-type CollationV1Message = ProtocolMessage&lt;CollationProtocolV1&gt;;
+</span>type ValidationV1Message = WireMessage&lt;ValidationProtocolV1&gt;;
+type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h3><a class="header" href="#startup" id="startup">Startup</a></h3>
