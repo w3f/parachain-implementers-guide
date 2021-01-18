@@ -2824,7 +2824,6 @@ struct BlockEntry {
     // The i'th bit is `true` iff the candidate has been approved in the context of
     // this block. The block can be considered approved has all bits set to 1
     approved_bitfield: Bitfield,
-    rotation_offset: GroupIndex,
     children: Vec&lt;Hash&gt;,
 }
 
@@ -2884,7 +2883,7 @@ struct State {
 </ul>
 <h3><a class="header" href="#incoming-messages" id="incoming-messages">Incoming Messages</a></h3>
 <h4><a class="header" href="#overseersignalblockfinalized" id="overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
-<p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the ChainApi subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendents of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>.</p>
+<p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the ChainApi subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendents of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>. We also update each of the <code>BlockNumber -&gt; Vec&lt;Hash&gt;</code> keys in the database to reflect the blocks at that height, clearing if empty.</p>
 <h4><a class="header" href="#overseersignalactiveleavesupdate" id="overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
