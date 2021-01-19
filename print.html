@@ -5036,10 +5036,12 @@ struct AssignmentCert {
 <li>Backed Candidate: A Backable Candidate noted in a relay-chain block</li>
 <li>Backing: A set of statements proving that a Parachain Candidate is backable.</li>
 <li>Collator: A node who generates Proofs-of-Validity (PoV) for blocks of a specific parachain.</li>
-<li>DMP: (Downward Message Passing). Message passing from the relay-chain to a parachain.</li>
+<li>DMP: (Downward Message Passing). Message passing from the relay-chain to a parachain. Also there is a runtime parachains module with the same name.</li>
+<li>DMQ: (Downward Message Queue). A message queue for messages from the relay-chain down to a parachain. A parachain has
+exactly one downward message queue.</li>
 <li>Extrinsic: An element of a relay-chain block which triggers a specific entry-point of a runtime module with given arguments.</li>
 <li>GRANDPA: (Ghost-based Recursive ANcestor Deriving Prefix Agreement). The algorithm validators use to guarantee finality of the Relay Chain.</li>
-<li>HRMP: (Horizontally Relay-routed Message Passing). A mechanism for message passing between parachains (hence horizontal) that leverages the relay-chain storage. Predates XCMP.</li>
+<li>HRMP: (Horizontally Relay-routed Message Passing). A mechanism for message passing between parachains (hence horizontal) that leverages the relay-chain storage. Predates XCMP. Also there is a runtime parachains module with the same name.</li>
 <li>Inclusion Pipeline: The set of steps taken to carry a Parachain Candidate from authoring, to backing, to availability and full inclusion in an active fork of its parachain.</li>
 <li>Module: A component of the Runtime logic, encapsulating storage, routines, and entry-points.</li>
 <li>Module Entry Point: A recipient of new information presented to the Runtime. This may trigger routines.</li>
@@ -5051,6 +5053,8 @@ struct AssignmentCert {
 <li>Parachain: A constituent chain secured by the Relay Chain's validators.</li>
 <li>Parachain Validators: A subset of validators assigned during a period of time to back candidates for a specific parachain</li>
 <li>Parathread: A parachain which is scheduled on a pay-as-you-go basis.</li>
+<li>PDK (Parachain Development Kit): A toolset that allows one to develop a parachain. Cumulus is a PDK.</li>
+<li>Preimage: In our context, if <code>H(X) = Y</code> where <code>H</code> is a hash function and <code>Y</code> is the hash, then <code>X</code> is the hash preimage.</li>
 <li>Proof-of-Validity (PoV): A stateless-client proof that a parachain candidate is valid, with respect to some validation function.</li>
 <li>Relay Parent: A block in the relay chain, referred to in a context where work is being done in the context of the state at this block.</li>
 <li>Router: The router module is a meta module that consists of three runtime modules responsible for routing messages between paras and the relay chain. The three separate runtime modules are: Dmp, Ump, Hrmp, each responsible for the respective part of message routing.</li>
