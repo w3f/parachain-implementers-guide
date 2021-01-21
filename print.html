@@ -4792,6 +4792,9 @@ enum ObservedRole {
 	Full,
 	Light,
 }
+
+/// SCALE and zstd encoded `PoV`.
+struct CompressedPoV(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#v1-network-subsystem-message-types" id="v1-network-subsystem-message-types">V1 Network Subsystem Message Types</a></h2>
@@ -4852,8 +4855,8 @@ enum ObservedRole {
 	/// specific relay-parent hash.
 	Awaiting(Hash, Vec&lt;Hash&gt;),
 	/// Notification of an awaited PoV, in a given relay-parent context.
-	/// (relay_parent, pov_hash, pov)
-	SendPoV(Hash, Hash, PoV),
+	/// (relay_parent, pov_hash, compressed_pov)
+	SendPoV(Hash, Hash, CompressedPoV),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -4880,7 +4883,7 @@ enum ObservedRole {
 	/// Request the advertised collation at that relay-parent.
 	RequestCollation(RequestId, Hash, ParaId),
 	/// A requested collation.
-	Collation(RequestId, CandidateReceipt, PoV),
+	Collation(RequestId, CandidateReceipt, CompressedPoV),
 }
 <span class="boring">}
 </span></code></pre></pre>
