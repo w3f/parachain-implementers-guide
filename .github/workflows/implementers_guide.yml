@@ -41,7 +41,12 @@ jobs:
         sudo apt install -y graphviz
         cargo install mdbook-graphviz
 
-    - run: |
+    - name: Setup mdbook-mermaid
+      run: |
+        cargo install mdbook-mermaid
+
+    - name: Build book.
+      run: |
         mdbook build .tmp_polkadot/roadmap/implementers-guide/
 
     - name: Deploy
