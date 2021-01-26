@@ -274,7 +274,7 @@ CandidateHash =&gt; CandidateEntry
 </span>struct ApprovalVoteRequest {
   validator_index: ValidatorIndex,
   block_hash: Hash,
-  candidate_index: u32,
+  candidate_index: CandidateIndex,
 }
 
 struct State {
@@ -282,7 +282,7 @@ struct State {
     session_info: Vec&lt;SessionInfo&gt;,
     keystore: KeyStorePtr,
     wakeups: BTreeMap&lt;Tick, Vec&lt;(Hash, Hash)&gt;&gt;, // Tick -&gt; [(Relay Block, Candidate Hash)]
-    
+
     // These are connected to each other.
     approval_vote_tx: mpsc::Sender&lt;ApprovalVoteRequest&gt;,
     approval_vote_rx: mpsc::Receiver&lt;ApprovalVoteRequest&gt;,
@@ -307,7 +307,7 @@ struct State {
 <h4><a class="header" href="#overseersignalactiveleavesupdate" id="overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
-<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. </li>
+<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem.</li>
 <li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps.</li>
 <li>We use the RuntimeApiSubsystem to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
 <ul>
@@ -318,7 +318,7 @@ struct State {
 <li>If any of the runtime API calls fail, we just warn and skip the block.</li>
 </ul>
 </li>
-<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks. </li>
+<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks.</li>
 <li>We also note how late we appear to have received the block. We create a <code>BlockEntry</code> for each block and a <code>CandidateEntry</code> for each candidate obtained from <code>CandidateIncluded</code> events after making a <code>RuntimeApiRequest::CandidateEvents</code> request.</li>
 <li>Ensure that the <code>CandidateEntry</code> contains a <code>block_assignments</code> entry for the block, with the correct backing group set.</li>
 <li>If a validator in this session, compute and assign <code>our_assignment</code> for the <code>block_assignments</code>
@@ -396,7 +396,7 @@ struct State {
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RequiredTranches {
-  // All validators appear to be required, based on tranches already taken and remaining no-shows. 
+  // All validators appear to be required, based on tranches already taken and remaining no-shows.
   All,
   // More tranches required - We're awaiting more assignments. The given `DelayTranche` indicates the
   // upper bound of tranches that should broadcast based on the last no-show.

@@ -2846,7 +2846,7 @@ CandidateHash =&gt; CandidateEntry
 </span>struct ApprovalVoteRequest {
   validator_index: ValidatorIndex,
   block_hash: Hash,
-  candidate_index: u32,
+  candidate_index: CandidateIndex,
 }
 
 struct State {
@@ -2854,7 +2854,7 @@ struct State {
     session_info: Vec&lt;SessionInfo&gt;,
     keystore: KeyStorePtr,
     wakeups: BTreeMap&lt;Tick, Vec&lt;(Hash, Hash)&gt;&gt;, // Tick -&gt; [(Relay Block, Candidate Hash)]
-    
+
     // These are connected to each other.
     approval_vote_tx: mpsc::Sender&lt;ApprovalVoteRequest&gt;,
     approval_vote_rx: mpsc::Receiver&lt;ApprovalVoteRequest&gt;,
@@ -2879,7 +2879,7 @@ struct State {
 <h4><a class="header" href="#overseersignalactiveleavesupdate" id="overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
-<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. </li>
+<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem.</li>
 <li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps.</li>
 <li>We use the RuntimeApiSubsystem to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
 <ul>
@@ -2890,7 +2890,7 @@ struct State {
 <li>If any of the runtime API calls fail, we just warn and skip the block.</li>
 </ul>
 </li>
-<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks. </li>
+<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks.</li>
 <li>We also note how late we appear to have received the block. We create a <code>BlockEntry</code> for each block and a <code>CandidateEntry</code> for each candidate obtained from <code>CandidateIncluded</code> events after making a <code>RuntimeApiRequest::CandidateEvents</code> request.</li>
 <li>Ensure that the <code>CandidateEntry</code> contains a <code>block_assignments</code> entry for the block, with the correct backing group set.</li>
 <li>If a validator in this session, compute and assign <code>our_assignment</code> for the <code>block_assignments</code>
@@ -2968,7 +2968,7 @@ struct State {
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RequiredTranches {
-  // All validators appear to be required, based on tranches already taken and remaining no-shows. 
+  // All validators appear to be required, based on tranches already taken and remaining no-shows.
   All,
   // More tranches required - We're awaiting more assignments. The given `DelayTranche` indicates the
   // upper bound of tranches that should broadcast based on the last no-show.
@@ -3069,6 +3069,20 @@ struct State {
 <p>For assignments, what we need to be checking is whether we are aware of the (block, candidate) pair that the assignment references. For approvals, we need to be aware of an assignment by the same validator which references the candidate being approved.</p>
 <p>However, awareness on its own of a (block, candidate) pair would imply that even ancient candidates all the way back to the genesis are relevant. We are actually not interested in anything before finality.</p>
 <h2><a class="header" href="#protocol-11" id="protocol-11">Protocol</a></h2>
+<p>Input:</p>
+<ul>
+<li><code>ApprovalDistributionMessage::NewBlocks</code></li>
+<li><code>ApprovalDistributionMessage::DistributeAssignment</code></li>
+<li><code>ApprovalDistributionMessage::DistributeApproval</code></li>
+<li><code>ApprovalDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>OverseerSignal::BlockFinalized</code></li>
+</ul>
+<p>Output:</p>
+<ul>
+<li><code>ApprovalVotingMessage::CheckAndImportAssignment</code></li>
+<li><code>ApprovalVotingMessage::CheckAndImportApproval</code></li>
+<li><code>NetworkBridgeMessage::SendValidationMessage::ApprovalDistribution</code></li>
+</ul>
 <h2><a class="header" href="#functionality-11" id="functionality-11">Functionality</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -3079,10 +3093,9 @@ struct State {
 ///
 /// It tracks metadata about our view of the unfinalized chain, which assignments and approvals we have seen, and our peers' views.
 struct State {
-  // These three fields are used in conjunction to construct a view over the unfinalized chain.
+  // These two fields are used in conjunction to construct a view over the unfinalized chain.
   blocks_by_number: BTreeMap&lt;BlockNumber, Vec&lt;Hash&gt;&gt;,
   blocks: HashMap&lt;Hash, BlockEntry&gt;,
-  finalized_number: BlockNumber,
 
   // Peer view data is partially stored here, and partially inline within the `BlockEntry`s
   peer_views: HashMap&lt;PeerId, View&gt;,
@@ -3136,8 +3149,6 @@ struct CandidateEntry {
 <p>One of the safeguards we can implement is to reject view updates from peers where the new <code>finalized_number</code> is less than the previous.</p>
 <p>We augment that by defining <code>constrain(x)</code> to output the x bounded by the first and last numbers in <code>state.blocks_by_number</code>.</p>
 <p>From there, we can loop backwards from <code>constrain(view.finalized_number)</code> until <code>constrain(last_view.finalized_number)</code> is reached, removing the <code>PeerId</code> from all <code>BlockEntry</code>s referenced at that height. We can break the loop early if we ever exit the bound supplied by the first block in <code>state.blocks_by_number</code>.</p>
-<h4><a class="header" href="#networkbridgeeventourviewchange" id="networkbridgeeventourviewchange"><code>NetworkBridgeEvent::OurViewChange</code></a></h4>
-<p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>view.finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
 <h4><a class="header" href="#networkbridgeeventpeermessage" id="networkbridgeeventpeermessage"><code>NetworkBridgeEvent::PeerMessage</code></a></h4>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Assignment(assignment_cert, claimed_index)</code>, then call <code>import_and_circulate_assignment(MessageSource::Peer(sender), assignment_cert, claimed_index)</code></p>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Approval(approval_vote)</code>, then call <code>import_and_circulate_approval(MessageSource::Peer(sender), approval_vote)</code></p>
@@ -3150,9 +3161,11 @@ struct CandidateEntry {
 <li>Invoke <code>unify_with_peer(peer, view_intersection)</code>.</li>
 </ul>
 <h4><a class="header" href="#approvaldistributionmessagedistributeasignment" id="approvaldistributionmessagedistributeasignment"><code>ApprovalDistributionMessage::DistributeAsignment</code></a></h4>
-<p>Load the corresponding <code>BlockEntry</code>. Distribute to all peers in <code>known_by</code>. Add to the corresponding <code>CandidateEntry</code>.</p>
+<p>Call <code>import_and_circulate_assignment</code> with <code>MessageSource::Local</code>.</p>
 <h4><a class="header" href="#approvaldistributionmessagedistributeapproval" id="approvaldistributionmessagedistributeapproval"><code>ApprovalDistributionMessage::DistributeApproval</code></a></h4>
-<p>Load the corresponding <code>BlockEntry</code>. Distribute to all peers in <code>known_by</code>. Add to the corresponding <code>CandidateEntry</code>.</p>
+<p>Call <code>import_and_circulate_approval</code> with <code>MessageSource::Local</code>.</p>
+<h4><a class="header" href="#overseersignalblockfinalized-1" id="overseersignalblockfinalized-1"><code>OverseerSignal::BlockFinalized</code></a></h4>
+<p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
 <h3><a class="header" href="#utility-1" id="utility-1">Utility</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -3163,22 +3176,32 @@ struct CandidateEntry {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h4><a class="header" href="#import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-u32" id="import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-u32"><code>import_and_circulate_assignment(source: MessageSource, assignment: IndirectAssignmentCert, claimed_candidate_index: u32)</code></a></h4>
+<h4><a class="header" href="#import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex" id="import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex"><code>import_and_circulate_assignment(source: MessageSource, assignment: IndirectAssignmentCert, claimed_candidate_index: CandidateIndex)</code></a></h4>
 <p>Imports an assignment cert referenced by block hash and candidate index. As a postcondition, if the cert is valid, it will have distributed the cert to all peers who have the block in their view, with the exclusion of the peer referenced by the <code>MessageSource</code>.</p>
+<p>We maintain a few invariants:</p>
+<ul>
+<li>we only send an assignment to a peer after we add its fingerpring to our knownledge</li>
+<li>we add a fingerprint of an assignment to our knownledge only if it's valid and hasn't been added before</li>
+</ul>
+<p>The algorithm is the following:</p>
 <ul>
 <li>Load the BlockEntry using <code>assignment.block_hash</code>. If it does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the <code>assignment</code> using <code>claimed_candidate_index</code>.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
 <li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
-<li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost and return. Note that we must do this after checking for out-of-view to avoid being spammed. If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
+<li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
+add the fingerpring to the peer's knownledge only if it knows about the block and return.
+Note that we must do this after checking for out-of-view and if the peers knows about the block to avoid being spammed.
+If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
 <li>Dispatch <code>ApprovalVotingMessage::CheckAndImportAssignment(assignment)</code> and wait for the response.</li>
-<li>If the result is <code>AssignmentCheckResult::Accepted</code> or <code>AssignmentCheckResult::AcceptedDuplicate</code>
+<li>If the result is <code>AssignmentCheckResult::Accepted</code>
 <ul>
 <li>If the vote was accepted but not duplicate, give the peer a positive reputation boost</li>
 <li>add the fingerprint to both our and the peer's knowledge in the <code>BlockEntry</code>. Note that we only doing this after making sure we have the right fingerprint.</li>
 </ul>
 </li>
+<li>If the result is <code>AssignmentCheckResult::AcceptedDuplicate</code>, add the fingerprint to the peer's knowledge if it knows about the block and return.</li>
 <li>If the result is <code>AssignmentCheckResult::TooFarInFuture</code>, mildly punish the peer and return.</li>
 <li>If the result is <code>AssignmentCheckResult::Bad</code>, punish the peer and return.</li>
 </ul>
@@ -3193,7 +3216,7 @@ struct CandidateEntry {
 <li>Dispatch a <code>ApprovalDistributionV1Message::Assignment(assignment, candidate_index)</code> to all peers in the <code>BlockEntry</code>'s <code>known_by</code> set, excluding the peer in the <code>source</code>, if <code>source</code> has kind <code>MessageSource::Peer</code>. Add the fingerprint of the assignment to the knowledge of each peer.</li>
 </ul>
 <h4><a class="header" href="#import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote" id="import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><code>import_and_circulate_approval(source: MessageSource, approval: IndirectSignedApprovalVote)</code></a></h4>
-<p>Imports an approval signature referenced by block hash and candidate index.</p>
+<p>Imports an approval signature referenced by block hash and candidate index:</p>
 <ul>
 <li>Load the BlockEntry using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the approval.</li>
@@ -3201,7 +3224,9 @@ struct CandidateEntry {
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
 <li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
-<li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost and return. Note that we must do this after checking for out-of-view to avoid being spammed. If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
+<li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
+add the fingerpring to the peer's knownledge only if it knows about the block and return.
+Note that we must do this after checking for out-of-view to avoid being spammed. If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
 <li>Dispatch <code>ApprovalVotingMessage::CheckAndImportApproval(approval)</code> and wait for the response.</li>
 <li>If the result is <code>VoteCheckResult::Accepted(())</code>:
 <ul>
@@ -3226,14 +3251,26 @@ struct CandidateEntry {
 </li>
 </ul>
 <h4><a class="header" href="#unify_with_peerpeer-peerid-view" id="unify_with_peerpeer-peerid-view"><code>unify_with_peer(peer: PeerId, view)</code>:</a></h4>
-<p>For each block in the view:</p>
 <ol>
 <li>Initialize a set <code>fresh_blocks = {}</code></li>
-<li>Load the <code>BlockEntry</code> for the block. If the block is unknown, or the number is less than the view's finalized number, go to step 6.</li>
-<li>Inspect the <code>known_by</code> set of the <code>BlockEntry</code>. If the peer is already present, go to step 6.</li>
-<li>Add the peer to <code>known_by</code> with a cloned version of <code>block_entry.knowledge</code>. and add the hash of the block to <code>fresh_blocks</code>.</li>
-<li>Return to step 2 with the ancestor of the block.</li>
-<li>For each block in <code>fresh_blocks</code>, send all assignments and approvals for all candidates in those blocks to the peer.</li>
+</ol>
+<p>For each block in the view:</p>
+<ol start="2">
+<li>
+<p>Load the <code>BlockEntry</code> for the block. If the block is unknown, or the number is less than or equal to the view's finalized number, go to step 6.</p>
+</li>
+<li>
+<p>Inspect the <code>known_by</code> set of the <code>BlockEntry</code>. If the peer is already present, go to step 6.</p>
+</li>
+<li>
+<p>Add the peer to <code>known_by</code> with a cloned version of <code>block_entry.knowledge</code>. and add the hash of the block to <code>fresh_blocks</code>.</p>
+</li>
+<li>
+<p>Return to step 2 with the ancestor of the block.</p>
+</li>
+<li>
+<p>For each block in <code>fresh_blocks</code>, send all assignments and approvals for all candidates in those blocks to the peer.</p>
+</li>
 </ol>
 <h1><a class="header" href="#dispute-participation" id="dispute-participation">Dispute Participation</a></h1>
 <h2><a class="header" href="#protocol-12" id="protocol-12">Protocol</a></h2>
@@ -4120,6 +4157,8 @@ struct BlockApprovalMeta {
 	hash: Hash,
 	/// The number of the block.
 	number: BlockNumber,
+	/// The hash of the parent block.
+	parent_hash: Hash,
 	/// The candidates included by the block. Note that these are not the same as the candidates that appear within the
 	/// block body.
 	candidates: Vec&lt;CandidateHash&gt;,
@@ -4133,9 +4172,7 @@ enum ApprovalDistributionMessage {
 	NewBlocks(Vec&lt;BlockApprovalMeta&gt;),
 	/// Distribute an assignment cert from the local validator. The cert is assumed
 	/// to be valid, relevant, and for the given relay-parent and validator index.
-	///
-	/// The `u32` param is the candidate index in the fully-included list.
-	DistributeAssignment(IndirectAssignmentCert, u32),
+	DistributeAssignment(IndirectAssignmentCert, CandidateIndex),
 	/// Distribute an approval vote for the local validator. The approval vote is assumed to be
 	/// valid, relevant, and the corresponding approval already issued. If not, the subsystem is free to drop
 	/// the message.
@@ -5006,7 +5043,7 @@ struct AssignmentCert {
     // A block hash where the candidate appears.
     block_hash: Hash,
     // The index of the candidate in the list of candidates fully included as-of the block.
-    candidate_index: u32,
+    candidate_index: CandidateIndex,
     validator: ValidatorIndex,
     signature: ValidatorSignature,
 }

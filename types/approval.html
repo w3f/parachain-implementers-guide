@@ -235,7 +235,7 @@ struct AssignmentCert {
     // A block hash where the candidate appears.
     block_hash: Hash,
     // The index of the candidate in the list of candidates fully included as-of the block.
-    candidate_index: u32,
+    candidate_index: CandidateIndex,
     validator: ValidatorIndex,
     signature: ValidatorSignature,
 }
