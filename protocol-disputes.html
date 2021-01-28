@@ -1,0 +1,292 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Disputes Process - The Polkadot Parachain Host Implementers' Guide</title>
+        
+        
+
+
+        <!-- Custom HTML head -->
+        
+
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        
+        <link rel="icon" href="favicon.svg">
+        
+        
+        <link rel="shortcut icon" href="favicon.png">
+        
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        
+        <link rel="stylesheet" href="css/print.css" media="print">
+        
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        
+        <link rel="stylesheet" href="fonts/fonts.css">
+        
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="index.html">Preamble</a></li><li class="chapter-item expanded "><a href="whence-parachains.html"><strong aria-hidden="true">1.</strong> Whence Parachains</a></li><li class="chapter-item expanded "><a href="protocol-overview.html"><strong aria-hidden="true">2.</strong> Protocol Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="protocol-approval.html"><strong aria-hidden="true">2.1.</strong> Approval Process</a></li><li class="chapter-item expanded "><a href="protocol-disputes.html" class="active"><strong aria-hidden="true">2.2.</strong> Disputes Process</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="disputes-flow.html"><strong aria-hidden="true">2.2.1.</strong> Dispute Flow</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="architecture.html"><strong aria-hidden="true">3.</strong> Architecture Overview</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="messaging.html"><strong aria-hidden="true">3.1.</strong> Messaging Overview</a></li></ol></li><li class="chapter-item expanded "><a href="runtime/index.html"><strong aria-hidden="true">4.</strong> Runtime Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="runtime/initializer.html"><strong aria-hidden="true">4.1.</strong> Initializer Module</a></li><li class="chapter-item expanded "><a href="runtime/configuration.html"><strong aria-hidden="true">4.2.</strong> Configuration Module</a></li><li class="chapter-item expanded "><a href="runtime/disputes.html"><strong aria-hidden="true">4.3.</strong> Disputes Module</a></li><li class="chapter-item expanded "><a href="runtime/paras.html"><strong aria-hidden="true">4.4.</strong> Paras Module</a></li><li class="chapter-item expanded "><a href="runtime/scheduler.html"><strong aria-hidden="true">4.5.</strong> Scheduler Module</a></li><li class="chapter-item expanded "><a href="runtime/inclusion.html"><strong aria-hidden="true">4.6.</strong> Inclusion Module</a></li><li class="chapter-item expanded "><a href="runtime/inclusioninherent.html"><strong aria-hidden="true">4.7.</strong> InclusionInherent Module</a></li><li class="chapter-item expanded "><a href="runtime/dmp.html"><strong aria-hidden="true">4.8.</strong> DMP Module</a></li><li class="chapter-item expanded "><a href="runtime/ump.html"><strong aria-hidden="true">4.9.</strong> UMP Module</a></li><li class="chapter-item expanded "><a href="runtime/hrmp.html"><strong aria-hidden="true">4.10.</strong> HRMP Module</a></li><li class="chapter-item expanded "><a href="runtime/session_info.html"><strong aria-hidden="true">4.11.</strong> Session Info Module</a></li></ol></li><li class="chapter-item expanded "><a href="runtime-api/index.html"><strong aria-hidden="true">5.</strong> Runtime APIs</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="runtime-api/validators.html"><strong aria-hidden="true">5.1.</strong> Validators</a></li><li class="chapter-item expanded "><a href="runtime-api/validator-groups.html"><strong aria-hidden="true">5.2.</strong> Validator Groups</a></li><li class="chapter-item expanded "><a href="runtime-api/availability-cores.html"><strong aria-hidden="true">5.3.</strong> Availability Cores</a></li><li class="chapter-item expanded "><a href="runtime-api/persisted-validation-data.html"><strong aria-hidden="true">5.4.</strong> Persisted Validation Data</a></li><li class="chapter-item expanded "><a href="runtime-api/session-index.html"><strong aria-hidden="true">5.5.</strong> Session Index</a></li><li class="chapter-item expanded "><a href="runtime-api/validation-code.html"><strong aria-hidden="true">5.6.</strong> Validation Code</a></li><li class="chapter-item expanded "><a href="runtime-api/candidate-pending-availability.html"><strong aria-hidden="true">5.7.</strong> Candidate Pending Availability</a></li><li class="chapter-item expanded "><a href="runtime-api/candidate-events.html"><strong aria-hidden="true">5.8.</strong> Candidate Events</a></li></ol></li><li class="chapter-item expanded "><a href="node/index.html"><strong aria-hidden="true">6.</strong> Node Architecture</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/subsystems-and-jobs.html"><strong aria-hidden="true">6.1.</strong> Subsystems and Jobs</a></li><li class="chapter-item expanded "><a href="node/overseer.html"><strong aria-hidden="true">6.2.</strong> Overseer</a></li><li class="chapter-item expanded "><a href="node/grandpa-voting-rule.html"><strong aria-hidden="true">6.3.</strong> GRANDPA Voting Rule</a></li><li class="chapter-item expanded "><a href="node/collators/index.html"><strong aria-hidden="true">6.4.</strong> Collator Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/collators/collation-generation.html"><strong aria-hidden="true">6.4.1.</strong> Collation Generation</a></li><li class="chapter-item expanded "><a href="node/collators/collator-protocol.html"><strong aria-hidden="true">6.4.2.</strong> Collator Protocol</a></li></ol></li><li class="chapter-item expanded "><a href="node/backing/index.html"><strong aria-hidden="true">6.5.</strong> Backing Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/backing/candidate-selection.html"><strong aria-hidden="true">6.5.1.</strong> Candidate Selection</a></li><li class="chapter-item expanded "><a href="node/backing/candidate-backing.html"><strong aria-hidden="true">6.5.2.</strong> Candidate Backing</a></li><li class="chapter-item expanded "><a href="node/backing/statement-distribution.html"><strong aria-hidden="true">6.5.3.</strong> Statement Distribution</a></li><li class="chapter-item expanded "><a href="node/backing/pov-distribution.html"><strong aria-hidden="true">6.5.4.</strong> PoV Distribution</a></li></ol></li><li class="chapter-item expanded "><a href="node/availability/index.html"><strong aria-hidden="true">6.6.</strong> Availability Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/availability/availability-distribution.html"><strong aria-hidden="true">6.6.1.</strong> Availability Distribution</a></li><li class="chapter-item expanded "><a href="node/availability/availability-recovery.html"><strong aria-hidden="true">6.6.2.</strong> Availability Recovery</a></li><li class="chapter-item expanded "><a href="node/availability/bitfield-distribution.html"><strong aria-hidden="true">6.6.3.</strong> Bitfield Distribution</a></li><li class="chapter-item expanded "><a href="node/availability/bitfield-signing.html"><strong aria-hidden="true">6.6.4.</strong> Bitfield Signing</a></li></ol></li><li class="chapter-item expanded "><a href="node/approval/index.html"><strong aria-hidden="true">6.7.</strong> Approval Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/approval/approval-voting.html"><strong aria-hidden="true">6.7.1.</strong> Approval Voting</a></li><li class="chapter-item expanded "><a href="node/approval/approval-distribution.html"><strong aria-hidden="true">6.7.2.</strong> Approval Distribution</a></li><li class="chapter-item expanded "><a href="node/approval/dispute-participation.html"><strong aria-hidden="true">6.7.3.</strong> Dispute Participation</a></li></ol></li><li class="chapter-item expanded "><a href="node/utility/index.html"><strong aria-hidden="true">6.8.</strong> Utility Subsystems</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="node/utility/availability-store.html"><strong aria-hidden="true">6.8.1.</strong> Availability Store</a></li><li class="chapter-item expanded "><a href="node/utility/candidate-validation.html"><strong aria-hidden="true">6.8.2.</strong> Candidate Validation</a></li><li class="chapter-item expanded "><a href="node/utility/provisioner.html"><strong aria-hidden="true">6.8.3.</strong> Provisioner</a></li><li class="chapter-item expanded "><a href="node/utility/network-bridge.html"><strong aria-hidden="true">6.8.4.</strong> Network Bridge</a></li><li class="chapter-item expanded "><a href="node/utility/misbehavior-arbitration.html"><strong aria-hidden="true">6.8.5.</strong> Misbehavior Arbitration</a></li><li class="chapter-item expanded "><a href="node/utility/peer-set-manager.html"><strong aria-hidden="true">6.8.6.</strong> Peer Set Manager</a></li><li class="chapter-item expanded "><a href="node/utility/runtime-api.html"><strong aria-hidden="true">6.8.7.</strong> Runtime API Requests</a></li><li class="chapter-item expanded "><a href="node/utility/chain-api.html"><strong aria-hidden="true">6.8.8.</strong> Chain API Requests</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="types/index.html"><strong aria-hidden="true">7.</strong> Data Structures and Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="types/candidate.html"><strong aria-hidden="true">7.1.</strong> Candidate</a></li><li class="chapter-item expanded "><a href="types/backing.html"><strong aria-hidden="true">7.2.</strong> Backing</a></li><li class="chapter-item expanded "><a href="types/availability.html"><strong aria-hidden="true">7.3.</strong> Availability</a></li><li class="chapter-item expanded "><a href="types/overseer-protocol.html"><strong aria-hidden="true">7.4.</strong> Overseer and Subsystem Protocol</a></li><li class="chapter-item expanded "><a href="types/runtime.html"><strong aria-hidden="true">7.5.</strong> Runtime</a></li><li class="chapter-item expanded "><a href="types/chain.html"><strong aria-hidden="true">7.6.</strong> Chain</a></li><li class="chapter-item expanded "><a href="types/messages.html"><strong aria-hidden="true">7.7.</strong> Messages</a></li><li class="chapter-item expanded "><a href="types/network.html"><strong aria-hidden="true">7.8.</strong> Network</a></li><li class="chapter-item expanded "><a href="types/approval.html"><strong aria-hidden="true">7.9.</strong> Approvals</a></li></ol></li><li class="chapter-item expanded "><a href="glossary.html">Glossary</a></li><li class="chapter-item expanded affix "><a href="further-reading.html">Further Reading</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        
+                    </div>
+
+                    <h1 class="menu-title">The Polkadot Parachain Host Implementers' Guide</h1>
+
+                    <div class="right-buttons">
+                        
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                        
+                    </div>
+                </div>
+
+                
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1><a class="header" href="#disputes" id="disputes">Disputes</a></h1>
+<p>Fast forward to <a href="./disputes-flow.html">more detailed disputes requirments</a>.</p>
+<h2><a class="header" href="#motivation" id="motivation">Motivation</a></h2>
+<p>All blocks that end up on chain should be valid.</p>
+<p>To ensure attempts, successful or not, of including
+a block that is invalid in respect to the validation code, must therefore be handled in some way with the offenders being punished and the whistle blowers being rewarded. Disputes and their resolution are the formal process to resolve these situations.</p>
+<p>At some point a validator claims that the <code>PoV</code> (proof of validity) - which was distributed with candidate block - for a certain block is invalid.</p>
+<p>Now the dispute can be happening quite some time later than the inclusion, but also right during backing. As such the block is stored or more so its Reed-Solomon encoded erasure chunks, from which the
+PoV can be reconstructed.</p>
+<p>A reconstructed PoV can be verified with the defined verification code, that is valid during the session the block was included or backed.
+If the block is invalid and there exists at least one backing vote and one validity challenging vote, a dispute exists.
+The existence of a dispute is detected by a backing checker
+or, if the block made it through backing stage, by an approval checker.
+In either case, the validator casts and distributes its vote via means of gossip.</p>
+<p>At this point the set of backing validators can not be trusted (since they voted for the block despite something being
+fishy at the very least). On the other hand, one must also consider, the validator that blew the whistle has ulterior motives
+to do so (i.e. it is controlled by a third party and wants to incur damage to itself).
+In either way, there are malicious validators around.
+As a consequence, all validators at the time of block backing, are being notified via broadcast of
+the first pair of backing and challenging vote.
+Validators that backed the candidate implicitly count as votes. Those validators are allowed to cast
+a regular vote (a non-backing vote) as well, but it is generally not in their interest to vote both sides, since that would
+advance the progress towards supermajority either way and have their bonds slashed.
+If both votes lean in the same direction, i.e. both positive they are only counted as one.
+Two opposing votes by the same validator would be equal to an attempted double vote and would be slashed accordingly.</p>
+<p>All validators at block inclusion time are eligible to (and should) cast their Vote. The backing votes of backing checkers
+are counted as votes as well.</p>
+<h2><a class="header" href="#initiation" id="initiation">Initiation</a></h2>
+<p>A dispute is initiated by one approval checker creating and gossiping a vote, that challenges another vote.</p>
+<p>After a backing or approval checker challenged a block, all validators that received the gossiped vote, reconstruct the block
+from availability erasure code chunks and check the block's PoV themselves via the validation code.
+The result of that check is converted into a vote, and distributed via the same mechanics as the first one.</p>
+<p>Once a receiver receives ⅔ supermajority in one or the other direction, the
+vote is concluded.
+Conclusion implies that the result for this block can not be altered anymore, valid or invalid is fixed now.</p>
+<p>In order to ensure, the dispute result is not forgotten or intentionally side stepped, it has to be recorded on chain.
+This on chain recording mechanic must be vigilant, in a sense, that new emerging forks
+must also receive the dispute resolution recorded (transplantation) irrespectively of the disputed block being included in that chain or not.</p>
+<p>If the disputed block was already finalized, the chain must be put in governance mode to be resolved by human interaction
+(i.e. sudo or motion or other mechanics that are available ).</p>
+<p>As such the validator has to keep track of all votes irrespective if the disputed block is already known or not.
+All backing votes should be either kept in storage as well, or be queried on demand, since they are a kind of vote
+as well.</p>
+<h2><a class="header" href="#late-votes" id="late-votes">Late votes</a></h2>
+<p>Late votes, after the dispute already reached a ⅔ supermajority, must be rewarded (albeit a smaller amount) as well.
+These ones must be attached to the votes after a defined period of time after the result has reached
+the required ⅔ supermajority.</p>
+<h2><a class="header" href="#chain-selection--grandpa" id="chain-selection--grandpa">Chain Selection / Grandpa</a></h2>
+<p>Chain selection should be influenced by the chance of picking a chain that does not even include the disputed block.
+Hence removing the need to include the dispute resolution itself.
+This is only possible though, if the set of active heads contains such a fork.
+In Grandpa the Voting rule should be used to avoid finalizing chains that contain an open or negative shut (shut with supermajority that marks the block as invalid) dispute.
+In case all possible chains contains such a dispute, a metric must be used to decide which fork to use or avoid finalization until one dispute resolves positive (the
+block is valid).</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+                            <a rel="prev" href="protocol-approval.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
+
+                        
+                            <a rel="next" href="disputes-flow.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+                    <a rel="prev" href="protocol-approval.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a rel="next" href="disputes-flow.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+
+        
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        
+
+        
+
+        
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+        <script type="text/javascript" src="mermaid.min.js"></script>
+        
+        <script type="text/javascript" src="mermaid-init.js"></script>
+        
+
+        
+
+    </body>
+</html>
