@@ -1129,6 +1129,7 @@ struct CandidatePendingAvailability {
   relay_parent_number: BlockNumber, // number of the relay-parent.
   backers: Bitfield, // one bit per validator, set for those who backed the candidate.
   backed_in_number: BlockNumber,
+  backing_group: GroupIndex,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -2054,11 +2055,11 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 </span><span class="boring">fn main() {
 </span>enum CandidateEvent {
 	/// This candidate receipt was backed in the most recent block.
-	CandidateBacked(CandidateReceipt, HeadData),
+	CandidateBacked(CandidateReceipt, HeadData, CoreIndex, GroupIndex),
 	/// This candidate receipt was included and became a parablock at the most recent block.
-	CandidateIncluded(CandidateReceipt, HeadData),
+	CandidateIncluded(CandidateReceipt, HeadData, CoreIndex, GroupIndex),
 	/// This candidate receipt was not made available in time and timed out.
-	CandidateTimedOut(CandidateReceipt, HeadData),
+	CandidateTimedOut(CandidateReceipt, HeadData, CoreIndex),
 }
 
 fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
@@ -3160,6 +3161,10 @@ If not running as a validator, do nothing.</p>
 <p>This category of subsystems also contains a module for <a href="node/approval/dispute-participation.html">participating in live disputes</a> and tracks all observed votes (backing or approval) by all validators on all candidates.</p>
 <h1><a class="header" href="#approval-voting" id="approval-voting">Approval Voting</a></h1>
 <p>Reading the <a href="node/approval/../../protocol-approval.html">section on the approval protocol</a> will likely be necessary to understand the aims of this subsystem.</p>
+<p>Approval votes are split into two parts: Assignments and Approvals. Validators first broadcast their assignment to indicate intent to check a candidate. Upon successfully checking, they broadcast an approval vote. If a validator doesn't broadcast their approval vote shortly after issuing an assignment, this is an indication that they are being prevented from recovering or validating the block data and that more validators should self-select to check the candidate. This is known as a &quot;no-show&quot;.</p>
+<p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of DelayTranches, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which DelayTranche those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
+<p>Another main component of this subsystem is the logic for determining when a (Block, Candidate) pair has been approved and when to broadcast and trigger our own assignment. Once a (Block, Candidate) pair has been approved, we mark a corresponding bit in the BlockEntry that indicates the candidate has been approved under the block. When we trigger our own assignment, we broadcast it via Approval Distribution, begin fetching the data from Availability Recovery, and then pass it through to the Candidate Validation. Once these steps are successful, we issue our approval vote. If any of these steps fail, we don't issue any vote and will &quot;no-show&quot; from the perspective of other validators. In the future we will initiate disputes as well.</p>
+<p>Where this all fits into Polkadot is via block finality. Our goal is to not finalize any block containing a candidate that is not approved. We provide a hook for a custom GRANDPA voting rule - GRANDPA makes requests of the form (target, minimum) consisting of a target block (i.e. longest chain) that it would like to finalize, and a minimum block which, due to the rules of GRANDPA, must be voted on. The minimum is typically the last finalized block, but may be beyond it, in the case of having a last-round-estimate beyond the last finalized. Thus, our goal is to inform GRANDPA of some block between target and minimum which we believe can be finalized safely. We do this by iterating backwards from the target to the minimum and finding the longest continuous chain from minimum where all candidates included by those blocks have been approved.</p>
 <h2><a class="header" href="#protocol-10" id="protocol-10">Protocol</a></h2>
 <p>Input:</p>
 <ul>
@@ -3208,9 +3213,6 @@ struct OurAssignment {
 struct ApprovalEntry {
     tranches: Vec&lt;TrancheEntry&gt;, // sorted ascending by tranche number.
     backing_group: GroupIndex,
-    // When the next wakeup for this entry should occur. This is either to
-    // check a no-show or to check if we need to broadcast an assignment.
-    next_wakeup: Tick,
     our_assignment: Option&lt;OurAssignment&gt;,
     assignments: Bitfield, // n_validators bits
     approved: bool,
@@ -3272,18 +3274,29 @@ CandidateHash =&gt; CandidateEntry
   candidate_index: CandidateIndex,
 }
 
+// Requests that background work (approval voting tasks) may need to make of the main subsystem
+// task.
+enum BackgroundRequest {
+  ApprovalVote(ApprovalVoteRequest),
+  // .. others, unspecified as per implementation.
+}
+
+// This is the general state of the subsystem. The actual implementation may split this
+// into further pieces.
 struct State {
     earliest_session: SessionIndex,
     session_info: Vec&lt;SessionInfo&gt;,
+    babe_epoch: Option&lt;BabeEpoch&gt;, // information about a cached BABE epoch.
     keystore: KeyStorePtr,
     wakeups: BTreeMap&lt;Tick, Vec&lt;(Hash, Hash)&gt;&gt;, // Tick -&gt; [(Relay Block, Candidate Hash)]
 
     // These are connected to each other.
-    approval_vote_tx: mpsc::Sender&lt;ApprovalVoteRequest&gt;,
-    approval_vote_rx: mpsc::Receiver&lt;ApprovalVoteRequest&gt;,
+    background_tx: mpsc::Sender&lt;BackgroundRequest&gt;,
+    background_rx: mpsc::Receiver&lt;BackgroundRequest&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
+<p>This guide section makes no explicit references to writes to or reads from disk. Instead, it handles them implicitly, with the understanding that updates to block, candidate, and approval entries are persisted to disk.</p>
 <p><a href="node/approval/../../runtime/session_info.html"><code>SessionInfo</code></a></p>
 <p>On start-up, we clear everything currently stored by the database. This is done by loading the <code>StoredBlockRange</code>, iterating through each block number, iterating through each block hash, and iterating through each candidate referenced by each block. Although this is <code>O(o*n*p)</code>, we don't expect to have more than a few unfinalized blocks at any time and in extreme cases, a few thousand. The clearing operation should be relatively fast as a result.</p>
 <p>Main loop:</p>
@@ -3292,7 +3305,11 @@ struct State {
 <ul>
 <li>The next <code>Tick</code> in <code>wakeups</code>: trigger <code>wakeup_process</code> for each <code>(Hash, Hash)</code> pair scheduled under the <code>Tick</code> and then remove all entries under the <code>Tick</code>.</li>
 <li>The next message from the overseer: handle the message as described in the <a href="node/approval/approval-voting.html#incoming-messages">Incoming Messages section</a></li>
-<li>The next request from <code>approval_vote_rx</code>: handle with <code>issue_approval</code></li>
+<li>The next approval vote request from <code>background_rx</code>
+<ul>
+<li>If this is an <code>ApprovalVoteRequest</code>, <a href="node/approval/approval-voting.html#issue-approval-vote">Issue an approval vote</a>.</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -3322,25 +3339,37 @@ struct State {
 <li>Run <code>RelayVRFModulo</code> and <code>RelayVRFDelay</code> according to the <a href="node/approval/../../protocol-approval.html#assignment-criteria">the approvals protocol section</a>. Ensure that the assigned core derived from the output is covered by the auxiliary signature aggregated in the <code>VRFPRoof</code>.</li>
 </ul>
 </li>
-<li>invoke <code>process_wakeup(relay_block, candidate)</code> for each new candidate in each new block - this will automatically broadcast a 0-tranche assignment, kick off approval work, and schedule the next delay.</li>
+<li><a href="node/approval/approval-voting.html#handle-wakeup">Handle Wakeup</a> for each new candidate in each new block - this will automatically broadcast a 0-tranche assignment, kick off approval work, and schedule the next delay.</li>
 <li>Dispatch an <code>ApprovalDistributionMessage::NewBlocks</code> with the meta information filled out for each new block.</li>
 </ul>
 <h4><a class="header" href="#approvalvotingmessagecheckandimportassignment" id="approvalvotingmessagecheckandimportassignment"><code>ApprovalVotingMessage::CheckAndImportAssignment</code></a></h4>
 <p>On receiving a <code>ApprovalVotingMessage::CheckAndImportAssignment</code> message, we check the assignment cert against the block entry. The cert itself contains information necessary to determine the candidate that is being assigned-to. In detail:</p>
 <ul>
-<li>Load the <code>BlockEntry</code> for the relay-parent referenced by the message. If there is none, return <code>VoteCheckResult::Report</code>.</li>
+<li>Load the <code>BlockEntry</code> for the relay-parent referenced by the message. If there is none, return <code>AssignmentCheckResult::Bad</code>.</li>
 <li>Fetch the <code>SessionInfo</code> for the session of the block</li>
 <li>Determine the assignment key of the validator based on that.</li>
+<li>Determine the claimed core index by looking up the candidate with given index in <code>block_entry.candidates</code>. Return <code>AssignmentCheckResult::Bad</code> if missing.</li>
 <li>Check the assignment cert
 <ul>
 <li>If the cert kind is <code>RelayVRFModulo</code>, then the certificate is valid as long as <code>sample &lt; session_info.relay_vrf_samples</code> and the VRF is valid for the validator's key with the input <code>block_entry.relay_vrf_story ++ sample.encode()</code> as described with <a href="node/approval/../../protocol-approval.html#assignment-criteria">the approvals protocol section</a>. We set <code>core_index = vrf.make_bytes().to_u32() % session_info.n_cores</code>. If the <code>BlockEntry</code> causes inclusion of a candidate at <code>core_index</code>, then this is a valid assignment for the candidate at <code>core_index</code> and has delay tranche 0. Otherwise, it can be ignored.</li>
 <li>If the cert kind is <code>RelayVRFDelay</code>, then we check if the VRF is valid for the validator's key with the input <code>block_entry.relay_vrf_story ++ cert.core_index.encode()</code> as described in <a href="node/approval/../../protocol-approval.html#assignment-criteria">the approvals protocol section</a>. The cert can be ignored if the block did not cause inclusion of a candidate on that core index. Otherwise, this is a valid assignment for the included candidate. The delay tranche for the assignment is determined by reducing <code>(vrf.make_bytes().to_u64() % (session_info.n_delay_tranches + session_info.zeroth_delay_tranche_width)).saturating_sub(session_info.zeroth_delay_tranche_width)</code>.</li>
 <li>We also check that the core index derived by the output is covered by the <code>VRFProof</code> by means of an auxiliary signature.</li>
-<li>If the delay tranche is too far in the future, return <code>VoteCheckResult::Ignore</code>.</li>
-<li><code>import_checked_assignment</code></li>
-<li>return the appropriate <code>VoteCheckResult</code> on the response channel.</li>
+<li>If the delay tranche is too far in the future, return <code>AssignmentCheckResult::TooFarInFuture</code>.</li>
 </ul>
 </li>
+<li>Import the assignment.
+<ul>
+<li>Load the candidate in question and access the <code>approval_entry</code> for the block hash the cert references.</li>
+<li>Ignore if we already observe the validator as having been assigned.</li>
+<li>Ensure the validator index is not part of the backing group for the candidate.</li>
+<li>Ensure the validator index is not present in the approval entry already.</li>
+<li>Create a tranche entry for the delay tranche in the approval entry and note the assignment within it.</li>
+<li>Note the candidate index within the approval entry.</li>
+</ul>
+</li>
+<li><a href="node/approval/approval-voting.html#check-full-approval">Check for full approval of the candidate entry</a> of the candidate_entry, filtering by this specific approval entry.</li>
+<li><a href="node/approval/approval-voting.html#schedule-wakeup">Schedule a wakeup</a> of the candidate.</li>
+<li>return the appropriate <code>AssignmentCheckResult</code> on the response channel.</li>
 </ul>
 <h4><a class="header" href="#approvalvotingmessagecheckandimportapproval" id="approvalvotingmessagecheckandimportapproval"><code>ApprovalVotingMessage::CheckAndImportApproval</code></a></h4>
 <p>On receiving a <code>CheckAndImportApproval(indirect_approval_vote, response_channel)</code> message:</p>
@@ -3349,7 +3378,7 @@ struct State {
 <li>Fetch the <code>CandidateEntry</code> from the indirect approval vote's <code>candidate_index</code>. If the block did not trigger inclusion of enough candidates, return <code>ApprovalCheckResult::Bad</code>.</li>
 <li>Construct a <code>SignedApprovalVote</code> using the candidate hash and check against the validator's approval key, based on the session info of the block. If invalid or no such validator, return <code>ApprovalCheckResult::Bad</code>.</li>
 <li>Send <code>ApprovalCheckResult::Accepted</code></li>
-<li><code>import_checked_approval(BlockEntry, CandidateEntry, ValidatorIndex)</code></li>
+<li><a href="node/approval/approval-voting.html#import-checked-approval">Import the checked approval vote</a></li>
 </ul>
 <h4><a class="header" href="#approvalvotingmessageapprovedancestor" id="approvalvotingmessageapprovedancestor"><code>ApprovalVotingMessage::ApprovedAncestor</code></a></h4>
 <p>On receiving an <code>ApprovedAncestor(Hash, BlockNumber, response_channel)</code>:</p>
@@ -3361,32 +3390,85 @@ struct State {
 <li>If the block entry's <code>approval_bitfield</code> has any 0 bits, set <code>all_approved_max = None</code>.</li>
 <li>After iterating all ancestry, return <code>all_approved_max</code>.</li>
 </ul>
-<h3><a class="header" href="#utility" id="utility">Utility</a></h3>
-<h4><a class="header" href="#tranche_nowslot_number-time---delaytranche" id="tranche_nowslot_number-time---delaytranche"><code>tranche_now(slot_number, time) -&gt; DelayTranche</code></a></h4>
+<h3><a class="header" href="#updates-and-auxiliary-logic" id="updates-and-auxiliary-logic">Updates and Auxiliary Logic</a></h3>
+<h4><a class="header" href="#import-checked-approval" id="import-checked-approval">Import Checked Approval</a></h4>
 <ul>
-<li>Convert <code>time.saturating_sub(slot_number.to_time())</code> to a delay tranches value</li>
-</ul>
-<h4><a class="header" href="#import_checked_assignment" id="import_checked_assignment"><code>import_checked_assignment</code></a></h4>
-<ul>
-<li>Load the candidate in question and access the <code>approval_entry</code> for the block hash the cert references.</li>
-<li>Ignore if we already observe the validator as having been assigned.</li>
-<li>Ensure the validator index is not part of the backing group for the candidate.</li>
-<li>Ensure the validator index is not present in the approval entry already.</li>
-<li>Create a tranche entry for the delay tranche in the approval entry and note the assignment within it.</li>
-<li>Note the candidate index within the approval entry.</li>
-<li>Schedule a wakeup with <code>next_wakeup</code>.</li>
-</ul>
-<h4><a class="header" href="#import_checked_approvalblockentry-candidateentry-validatorindex" id="import_checked_approvalblockentry-candidateentry-validatorindex"><code>import_checked_approval(BlockEntry, CandidateEntry, ValidatorIndex)</code></a></h4>
-<ul>
+<li>Import an approval vote which we can assume to have passed signature checks.</li>
+<li>Requires <code>(BlockEntry, CandidateEntry, ValidatorIndex)</code></li>
 <li>Set the corresponding bit of the <code>approvals</code> bitfield in the <code>CandidateEntry</code> to <code>1</code>. If already <code>1</code>, return.</li>
-<li>For each <code>ApprovalEntry</code> in the <code>CandidateEntry</code> (typically only 1), check whether the validator is assigned as a checker.
+<li><a href="node/approval/approval-voting.html#check-full-approval">Check full approval of the candidate</a></li>
+</ul>
+<h4><a class="header" href="#check-full-approval" id="check-full-approval">Check Full Approval</a></h4>
 <ul>
-<li>If so, set <code>n_tranches = tranches_to_approve(approval_entry, tranche_now(block.slot, now()))</code>.</li>
-<li>If <code>check_approval(block_entry, approval_entry, n_tranches)</code> is true, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
+<li>Checks the approval state of the candidate under every block it is included by, and updates the block entries accordingly.</li>
+<li>Requires <code>(CandidateEntry, filter)</code>, where filter is used to limit which approval entries are inspected.</li>
+<li>Checks every <code>ApprovalEntry</code> that is not yet <code>approved</code> for whether it is now approved.
+<ul>
+<li>For each <code>ApprovalEntry</code> in the <code>CandidateEntry</code> that is not <code>approved</code> and passes the <code>filter</code></li>
+<li>Load the block entry for the <code>ApprovalEntry</code>.</li>
+<li>If so, <a href="node/approval/approval-voting.html#determine-required-tranches">determine the tranches to inspect</a> of the candidate, </li>
+<li>If <a href="node/approval/approval-voting.html#check-approval">the candidate is approved under the block</a>, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
 </ul>
 </li>
 </ul>
-<h4><a class="header" href="#tranches_to_approveapproval_entry-tranche_now---requiredtranches" id="tranches_to_approveapproval_entry-tranche_now---requiredtranches"><code>tranches_to_approve(approval_entry, tranche_now) -&gt; RequiredTranches</code></a></h4>
+<h4><a class="header" href="#handling-wakeup" id="handling-wakeup">Handling Wakeup</a></h4>
+<ul>
+<li>Handle a previously-scheduled wakeup of a candidate under a specific block.</li>
+<li>Requires <code>(relay_block, candidate_hash)</code></li>
+<li>Load the <code>BlockEntry</code> and <code>CandidateEntry</code> from disk. If either is not present, this may have lost a race with finality and can be ignored. Also load the <code>ApprovalEntry</code> for the block and candidate.</li>
+<li><a href="node/approval/approval-voting.html#determine-required-tranches">determine the <code>RequiredTranches</code> of the candidate</a>.</li>
+<li>Determine if we should trigger our assignment.
+<ul>
+<li>If we've already triggered or <code>OurAssignment</code> is <code>None</code>, we do not trigger.</li>
+<li>If we have  <code>RequiredTranches::All</code>, then we trigger if the candidate is <a href="node/approval/approval-voting.html#check-approval">not approved</a>.</li>
+<li>If we have <code>RequiredTranches::Pending(max)</code>, then we trigger if our assignment's tranche is less than or equal to <code>max</code>.</li>
+<li>If we have <code>RequiredTranches::Exact(tranche)</code> then we do not trigger, because this value indicates that no new assignments are needed at the moment.</li>
+</ul>
+</li>
+<li>If we should trigger our assignment
+<ul>
+<li>Import the assignment to the <code>ApprovalEntry</code></li>
+<li>Broadcast on network with an <code>ApprovalDistributionMessage::DistributeAssignment</code>.</li>
+<li><a href="node/approval/approval-voting.html#launch-approval-work">Launch approval work</a> for the candidate. </li>
+</ul>
+</li>
+<li><a href="node/approval/approval-voting.html#schedule-wakeup">Schedule a new wakeup</a> of the candidate.</li>
+</ul>
+<h4><a class="header" href="#schedule-wakeup" id="schedule-wakeup">Schedule Wakeup</a></h4>
+<ul>
+<li>Requires <code>(approval_entry, candidate_entry)</code> which effectively denotes a <code>(Block Hash, Candidate Hash)</code> pair - the candidate, along with the block it appears in.</li>
+<li>If the <code>approval_entry</code> is approved, this doesn't need to be woken up again.</li>
+<li>Return the earlier of our next no-show timeout or the tranche of our assignment, if not yet triggered</li>
+<li>Our next no-show timeout is computed by finding the earliest-received assignment within <code>n_tranches</code> for which we have not received an approval and adding <code>to_ticks(session_info.no_show_slots)</code> to it.</li>
+<li>If the approval entry is already approved, or we have triggered our assignment and there are no pending no-shows, we do not need to schedule a wakeup. Note that the latter case is only possible when we have not seen enough assignments in order to approve. When we receive an incoming assignment, we will schedule a new wakeup, and the <code>(Block, Candidate)</code> pair will continue to be processed appropriately.</li>
+</ul>
+<h4><a class="header" href="#launch-approval-work" id="launch-approval-work">Launch Approval Work</a></h4>
+<ul>
+<li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, block_hash, candidate_index)</code></li>
+<li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
+<li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, response_sender)</code></li>
+<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::HistoricalValidationCode(</code>descriptor.para_id<code>, </code>descriptor.relay_parent<code>)</code> against the state of <code>block_hash</code>.</li>
+<li>Spawn a background task with a clone of <code>background_tx</code>
+<ul>
+<li>Wait for the available data</li>
+<li>Issue a <code>CandidateValidationMessage::ValidateFromExhaustive</code> message</li>
+<li>Wait for the result of validation</li>
+<li>If valid, issue a message on <code>background_tx</code> detailing the request.</li>
+</ul>
+</li>
+</ul>
+<h4><a class="header" href="#issue-approval-vote" id="issue-approval-vote">Issue Approval Vote</a></h4>
+<ul>
+<li>Fetch the block entry and candidate entry. Ignore if <code>None</code> - we've probably just lost a race with finality.</li>
+<li>Construct a <code>SignedApprovalVote</code> with the validator index for the session.</li>
+<li><a href="node/approval/approval-voting.html#import-checked-approval">Import the checked approval vote</a>. It is &quot;checked&quot; as we've just issued the signature.</li>
+<li>Construct a <code>IndirectSignedApprovalVote</code> using the information about the vote.</li>
+<li>Dispatch <code>ApprovalDistributionMessage::DistributeApproval</code>.</li>
+</ul>
+<h3><a class="header" href="#determining-approval-of-candidate" id="determining-approval-of-candidate">Determining Approval of Candidate</a></h3>
+<h4><a class="header" href="#determine-required-tranches" id="determine-required-tranches">Determine Required Tranches</a></h4>
+<p>This is pure logic is for inspecting an approval entry, containing the assignments received, the current time, requirements for approval, and the approval votes already received to determine how many of the delay tranches of the approval entry are relevant, as well as contextual information about what may be remaining to check on the candidate.</p>
+<p>Requires <code>(approval_entry, approvals_received, tranche_now, block_tick, no_show_duration, needed_approvals)</code></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -3402,7 +3484,6 @@ struct State {
 <span class="boring">}
 </span></code></pre></pre>
 <ul>
-<li>Determine the amount of tranches <code>n_tranches</code> our view of the protocol requires of this approval entry.</li>
 <li>Ignore all tranches beyond <code>tranche_now</code>.
 <ul>
 <li>First, take tranches until we have at least <code>session_info.needed_approvals</code>. Call the number of tranches taken <code>k</code></li>
@@ -3414,64 +3495,23 @@ struct State {
 <li>The amount of assignments in non-empty &amp; taken tranches plus the amount of needed extras equals or exceeds the total number of validators for the approval entry, which can be obtained by measuring the bitfield. In this case we return a special value <code>RequiredTranches::All</code> indicating that all validators have effectively been assigned to check.</li>
 </ul>
 </li>
-<li>return <code>n_tranches</code></li>
+<li>return <code>RequiredTranches::Exact(n_tranches, total_no_shows)</code></li>
 </ul>
 </li>
 </ul>
-<h4><a class="header" href="#check_approvalblock_entry-approval_entry-n_tranches---bool" id="check_approvalblock_entry-approval_entry-n_tranches---bool"><code>check_approval(block_entry, approval_entry, n_tranches) -&gt; bool</code></a></h4>
+<h4><a class="header" href="#check-approval" id="check-approval">Check Approval</a></h4>
 <ul>
+<li>Check whether a candidate is approved under a particular block.</li>
+<li>Requires <code>(block_entry, candidate_entry, approval_entry, n_tranches)</code></li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::Pending</code>, return false</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::All</code>,  then we return <code>3 * n_approvals &gt; 2 * n_validators</code>.</li>
-<li>If <code>n_tranches</code> is <code>RequiredTranches::Exact(tranche, no_shows), then we return whether all assigned validators up to </code>tranche<code>less</code>no_shows<code>have approved. e.g. if we had 5 tranches and 1 no-show, we would accept all validators in tranches 0..=5 except for 1 approving. In that example, we also accept all validators in tranches 0..=5 approving, but that would indicate that the</code>RequiredTranches` value was incorrectly constructed, so it is not realistic. If there are more missing approvals than there are no-shows, that indicates that there are some assignments which are not yet no-shows, but may become no-shows.</li>
+<li>If <code>n_tranches</code> is <code>RequiredTranches::Exact(tranche, no_shows)</code>, then we return whether all assigned validators up to <code>tranche</code> less <code>no_shows</code> have approved. e.g. if we had 5 tranches and 1 no-show, we would accept all validators in tranches 0..=5 except for 1 approving. In that example, we also accept all validators in tranches 0..=5 approving, but that would indicate that the <code>RequiredTranches</code> value was incorrectly constructed, so it is not realistic. If there are more missing approvals than there are no-shows, that indicates that there are some assignments which are not yet no-shows, but may become no-shows.</li>
 </ul>
-<h4><a class="header" href="#process_wakeuprelay_block-candidate_hash" id="process_wakeuprelay_block-candidate_hash"><code>process_wakeup(relay_block, candidate_hash)</code></a></h4>
+<h3><a class="header" href="#time" id="time">Time</a></h3>
+<h4><a class="header" href="#current-tranche" id="current-tranche">Current Tranche</a></h4>
 <ul>
-<li>Load the <code>BlockEntry</code> and <code>CandidateEntry</code> from disk. If either is not present, this may have lost a race with finality and can be ignored. Also load the <code>ApprovalEntry</code> for the block and candidate.</li>
-<li>Set <code>required = tranches_to_approve(approval_entry, tranche_now(block.slot, now()))</code></li>
-<li>Determine if we should trigger our assignment.
-<ul>
-<li>If we've already triggered or <code>OurAssignment</code> is <code>None</code>, we do not trigger.</li>
-<li>If <code>required</code> is <code>RequiredTranches::All</code>, then we trigger if <code>check_approval(block_entry, approval_entry, All)</code> is false.</li>
-<li>If <code>required</code> is <code>RequiredTranches::Pending(max), then we trigger if our assignment's tranche is less than or equal to </code>max`.</li>
-<li>If <code>required</code> is <code>RequiredTranches::Exact(tranche)</code> then we do not trigger, because this value indicates that no new assignments are needed at the moment.</li>
-</ul>
-</li>
-<li>If we should trigger our assignment
-<ul>
-<li>Import the assignment to the <code>ApprovalEntry</code></li>
-<li>Broadcast on network with an <code>ApprovalDistributionMessage::DistributeAssignment</code>.</li>
-<li>Kick off approval work with <code>launch_approval</code></li>
-</ul>
-</li>
-<li>Schedule another wakeup based on <code>next_wakeup</code></li>
-</ul>
-<h4><a class="header" href="#next_wakeupapproval_entry-candidate_entry" id="next_wakeupapproval_entry-candidate_entry"><code>next_wakeup(approval_entry, candidate_entry)</code>:</a></h4>
-<ul>
-<li>If the <code>approval_entry</code> is approved, this doesn't need to be woken up again.</li>
-<li>Return the earlier of our next no-show timeout or the tranche of our assignment, if not yet triggered</li>
-<li>Our next no-show timeout is computed by finding the earliest-received assignment within <code>n_tranches</code> for which we have not received an approval and adding <code>to_ticks(session_info.no_show_slots)</code> to it.</li>
-</ul>
-<h4><a class="header" href="#launch_approvalsessionindex-candidatereceipt-validatorindex-block_hash-candidate_index" id="launch_approvalsessionindex-candidatereceipt-validatorindex-block_hash-candidate_index"><code>launch_approval(SessionIndex, CandidateReceipt, ValidatorIndex, block_hash, candidate_index)</code>:</a></h4>
-<ul>
-<li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
-<li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, response_sender)</code></li>
-<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::HistoricalValidationCode(</code>descriptor.para_id<code>, </code>descriptor.relay_parent<code>)</code> against the state of <code>block_hash</code>.</li>
-<li>Spawn a background task with a clone of <code>approval_vote_tx</code>
-<ul>
-<li>Wait for the available data</li>
-<li>Issue a <code>CandidateValidationMessage::ValidateFromExhaustive</code> message</li>
-<li>Wait for the result of validation</li>
-<li>If valid, issue a message on <code>approval_vote_tx</code> detailing the request.</li>
-</ul>
-</li>
-</ul>
-<h4><a class="header" href="#issue_approvalrequest" id="issue_approvalrequest"><code>issue_approval(request)</code>:</a></h4>
-<ul>
-<li>Fetch the block entry and candidate entry. Ignore if <code>None</code> - we've probably just lost a race with finality.</li>
-<li>Construct a <code>SignedApprovalVote</code> with the validator index for the session.</li>
-<li><code>import_checked_approval(block_entry, candidate_entry, validator_index)</code></li>
-<li>Construct a <code>IndirectSignedApprovalVote</code> using the information about the vote.</li>
-<li>Dispatch <code>ApprovalDistributionMessage::DistributeApproval</code>.</li>
+<li>Given the slot number of a block, and the current time, this informs about the current tranche.</li>
+<li>Convert <code>time.saturating_sub(slot_number.to_time())</code> to a delay tranches value</li>
 </ul>
 <h1><a class="header" href="#approval-distribution" id="approval-distribution">Approval Distribution</a></h1>
 <p>A subsystem for the distribution of assignments and approvals for approval checks on candidates over the network.</p>
@@ -3589,7 +3629,7 @@ struct CandidateEntry {
 <p>Call <code>import_and_circulate_approval</code> with <code>MessageSource::Local</code>.</p>
 <h4><a class="header" href="#overseersignalblockfinalized-1" id="overseersignalblockfinalized-1"><code>OverseerSignal::BlockFinalized</code></a></h4>
 <p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
-<h3><a class="header" href="#utility-1" id="utility-1">Utility</a></h3>
+<h3><a class="header" href="#utility" id="utility">Utility</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -4554,6 +4594,7 @@ enum ApprovalVotingMessage {
     /// Should not be sent unless the block hash is known.
     CheckAndImportAssignment(
         IndirectAssignmentCert,
+        CandidateIndex, // The index of the candidate included in the block.
         ResponseChannel&lt;AssignmentCheckResult&gt;,
     ),
     /// Check if the approval vote is valid and can be accepted by our view of the
@@ -5001,6 +5042,8 @@ enum ProvisionerMessage {
     /// Get the contents of all channels addressed to the given recipient. Channels that have no
     /// messages in them are also included.
     InboundHrmpChannelsContents(ParaId, ResponseChannel&lt;BTreeMap&lt;ParaId, Vec&lt;InboundHrmpMessage&lt;BlockNumber&gt;&gt;&gt;&gt;),
+    /// Get information about the BABE epoch this block was produced in.
+    BabeEpoch(ResponseChannel&lt;BabeEpoch&gt;),
 }
 
 enum RuntimeApiMessage {
