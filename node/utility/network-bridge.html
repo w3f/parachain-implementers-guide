@@ -215,7 +215,7 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <h3><a class="header" href="#overseer-signal-blockfinalized" id="overseer-signal-blockfinalized">Overseer Signal: BlockFinalized</a></h3>
 <p>We update our view's <code>finalized_number</code> to the provided one and delay <code>ProtocolMessage::ViewUpdate</code> and <code>NetworkBridgeEvent::OurViewChange</code> till the next <code>ActiveLeavesUpdate</code>.</p>
 <h3><a class="header" href="#network-event-peer-connected" id="network-event-peer-connected">Network Event: Peer Connected</a></h3>
-<p>Issue a <code>NetworkBridgeEvent::PeerConnected</code> for each <a href="#event-handlers">Event Handler</a> of the peer-set and negotiated protocol version of the peer.</p>
+<p>Issue a <code>NetworkBridgeEvent::PeerConnected</code> for each <a href="#event-handlers">Event Handler</a> of the peer-set and negotiated protocol version of the peer. Also issue a <code>NetworkBridgeEvent::PeerViewChange</code> and send the peer our current view.</p>
 <h3><a class="header" href="#network-event-peer-disconnected" id="network-event-peer-disconnected">Network Event: Peer Disconnected</a></h3>
 <p>Issue a <code>NetworkBridgeEvent::PeerDisconnected</code> for each <a href="#event-handlers">Event Handler</a> of the peer-set and negotiated protocol version of the peer.</p>
 <h3><a class="header" href="#network-event-protocolmessage" id="network-event-protocolmessage">Network Event: ProtocolMessage</a></h3>
