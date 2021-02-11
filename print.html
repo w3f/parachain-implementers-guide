@@ -3473,7 +3473,7 @@ struct State {
 <ul>
 <li>For each <code>ApprovalEntry</code> in the <code>CandidateEntry</code> that is not <code>approved</code> and passes the <code>filter</code></li>
 <li>Load the block entry for the <code>ApprovalEntry</code>.</li>
-<li>If so, <a href="node/approval/approval-voting.html#determine-required-tranches">determine the tranches to inspect</a> of the candidate, </li>
+<li>If so, <a href="node/approval/approval-voting.html#determine-required-tranches">determine the tranches to inspect</a> of the candidate,</li>
 <li>If <a href="node/approval/approval-voting.html#check-approval">the candidate is approved under the block</a>, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
 <li>Otherwise, <a href="node/approval/approval-voting.html#schedule-wakeup">schedule a wakeup of the candidate</a></li>
 </ul>
@@ -3497,7 +3497,7 @@ struct State {
 <ul>
 <li>Import the assignment to the <code>ApprovalEntry</code></li>
 <li>Broadcast on network with an <code>ApprovalDistributionMessage::DistributeAssignment</code>.</li>
-<li><a href="node/approval/approval-voting.html#launch-approval-work">Launch approval work</a> for the candidate. </li>
+<li><a href="node/approval/approval-voting.html#launch-approval-work">Launch approval work</a> for the candidate.</li>
 </ul>
 </li>
 <li><a href="node/approval/approval-voting.html#schedule-wakeup">Schedule a new wakeup</a> of the candidate.</li>
