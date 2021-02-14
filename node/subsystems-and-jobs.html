@@ -296,24 +296,18 @@ with implementing a gossip protocol:</p>
 <pre class="mermaid">sequenceDiagram
     participant SD as StatementDistribution
     participant NB as NetworkBridge
-    participant Listener
 
     alt On receipt of a&lt;br/&gt;SignedStatement from CandidateBacking
         % fn circulate_statement_and_dependents
         SD -&gt;&gt; NB: SendValidationMessage
 
         Note right of NB: Bridge sends validation message to all appropriate peers
-    else On initialization, from other subsystems:
-        Listener -&gt;&gt; SD: RegisterStatementListener
     else On receipt of peer validation message
         NB -&gt;&gt; SD: NetworkBridgeUpdateV1
 
         % fn handle_incoming_message
         alt if we aren't already aware of the relay parent for this statement
             SD -&gt;&gt; NB: ReportPeer
-        else the statement corresponds to our View
-            Note over SD,Listener: Forward the statement to each registered listener
-            SD -&gt;&gt; Listener: SignedFullStatement
         end
 
         % fn circulate_statement

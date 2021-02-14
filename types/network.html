@@ -275,6 +275,8 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 	RequestCollation(RequestId, Hash, ParaId),
 	/// A requested collation.
 	Collation(RequestId, CandidateReceipt, CompressedPoV),
+	/// A collation sent to a validator was seconded.
+	CollationSeconded(SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>

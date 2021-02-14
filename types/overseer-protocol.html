@@ -396,10 +396,12 @@ enum BitfieldSigningMessage { }
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
-  /// A candidate collation can be fetched from a collator and should be considered for seconding.
-  Collation(RelayParent, ParaId, CollatorId),
-  /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
-  Invalid(CandidateReceipt),
+    /// A candidate collation can be fetched from a collator and should be considered for seconding.
+    Collation(RelayParent, ParaId, CollatorId),
+    /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
+    Invalid(RelayParent, CandidateReceipt),
+    /// The candidate we recommended to be seconded was validated successfully.
+    Seconded(RelayParent, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -451,15 +453,20 @@ enum BitfieldSigningMessage { }
     ///
     /// This should be sent before any `DistributeCollation` message.
     CollateOn(ParaId),
-    /// Provide a collation to distribute to validators.
-    DistributeCollation(CandidateReceipt, PoV),
+    /// Provide a collation to distribute to validators with an optional result sender.
+    ///
+    /// The result sender should be informed when at least one parachain validator seconded the collation. It is also
+    /// completely okay to just drop the sender.
+    DistributeCollation(CandidateReceipt, PoV, Option&lt;oneshot::Sender&lt;SignedFullStatement&gt;&gt;),
     /// Fetch a collation under the given relay-parent for the given ParaId.
     FetchCollation(Hash, ParaId, ResponseChannel&lt;(CandidateReceipt, PoV)&gt;),
     /// Report a collator as having provided an invalid collation. This should lead to disconnect
     /// and blacklist of the collator.
     ReportCollator(CollatorId),
     /// Note a collator as having provided a good collation.
-    NoteGoodCollation(CollatorId),
+    NoteGoodCollation(CollatorId, SignedFullStatement),
+    /// Notify a collator that its collation was seconded.
+    NotifyCollationSeconded(CollatorId, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -701,8 +708,6 @@ It receives updates from the network bridge and signed statements to share with 
     /// The statement distribution subsystem assumes that the statement should be correctly
     /// signed.
     Share(Hash, SignedFullStatement),
-    /// Register a listener to be notified on any new statements.
-    RegisterStatementListener(ResponseChannel&lt;SignedFullStatement&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>

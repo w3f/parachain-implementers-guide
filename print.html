@@ -2293,24 +2293,18 @@ with implementing a gossip protocol:</p>
 <pre class="mermaid">sequenceDiagram
     participant SD as StatementDistribution
     participant NB as NetworkBridge
-    participant Listener
 
     alt On receipt of a&lt;br/&gt;SignedStatement from CandidateBacking
         % fn circulate_statement_and_dependents
         SD -&gt;&gt; NB: SendValidationMessage
 
         Note right of NB: Bridge sends validation message to all appropriate peers
-    else On initialization, from other subsystems:
-        Listener -&gt;&gt; SD: RegisterStatementListener
     else On receipt of peer validation message
         NB -&gt;&gt; SD: NetworkBridgeUpdateV1
 
         % fn handle_incoming_message
         alt if we aren't already aware of the relay parent for this statement
             SD -&gt;&gt; NB: ReportPeer
-        else the statement corresponds to our View
-            Note over SD,Listener: Forward the statement to each registered listener
-            SD -&gt;&gt; Listener: SignedFullStatement
         end
 
         % fn circulate_statement
@@ -2568,8 +2562,28 @@ into the inherent data. From that point on, control passes from the node to the 
   pub proof_of_validity: PoV,
 }
 
-type CollatorFn = Box&lt;
-  dyn Fn(Hash, &amp;PeristedValidationData) -&gt; Pin&lt;Box&lt;dyn Future&lt;Output = Option&lt;Collation&gt;&gt;&gt;&gt;
+/// Result of the [`CollatorFn`] invocation.
+pub struct CollationResult {
+	/// The collation that was build.
+	collation: Collation,
+	/// An optional result sender that should be informed about a successfully seconded collation.
+	///
+	/// There is no guarantee that this sender is informed ever about any result, it is completly okay to just drop it.
+	/// However, if it is called, it should be called with the signed statement of a parachain validator seconding the
+	/// collation.
+	result_sender: Option&lt;oneshot::Sender&lt;SignedFullStatement&gt;&gt;,
+}
+
+/// Collation function.
+///
+/// Will be called with the hash of the relay chain block the parachain block should be build on and the
+/// [`ValidationData`] that provides information about the state of the parachain on the relay chain.
+///
+/// Returns an optional [`CollationResult`].
+pub type CollatorFn = Box&lt;
+	dyn Fn(Hash, &amp;PersistedValidationData) -&gt; Pin&lt;Box&lt;dyn Future&lt;Output = Option&lt;CollationResult&gt;&gt; + Send&gt;&gt;
+		+ Send
+		+ Sync,
 &gt;;
 
 struct CollationGenerationConfig {
@@ -4858,10 +4872,12 @@ enum BitfieldSigningMessage { }
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateSelectionMessage {
-  /// A candidate collation can be fetched from a collator and should be considered for seconding.
-  Collation(RelayParent, ParaId, CollatorId),
-  /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
-  Invalid(CandidateReceipt),
+    /// A candidate collation can be fetched from a collator and should be considered for seconding.
+    Collation(RelayParent, ParaId, CollatorId),
+    /// We recommended a particular candidate to be seconded, but it was invalid; penalize the collator.
+    Invalid(RelayParent, CandidateReceipt),
+    /// The candidate we recommended to be seconded was validated successfully.
+    Seconded(RelayParent, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -4913,15 +4929,20 @@ enum BitfieldSigningMessage { }
     ///
     /// This should be sent before any `DistributeCollation` message.
     CollateOn(ParaId),
-    /// Provide a collation to distribute to validators.
-    DistributeCollation(CandidateReceipt, PoV),
+    /// Provide a collation to distribute to validators with an optional result sender.
+    ///
+    /// The result sender should be informed when at least one parachain validator seconded the collation. It is also
+    /// completely okay to just drop the sender.
+    DistributeCollation(CandidateReceipt, PoV, Option&lt;oneshot::Sender&lt;SignedFullStatement&gt;&gt;),
     /// Fetch a collation under the given relay-parent for the given ParaId.
     FetchCollation(Hash, ParaId, ResponseChannel&lt;(CandidateReceipt, PoV)&gt;),
     /// Report a collator as having provided an invalid collation. This should lead to disconnect
     /// and blacklist of the collator.
     ReportCollator(CollatorId),
     /// Note a collator as having provided a good collation.
-    NoteGoodCollation(CollatorId),
+    NoteGoodCollation(CollatorId, SignedFullStatement),
+    /// Notify a collator that its collation was seconded.
+    NotifyCollationSeconded(CollatorId, SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -5163,8 +5184,6 @@ It receives updates from the network bridge and signed statements to share with 
     /// The statement distribution subsystem assumes that the statement should be correctly
     /// signed.
     Share(Hash, SignedFullStatement),
-    /// Register a listener to be notified on any new statements.
-    RegisterStatementListener(ResponseChannel&lt;SignedFullStatement&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -5533,6 +5552,8 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 	RequestCollation(RequestId, Hash, ParaId),
 	/// A requested collation.
 	Collation(RequestId, CandidateReceipt, CompressedPoV),
+	/// A collation sent to a validator was seconded.
+	CollationSeconded(SignedFullStatement),
 }
 <span class="boring">}
 </span></code></pre></pre>
