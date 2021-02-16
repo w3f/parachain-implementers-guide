@@ -387,9 +387,9 @@ struct State {
 <p>On receiving an <code>ApprovedAncestor(Hash, BlockNumber, response_channel)</code>:</p>
 <ul>
 <li>Iterate over the ancestry of the hash all the way back to block number given, starting from the provided block hash.</li>
-<li>Keep track of an <code>all_approved_max: Option&lt;Hash&gt;</code>.</li>
+<li>Keep track of an <code>all_approved_max: Option&lt;(Hash, BlockNumber)&gt;</code>.</li>
 <li>For each block hash encountered, load the <code>BlockEntry</code> associated. If any are not found, return <code>None</code> on the response channel and conclude.</li>
-<li>If the block entry's <code>approval_bitfield</code> has all bits set to 1 and <code>all_approved_max == None</code>, set <code>all_approved_max = Some(current_hash)</code>.</li>
+<li>If the block entry's <code>approval_bitfield</code> has all bits set to 1 and <code>all_approved_max == None</code>, set <code>all_approved_max = Some((current_hash, current_number))</code>.</li>
 <li>If the block entry's <code>approval_bitfield</code> has any 0 bits, set <code>all_approved_max = None</code>.</li>
 <li>After iterating all ancestry, return <code>all_approved_max</code>.</li>
 </ul>
