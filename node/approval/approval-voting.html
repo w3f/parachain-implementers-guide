@@ -449,9 +449,9 @@ struct State {
 </ul>
 <h4><a class="header" href="#launch-approval-work" id="launch-approval-work">Launch Approval Work</a></h4>
 <ul>
-<li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, block_hash, candidate_index)</code></li>
+<li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, backing_group, block_hash, candidate_index)</code></li>
 <li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
-<li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, response_sender)</code></li>
+<li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, Some(backing_group), response_sender)</code></li>
 <li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::HistoricalValidationCode(</code>descriptor.para_id<code>, </code>descriptor.relay_parent<code>)</code> against the state of <code>block_hash</code>.</li>
 <li>Spawn a background task with a clone of <code>background_tx</code>
 <ul>
