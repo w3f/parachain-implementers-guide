@@ -404,10 +404,7 @@ the <code>Provisioner</code> also has other things going on.</p>
     participant RA as RuntimeApi
     participant PO as Proposer
 
-    alt receive request to forward block authorship data
-        A -&gt;&gt; PV: RequestBlockAuthorshipData
-        Note over A,PV: This request contains a mpsc::Sender, which the Provisioner keeps
-    else receive provisionable data
+    alt receive provisionable data
         alt
             CB -&gt;&gt; PV: ProvisionableData
         else
@@ -436,8 +433,7 @@ the <code>Provisioner</code> also has other things going on.</p>
     end
 </pre>
 <p>In principle, any arbitrary subsystem could send a <code>RequestInherentData</code> to the <code>Provisioner</code>. In practice,
-only the <code>Proposer</code> does so. Likewise, any arbitrary subsystem could send a <code>RequestBlockAuthorshipData</code>; the
-distinction is that no subsystem currently does so.</p>
+only the <code>Proposer</code> does so.</p>
 <p>The proposer is an atypical subsystem in that, unlike most of them, it is not primarily driven by
 the <code>Overseer</code>, but instead by the <code>sp_consensus::Environment</code> and <code>sp_consensus::Proposer</code> traits
 from Substrate. It doesn't make much sense to diagram this flow because it's very linear:</p>

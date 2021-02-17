@@ -183,8 +183,8 @@
 </blockquote>
 <h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a>. Backed candidates come from the <a href="../backing/candidate-backing.html">Candidate Backing subsystem</a>, signed bitfields come from the <a href="../availability/bitfield-distribution.html">Bitfield Distribution subsystem</a>, and misbehavior reports and disputes come from the <a href="misbehavior-arbitration.html">Misbehavior Arbitration subsystem</a>.</p>
-<p>At initialization, this subsystem has no outputs. Block authors can send a <code>ProvisionerMessage::RequestBlockAuthorshipData</code>, which includes a channel over which provisionable data can be sent. All appropriate provisionable data will then be sent over this channel, as it is received.</p>
-<p>Note that block authors must re-send a <code>ProvisionerMessage::RequestBlockAuthorshipData</code> for each relay parent they are interested in receiving provisionable data for.</p>
+<p>At initialization, this subsystem has no outputs.</p>
+<p>Block authors request the inherent data they should use for constructing the inherent in the block which contains parachain execution information.</p>
 <h2><a class="header" href="#block-production" id="block-production">Block Production</a></h2>
 <p>When a validator is selected by BABE to author a block, it becomes a block producer. The provisioner is the subsystem best suited to choosing which specific backed candidates and availability bitfields should be assembled into the block. To engage this functionality, a <code>ProvisionerMessage::RequestInherentData</code> is sent; the response is a <a href="../../types/runtime.html#parainherentdata"><code>ParaInherentData</code></a>. There are never two distinct parachain candidates included for the same parachain and that new parachain candidates cannot be backed until the previous one either gets declared available or expired. Appropriate bitfields, as outlined in the section on <a href="#bitfield-selection">bitfield selection</a>, and any dispute statements should be attached as well.</p>
 <h3><a class="header" href="#bitfield-selection" id="bitfield-selection">Bitfield Selection</a></h3>
@@ -236,7 +236,6 @@
 </ul>
 <h3><a class="header" href="#notes" id="notes">Notes</a></h3>
 <p>See also: <a href="../../runtime/scheduler.html#availability-cores">Scheduler Module: Availability Cores</a>.</p>
-<p>One might ask: given <code>ProvisionerMessage::RequestInherentData</code>, what's the point of <code>ProvisionerMessage::RequestBlockAuthorshipData</code>? The answer is that the block authorship data includes more information than is present in the inherent data; disputes, for example.</p>
 <h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3><a class="header" href="#on-overseer-signal" id="on-overseer-signal">On Overseer Signal</a></h3>
