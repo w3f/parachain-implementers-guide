@@ -4141,7 +4141,7 @@ to be run very often.</p>
 </ul>
 </li>
 </ul>
-<p>The end result of this process is a vector of <code>BackedCandidate</code>s, sorted in order of their core index.</p>
+<p>The end result of this process is a vector of <code>BackedCandidate</code>s, sorted in order of their core index. Furthermore, this process should select at maximum one candidate which upgrades the runtime validation code.</p>
 <h3><a class="header" href="#determining-bitfield-availability" id="determining-bitfield-availability">Determining Bitfield Availability</a></h3>
 <p>An occupied core has a <code>CoreAvailability</code> bitfield. We also have a list of <code>SignedAvailabilityBitfield</code>s. We need to determine from these whether or not a core at a particular index has become available.</p>
 <p>The key insight required is that <code>CoreAvailability</code> is transverse to the <code>SignedAvailabilityBitfield</code>s: if we conceptualize the list of bitfields as many rows, each bit of which is its own column, then <code>CoreAvailability</code> for a given core index is the vertical slice of bits in the set at that index.</p>
