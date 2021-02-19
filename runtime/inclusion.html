@@ -200,9 +200,6 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 
 /// The current validators, by their parachain session keys.
 Validators: Vec&lt;ValidatorId&gt;;
-
-/// The current session index.
-CurrentSessionIndex: SessionIndex;
 <span class="boring">}
 </span></code></pre></pre>
 <h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
@@ -210,7 +207,6 @@ CurrentSessionIndex: SessionIndex;
 <li>Clear out all candidates pending availability.</li>
 <li>Clear out all validator bitfields.</li>
 <li>Update <code>Validators</code> with the validators from the session change notification.</li>
-<li>Update <code>CurrentSessionIndex</code> with the session index from the session change notification.</li>
 </ol>
 <h2><a class="header" href="#routines" id="routines">Routines</a></h2>
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>

@@ -173,11 +173,15 @@
 <p>We will split the logic of the runtime up into these modules:</p>
 <ul>
 <li>Initializer: manage initialization order of the other modules.</li>
+<li>Shared: manages shared storage and configurations for other modules.</li>
 <li>Configuration: manage configuration and configuration updates in a non-racy manner.</li>
 <li>Paras: manage chain-head and validation code for parachains and parathreads.</li>
 <li>Scheduler: manages parachain and parathread scheduling as well as validator assignments.</li>
 <li>Inclusion: handles the inclusion and availability of scheduled parachains and parathreads.</li>
 <li>Validity: handles secondary checks and dispute resolution for included, available parablocks.</li>
+<li>Hrmp: handles horizontal messages between paras.</li>
+<li>Ump: Handles upward messages from a para to the relay chain.</li>
+<li>Dmp: Handles downward messages from the relay chain to the para.</li>
 </ul>
 <p>The <a href="initializer.html">Initializer module</a> is special - it's responsible for handling the initialization logic of the other modules to ensure that the correct initialization order and related invariants are maintained. The other modules won't specify a on-initialize logic, but will instead expose a special semi-private routine that the initialization module will call. The other modules are relatively straightforward and perform the roles described above.</p>
 <p>The Parachain Host operates under a changing set of validators. Time is split up into periodic sessions, where each session brings a potentially new set of validators. Sessions are buffered by one, meaning that the validators of the upcoming session <code>n+1</code> are determined at the end of session <code>n-1</code>, right before session <code>n</code> starts. Parachain Host runtime modules need to react to changes in the validator set, as it will affect the runtime logic for processing candidate backing, availability bitfields, and misbehavior reports. The Parachain Host modules can't determine ahead-of-time exactly when session change notifications are going to happen within the block (note: this depends on module initialization order again - better to put session before parachains modules).</p>
