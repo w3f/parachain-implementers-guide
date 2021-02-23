@@ -212,9 +212,9 @@ Validators: Vec&lt;ValidatorId&gt;;
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>
 <ul>
 <li>
-<p><code>process_bitfields(Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
+<p><code>process_bitfields(expected_bits, Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
 <ol>
-<li>check that the number of bitfields and bits in each bitfield is correct.</li>
+<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to expected_bits.</li>
 <li>check that there are no duplicates</li>
 <li>check all validator signatures.</li>
 <li>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</li>

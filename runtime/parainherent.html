@@ -192,7 +192,7 @@
 <li>Invoke <code>Disputes::provide_multi_dispute_data</code>.</li>
 <li>If <code>Disputes::is_frozen</code>, return and set <code>Included</code> to <code>Some(())</code>.</li>
 <li>If there are any created disputes from the current session, invoke <code>Inclusion::collect_disputed</code> with the disputed candidates. Annotate each returned core with <code>FreedReason::Concluded</code>.</li>
-<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
+<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide the number of availability cores (<code>Scheduler::availability_cores().len()</code>) as the expected number of bits and a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>For each freed candidate from the <code>Inclusion::process_bitfields</code> call, invoke <code>Disputes::note_included(current_session, candidate)</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it and annotate each of those freed cores with <code>FreedReason::TimedOut</code>.</li>
 <li>Combine and sort the dispute-freed cores, the bitfield-freed cores, and the timed-out cores.</li>

@@ -1253,9 +1253,9 @@ Validators: Vec&lt;ValidatorId&gt;;
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>
 <ul>
 <li>
-<p><code>process_bitfields(Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
+<p><code>process_bitfields(expected_bits, Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
 <ol>
-<li>check that the number of bitfields and bits in each bitfield is correct.</li>
+<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to expected_bits.</li>
 <li>check that there are no duplicates</li>
 <li>check all validator signatures.</li>
 <li>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</li>
@@ -1361,7 +1361,7 @@ Validators: Vec&lt;ValidatorId&gt;;
 <li>Invoke <code>Disputes::provide_multi_dispute_data</code>.</li>
 <li>If <code>Disputes::is_frozen</code>, return and set <code>Included</code> to <code>Some(())</code>.</li>
 <li>If there are any created disputes from the current session, invoke <code>Inclusion::collect_disputed</code> with the disputed candidates. Annotate each returned core with <code>FreedReason::Concluded</code>.</li>
-<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
+<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide the number of availability cores (<code>Scheduler::availability_cores().len()</code>) as the expected number of bits and a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>For each freed candidate from the <code>Inclusion::process_bitfields</code> call, invoke <code>Disputes::note_included(current_session, candidate)</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it and annotate each of those freed cores with <code>FreedReason::TimedOut</code>.</li>
 <li>Combine and sort the dispute-freed cores, the bitfield-freed cores, and the timed-out cores.</li>
@@ -3447,7 +3447,10 @@ struct State {
     session_info: Vec&lt;SessionInfo&gt;,
     babe_epoch: Option&lt;BabeEpoch&gt;, // information about a cached BABE epoch.
     keystore: KeyStorePtr,
-    wakeups: BTreeMap&lt;Tick, Vec&lt;(Hash, Hash)&gt;&gt;, // Tick -&gt; [(Relay Block, Candidate Hash)]
+
+    // A scheduler which keeps at most one wakeup per hash, candidate hash pair and
+    // maps such pairs to `Tick`s.
+    wakeups: Wakeups, 
 
     // These are connected to each other.
     background_tx: mpsc::Sender&lt;BackgroundRequest&gt;,
@@ -3741,6 +3744,11 @@ struct State {
 </span><span class="boring">fn main() {
 </span>type BlockScopedCandidate = (Hash, CandidateHash);
 
+enum PendingMessage {
+  Assignment(IndirectAssignmentCert, CoreIndex),
+  Approval(IndirectSignedApprovalVote),
+}
+
 /// The `State` struct is responsible for tracking the overall state of the subsystem.
 ///
 /// It tracks metadata about our view of the unfinalized chain, which assignments and approvals we have seen, and our peers' views.
@@ -3748,6 +3756,14 @@ struct State {
   // These two fields are used in conjunction to construct a view over the unfinalized chain.
   blocks_by_number: BTreeMap&lt;BlockNumber, Vec&lt;Hash&gt;&gt;,
   blocks: HashMap&lt;Hash, BlockEntry&gt;,
+
+  /// Our view updates to our peers can race with `NewBlocks` updates. We store messages received
+  /// against the directly mentioned blocks in our view in this map until `NewBlocks` is received.
+  ///
+  /// As long as the parent is already in the `blocks` map and `NewBlocks` messages aren't delayed
+  /// by more than a block length, this strategy will work well for mitigating the race. This is
+  /// also a race that occurs typically on local networks.
+  pending_known: HashMap&lt;Hash, Vec&lt;(PeerId, PendingMessage&gt;)&gt;&gt;,
 
   // Peer view data is partially stored here, and partially inline within the `BlockEntry`s
   peer_views: HashMap&lt;PeerId, View&gt;,
@@ -3795,6 +3811,9 @@ struct CandidateEntry {
 <h4 id="networkbridgeeventpeerdisconnected"><a class="header" href="#networkbridgeeventpeerdisconnected"><code>NetworkBridgeEvent::PeerDisconnected</code></a></h4>
 <p>Remove the view under the associated <code>PeerId</code> from <code>State::peer_views</code>.</p>
 <p>Iterate over every <code>BlockEntry</code> and remove <code>PeerId</code> from it.</p>
+<h4 id="networkbridgeeventourviewchange"><a class="header" href="#networkbridgeeventourviewchange"><code>NetworkBridgeEvent::OurViewChange</code></a></h4>
+<p>Remove entries in <code>pending_known</code> for all hashes not present in the view.
+Ensure a vector is present in <code>pending_known</code> for each hash in the view that does not have an entry in <code>blocks</code>.</p>
 <h4 id="networkbridgeeventpeerviewchange"><a class="header" href="#networkbridgeeventpeerviewchange"><code>NetworkBridgeEvent::PeerViewChange</code></a></h4>
 <p>Invoke <code>unify_with_peer(peer, view)</code> to catch them up to messages we have.</p>
 <p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their 'finalized_number` forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
@@ -3802,11 +3821,16 @@ struct CandidateEntry {
 <p>We augment that by defining <code>constrain(x)</code> to output the x bounded by the first and last numbers in <code>state.blocks_by_number</code>.</p>
 <p>From there, we can loop backwards from <code>constrain(view.finalized_number)</code> until <code>constrain(last_view.finalized_number)</code> is reached, removing the <code>PeerId</code> from all <code>BlockEntry</code>s referenced at that height. We can break the loop early if we ever exit the bound supplied by the first block in <code>state.blocks_by_number</code>.</p>
 <h4 id="networkbridgeeventpeermessage"><a class="header" href="#networkbridgeeventpeermessage"><code>NetworkBridgeEvent::PeerMessage</code></a></h4>
+<p>If the block hash referenced by the message exists in <code>pending_known</code>, add it to the vector of pending messages and return.</p>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Assignment(assignment_cert, claimed_index)</code>, then call <code>import_and_circulate_assignment(MessageSource::Peer(sender), assignment_cert, claimed_index)</code></p>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Approval(approval_vote)</code>, then call <code>import_and_circulate_approval(MessageSource::Peer(sender), approval_vote)</code></p>
 <h3 id="subsystem-updates"><a class="header" href="#subsystem-updates">Subsystem Updates</a></h3>
 <h4 id="approvaldistributionmessagenewblocks"><a class="header" href="#approvaldistributionmessagenewblocks"><code>ApprovalDistributionMessage::NewBlocks</code></a></h4>
 <p>Create <code>BlockEntry</code> and <code>CandidateEntries</code> for all blocks.</p>
+<p>For all entries in <code>pending_known</code>:</p>
+<ul>
+<li>If there is now an entry under <code>blocks</code> for the block hash, drain all messages and import with <code>import_and_circulate_assignment</code> and <code>import_and_circulate_approval</code>.</li>
+</ul>
 <p>For all peers:</p>
 <ul>
 <li>Compute <code>view_intersection</code> as the intersection of the peer's view blocks with the hashes of the new blocks.</li>
@@ -3832,8 +3856,8 @@ struct CandidateEntry {
 <p>Imports an assignment cert referenced by block hash and candidate index. As a postcondition, if the cert is valid, it will have distributed the cert to all peers who have the block in their view, with the exclusion of the peer referenced by the <code>MessageSource</code>.</p>
 <p>We maintain a few invariants:</p>
 <ul>
-<li>we only send an assignment to a peer after we add its fingerpring to our knownledge</li>
-<li>we add a fingerprint of an assignment to our knownledge only if it's valid and hasn't been added before</li>
+<li>we only send an assignment to a peer after we add its fingerprint to our knowledge</li>
+<li>we add a fingerprint of an assignment to our knowledge only if it's valid and hasn't been added before</li>
 </ul>
 <p>The algorithm is the following:</p>
 <ul>
@@ -3843,7 +3867,7 @@ struct CandidateEntry {
 <ul>
 <li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
 <li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
-add the fingerpring to the peer's knownledge only if it knows about the block and return.
+add the fingerprint to the peer's knowledge only if it knows about the block and return.
 Note that we must do this after checking for out-of-view and if the peers knows about the block to avoid being spammed.
 If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
 <li>Dispatch <code>ApprovalVotingMessage::CheckAndImportAssignment(assignment)</code> and wait for the response.</li>
@@ -3877,7 +3901,7 @@ If we did this check earlier, a peer could provide data out-of-view repeatedly a
 <ul>
 <li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
 <li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
-add the fingerpring to the peer's knownledge only if it knows about the block and return.
+add the fingerprint to the peer's knowledge only if it knows about the block and return.
 Note that we must do this after checking for out-of-view to avoid being spammed. If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
 <li>Dispatch <code>ApprovalVotingMessage::CheckAndImportApproval(approval)</code> and wait for the response.</li>
 <li>If the result is <code>VoteCheckResult::Accepted(())</code>:
