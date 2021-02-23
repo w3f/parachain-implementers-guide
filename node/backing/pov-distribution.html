@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#pov-distribution" id="pov-distribution">PoV Distribution</a></h1>
+                        <h1 id="pov-distribution"><a class="header" href="#pov-distribution">PoV Distribution</a></h1>
 <p>This subsystem is responsible for distributing PoV blocks. For now, unified with <a href="statement-distribution.html">Statement Distribution subsystem</a>.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input: <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></p>
 <p>Output:</p>
@@ -173,7 +173,7 @@
 <li>NetworkBridge::SendMessage(<code>[PeerId]</code>, message)</li>
 <li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This network protocol is responsible for distributing <a href="../../types/availability.html#proof-of-validity"><code>PoV</code>s</a> by gossip. Since PoVs are heavy in practice, gossip is far from the most efficient way to distribute them. In the future, this should be replaced by a better network protocol that finds validators who have validated the block and connects to them directly. This protocol is described.</p>
 <p>This protocol is described in terms of &quot;us&quot; and our peers, with the understanding that this is the procedure that any honest node will run. It has the following goals:</p>
 <ul>
@@ -185,7 +185,7 @@
 <p>The view update mechanism of the <a href="../utility/network-bridge.html">Network Bridge</a> ensures that peers are only allowed to consider a certain set of relay-parents as live. So this bounding mechanism caps the amount of data we need to store per peer at any time at <code>sum({ 2 * n_validators_at_head(head) * sizeof(hash) for head in view_heads })</code>. Additionally, peers should only be allowed to notify us of PoV hashes they are waiting for in the context of relay-parents in our own local view, which means that <code>n_validators_at_head</code> is implied to be <code>0</code> for relay-parents not in our own local view.</p>
 <p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>ActiveLeavesUpdate</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
 <p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::FetchPoV variant. Proper operation of this subsystem depends on the descriptors passed faithfully representing candidates which have been seconded by other validators.</p>
-<h2><a class="header" href="#formal-description" id="formal-description">Formal Description</a></h2>
+<h2 id="formal-description"><a class="header" href="#formal-description">Formal Description</a></h2>
 <p>This protocol can be implemented as a state machine with the following state:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

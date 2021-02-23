@@ -163,13 +163,13 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#approval-voting" id="approval-voting">Approval Voting</a></h1>
+                        <h1 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h1>
 <p>Reading the <a href="../../protocol-approval.html">section on the approval protocol</a> will likely be necessary to understand the aims of this subsystem.</p>
 <p>Approval votes are split into two parts: Assignments and Approvals. Validators first broadcast their assignment to indicate intent to check a candidate. Upon successfully checking, they broadcast an approval vote. If a validator doesn't broadcast their approval vote shortly after issuing an assignment, this is an indication that they are being prevented from recovering or validating the block data and that more validators should self-select to check the candidate. This is known as a &quot;no-show&quot;.</p>
 <p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of DelayTranches, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which DelayTranche those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
 <p>Another main component of this subsystem is the logic for determining when a (Block, Candidate) pair has been approved and when to broadcast and trigger our own assignment. Once a (Block, Candidate) pair has been approved, we mark a corresponding bit in the BlockEntry that indicates the candidate has been approved under the block. When we trigger our own assignment, we broadcast it via Approval Distribution, begin fetching the data from Availability Recovery, and then pass it through to the Candidate Validation. Once these steps are successful, we issue our approval vote. If any of these steps fail, we don't issue any vote and will &quot;no-show&quot; from the perspective of other validators. In the future we will initiate disputes as well.</p>
 <p>Where this all fits into Polkadot is via block finality. Our goal is to not finalize any block containing a candidate that is not approved. We provide a hook for a custom GRANDPA voting rule - GRANDPA makes requests of the form (target, minimum) consisting of a target block (i.e. longest chain) that it would like to finalize, and a minimum block which, due to the rules of GRANDPA, must be voted on. The minimum is typically the last finalized block, but may be beyond it, in the case of having a last-round-estimate beyond the last finalized. Thus, our goal is to inform GRANDPA of some block between target and minimum which we believe can be finalized safely. We do this by iterating backwards from the target to the minimum and finding the longest continuous chain from minimum where all candidates included by those blocks have been approved.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input:</p>
 <ul>
 <li><code>ApprovalVotingMessage::CheckAndImportAssignment</code></li>
@@ -185,10 +185,10 @@
 <li><code>AvailabilityRecoveryMessage::Recover</code></li>
 <li><code>CandidateExecutionMessage::ValidateFromExhaustive</code></li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>The approval voting subsystem is responsible for casting votes and determining approval of candidates and as a result, blocks.</p>
 <p>This subsystem wraps a database which is used to store metadata about unfinalized blocks and the candidates within them. Candidates may appear in multiple blocks, and assignment criteria are chosen differently based on the hash of the block they appear in.</p>
-<h2><a class="header" href="#database-schema" id="database-schema">Database Schema</a></h2>
+<h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
 <p>The database schema is designed with the following goals in mind:</p>
 <ol>
 <li>To provide an easy index from unfinalized blocks to candidates</li>
@@ -261,7 +261,7 @@ BlockNumber =&gt; Vec&lt;BlockHash&gt;
 BlockHash =&gt; BlockEntry
 CandidateHash =&gt; CandidateEntry
 </code></pre>
-<h2><a class="header" href="#logic" id="logic">Logic</a></h2>
+<h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -317,10 +317,10 @@ struct State {
 </ul>
 </li>
 </ul>
-<h3><a class="header" href="#incoming-messages" id="incoming-messages">Incoming Messages</a></h3>
-<h4><a class="header" href="#overseersignalblockfinalized" id="overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
+<h3 id="incoming-messages"><a class="header" href="#incoming-messages">Incoming Messages</a></h3>
+<h4 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
 <p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the ChainApi subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendents of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>. We also update each of the <code>BlockNumber -&gt; Vec&lt;Hash&gt;</code> keys in the database to reflect the blocks at that height, clearing if empty.</p>
-<h4><a class="header" href="#overseersignalactiveleavesupdate" id="overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
+<h4 id="overseersignalactiveleavesupdate"><a class="header" href="#overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
 <li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem.</li>
@@ -346,7 +346,7 @@ struct State {
 <li><a href="#handle-wakeup">Handle Wakeup</a> for each new candidate in each new block - this will automatically broadcast a 0-tranche assignment, kick off approval work, and schedule the next delay.</li>
 <li>Dispatch an <code>ApprovalDistributionMessage::NewBlocks</code> with the meta information filled out for each new block.</li>
 </ul>
-<h4><a class="header" href="#approvalvotingmessagecheckandimportassignment" id="approvalvotingmessagecheckandimportassignment"><code>ApprovalVotingMessage::CheckAndImportAssignment</code></a></h4>
+<h4 id="approvalvotingmessagecheckandimportassignment"><a class="header" href="#approvalvotingmessagecheckandimportassignment"><code>ApprovalVotingMessage::CheckAndImportAssignment</code></a></h4>
 <p>On receiving a <code>ApprovalVotingMessage::CheckAndImportAssignment</code> message, we check the assignment cert against the block entry. The cert itself contains information necessary to determine the candidate that is being assigned-to. In detail:</p>
 <ul>
 <li>Load the <code>BlockEntry</code> for the relay-parent referenced by the message. If there is none, return <code>AssignmentCheckResult::Bad</code>.</li>
@@ -374,7 +374,7 @@ struct State {
 <li><a href="#check-full-approval">Check for full approval of the candidate entry</a> of the candidate_entry, filtering by this specific approval entry.</li>
 <li>return the appropriate <code>AssignmentCheckResult</code> on the response channel.</li>
 </ul>
-<h4><a class="header" href="#approvalvotingmessagecheckandimportapproval" id="approvalvotingmessagecheckandimportapproval"><code>ApprovalVotingMessage::CheckAndImportApproval</code></a></h4>
+<h4 id="approvalvotingmessagecheckandimportapproval"><a class="header" href="#approvalvotingmessagecheckandimportapproval"><code>ApprovalVotingMessage::CheckAndImportApproval</code></a></h4>
 <p>On receiving a <code>CheckAndImportApproval(indirect_approval_vote, response_channel)</code> message:</p>
 <ul>
 <li>Fetch the <code>BlockEntry</code> from the indirect approval vote's <code>block_hash</code>. If none, return <code>ApprovalCheckResult::Bad</code>.</li>
@@ -383,7 +383,7 @@ struct State {
 <li>Send <code>ApprovalCheckResult::Accepted</code></li>
 <li><a href="#import-checked-approval">Import the checked approval vote</a></li>
 </ul>
-<h4><a class="header" href="#approvalvotingmessageapprovedancestor" id="approvalvotingmessageapprovedancestor"><code>ApprovalVotingMessage::ApprovedAncestor</code></a></h4>
+<h4 id="approvalvotingmessageapprovedancestor"><a class="header" href="#approvalvotingmessageapprovedancestor"><code>ApprovalVotingMessage::ApprovedAncestor</code></a></h4>
 <p>On receiving an <code>ApprovedAncestor(Hash, BlockNumber, response_channel)</code>:</p>
 <ul>
 <li>Iterate over the ancestry of the hash all the way back to block number given, starting from the provided block hash.</li>
@@ -393,15 +393,15 @@ struct State {
 <li>If the block entry's <code>approval_bitfield</code> has any 0 bits, set <code>all_approved_max = None</code>.</li>
 <li>After iterating all ancestry, return <code>all_approved_max</code>.</li>
 </ul>
-<h3><a class="header" href="#updates-and-auxiliary-logic" id="updates-and-auxiliary-logic">Updates and Auxiliary Logic</a></h3>
-<h4><a class="header" href="#import-checked-approval" id="import-checked-approval">Import Checked Approval</a></h4>
+<h3 id="updates-and-auxiliary-logic"><a class="header" href="#updates-and-auxiliary-logic">Updates and Auxiliary Logic</a></h3>
+<h4 id="import-checked-approval"><a class="header" href="#import-checked-approval">Import Checked Approval</a></h4>
 <ul>
 <li>Import an approval vote which we can assume to have passed signature checks.</li>
 <li>Requires <code>(BlockEntry, CandidateEntry, ValidatorIndex)</code></li>
 <li>Set the corresponding bit of the <code>approvals</code> bitfield in the <code>CandidateEntry</code> to <code>1</code>. If already <code>1</code>, return.</li>
 <li><a href="#check-full-approval">Check full approval of the candidate</a></li>
 </ul>
-<h4><a class="header" href="#check-full-approval" id="check-full-approval">Check Full Approval</a></h4>
+<h4 id="check-full-approval"><a class="header" href="#check-full-approval">Check Full Approval</a></h4>
 <ul>
 <li>Checks the approval state of the candidate under every block it is included by, and updates the block entries accordingly.</li>
 <li>Requires <code>(CandidateEntry, filter)</code>, where filter is used to limit which approval entries are inspected.</li>
@@ -415,7 +415,7 @@ struct State {
 </ul>
 </li>
 </ul>
-<h4><a class="header" href="#handling-wakeup" id="handling-wakeup">Handling Wakeup</a></h4>
+<h4 id="handling-wakeup"><a class="header" href="#handling-wakeup">Handling Wakeup</a></h4>
 <ul>
 <li>Handle a previously-scheduled wakeup of a candidate under a specific block.</li>
 <li>Requires <code>(relay_block, candidate_hash)</code></li>
@@ -438,7 +438,7 @@ struct State {
 </li>
 <li><a href="#schedule-wakeup">Schedule a new wakeup</a> of the candidate.</li>
 </ul>
-<h4><a class="header" href="#schedule-wakeup" id="schedule-wakeup">Schedule Wakeup</a></h4>
+<h4 id="schedule-wakeup"><a class="header" href="#schedule-wakeup">Schedule Wakeup</a></h4>
 <ul>
 <li>Requires <code>(approval_entry, candidate_entry)</code> which effectively denotes a <code>(Block Hash, Candidate Hash)</code> pair - the candidate, along with the block it appears in.</li>
 <li>Also requires <code>RequiredTranches</code></li>
@@ -447,7 +447,7 @@ struct State {
 <li>If <code>RequiredTranches::Pending { considered, next_no_show, uncovered, maximum_broadcast, clock_drift }</code> - schedule at the lesser of the next no-show tick, or the tick, offset positively by <code>clock_drift</code> of the next non-empty tranche we are aware of after <code>considered</code>, including any tranche containing our own unbroadcast assignment. This can lead to no wakeup in the case that we have already broadcast our assignment and there are no pending no-shows; that is, we have approval votes for every assignment we've received that is not already a no-show. In this case, we will be re-triggered by other validators broadcasting their assignments.</li>
 <li>If `RequiredTranches::Exact { next_no_show, .. } - set a wakeup for the next no-show tick.</li>
 </ul>
-<h4><a class="header" href="#launch-approval-work" id="launch-approval-work">Launch Approval Work</a></h4>
+<h4 id="launch-approval-work"><a class="header" href="#launch-approval-work">Launch Approval Work</a></h4>
 <ul>
 <li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, backing_group, block_hash, candidate_index)</code></li>
 <li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
@@ -462,7 +462,7 @@ struct State {
 </ul>
 </li>
 </ul>
-<h4><a class="header" href="#issue-approval-vote" id="issue-approval-vote">Issue Approval Vote</a></h4>
+<h4 id="issue-approval-vote"><a class="header" href="#issue-approval-vote">Issue Approval Vote</a></h4>
 <ul>
 <li>Fetch the block entry and candidate entry. Ignore if <code>None</code> - we've probably just lost a race with finality.</li>
 <li>Construct a <code>SignedApprovalVote</code> with the validator index for the session.</li>
@@ -470,8 +470,8 @@ struct State {
 <li>Construct a <code>IndirectSignedApprovalVote</code> using the information about the vote.</li>
 <li>Dispatch <code>ApprovalDistributionMessage::DistributeApproval</code>.</li>
 </ul>
-<h3><a class="header" href="#determining-approval-of-candidate" id="determining-approval-of-candidate">Determining Approval of Candidate</a></h3>
-<h4><a class="header" href="#determine-required-tranches" id="determine-required-tranches">Determine Required Tranches</a></h4>
+<h3 id="determining-approval-of-candidate"><a class="header" href="#determining-approval-of-candidate">Determining Approval of Candidate</a></h3>
+<h4 id="determine-required-tranches"><a class="header" href="#determine-required-tranches">Determine Required Tranches</a></h4>
 <p>This logic is for inspecting an approval entry that tracks the assignments received, along with information on which assignments have corresponding approval votes. Inspection also involves the current time and expected requirements and is used to help the higher-level code determine the following:</p>
 <ul>
 <li>Whether to broadcast the local assignment</li>
@@ -533,7 +533,7 @@ struct State {
 <li>If there are no-shows, return to the beginning, incrementing <code>depth</code> and attempting to cover the number of no-shows. Each no-show must be covered by a non-empty tranche, which are tranches that have at least one assignment. Each non-empty tranche covers exactly one no-show.</li>
 <li>If at any point, it seems that all validators are required, do an early return with <code>RequiredTranches::All</code> which indicates that everyone should broadcast.</li>
 </ul>
-<h4><a class="header" href="#check-approval" id="check-approval">Check Approval</a></h4>
+<h4 id="check-approval"><a class="header" href="#check-approval">Check Approval</a></h4>
 <ul>
 <li>Check whether a candidate is approved under a particular block.</li>
 <li>Requires <code>(block_entry, candidate_entry, approval_entry, n_tranches)</code></li>
@@ -541,8 +541,8 @@ struct State {
 <li>If <code>n_tranches</code> is <code>RequiredTranches::All</code>,  then we return <code>3 * n_approvals &gt; 2 * n_validators</code>.</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::Exact { tranche, tolerated_missing, .. }</code>, then we return whether all assigned validators up to <code>tranche</code> less <code>tolerated_missing</code> have approved. e.g. if we had 5 tranches and 1 tolerated missing, we would accept only if all but 1 of assigned validators in tranches 0..=5 have approved. In that example, we also accept all validators in tranches 0..=5 having approved, but that would indicate that the <code>RequiredTranches</code> value was incorrectly constructed, so it is not realistic. <code>tolerated_missing</code> actually represents covered no-shows. If there are more missing approvals than there are tolerated missing, that indicates that there are some assignments which are not yet no-shows, but may become no-shows, and we should wait for the validators to either approve or become no-shows.</li>
 </ul>
-<h3><a class="header" href="#time" id="time">Time</a></h3>
-<h4><a class="header" href="#current-tranche" id="current-tranche">Current Tranche</a></h4>
+<h3 id="time"><a class="header" href="#time">Time</a></h3>
+<h4 id="current-tranche"><a class="header" href="#current-tranche">Current Tranche</a></h4>
 <ul>
 <li>Given the slot number of a block, and the current time, this informs about the current tranche.</li>
 <li>Convert <code>time.saturating_sub(slot_number.to_time())</code> to a delay tranches value</li>

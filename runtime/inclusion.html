@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#inclusion-module" id="inclusion-module">Inclusion Module</a></h1>
+                        <h1 id="inclusion-module"><a class="header" href="#inclusion-module">Inclusion Module</a></h1>
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Helper structs:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -202,13 +202,13 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 Validators: Vec&lt;ValidatorId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
+<h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>Clear out all candidates pending availability.</li>
 <li>Clear out all validator bitfields.</li>
 <li>Update <code>Validators</code> with the validators from the session change notification.</li>
 </ol>
-<h2><a class="header" href="#routines" id="routines">Routines</a></h2>
+<h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>
 <ul>
 <li>

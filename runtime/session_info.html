@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#session-info" id="session-info">Session Info</a></h1>
+                        <h1 id="session-info"><a class="header" href="#session-info">Session Info</a></h1>
 <p>For disputes and approvals, we need access to information about validator sets from prior sessions. We also often want easy access to the same information about the current session's validator set. This module aggregates and stores this information in a rolling window while providing easy APIs for access.</p>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Helper structs:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -208,12 +208,12 @@ EarliestStoredSession: SessionIndex,
 Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
+<h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>Update <code>EarliestStoredSession</code> based on <code>config.dispute_period</code> and remove all entries from <code>Sessions</code> from the previous value up to the new value.</li>
 <li>Create a new entry in <code>Sessions</code> with information about the current session.</li>
 </ol>
-<h2><a class="header" href="#routines" id="routines">Routines</a></h2>
+<h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <ul>
 <li><code>earliest_stored_session() -&gt; SessionIndex</code>: Yields the earliest session for which we have information stored.</li>
 <li><code>session_info(session: SessionIndex) -&gt; Option&lt;SessionInfo&gt;</code>: Yields the session info for the given session, if stored.</li>

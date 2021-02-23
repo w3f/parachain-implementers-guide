@@ -163,8 +163,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#disputes" id="disputes">Disputes</a></h1>
-<h2><a class="header" href="#disputestatementset" id="disputestatementset">DisputeStatementSet</a></h2>
+                        <h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
+<h2 id="disputestatementset"><a class="header" href="#disputestatementset">DisputeStatementSet</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -176,7 +176,7 @@ struct DisputeStatementSet {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#disputestatement" id="disputestatement">DisputeStatement</a></h2>
+<h2 id="disputestatement"><a class="header" href="#disputestatement">DisputeStatement</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -191,7 +191,7 @@ enum DisputeStatement {
 
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#dispute-statement-kinds" id="dispute-statement-kinds">Dispute Statement Kinds</a></h2>
+<h2 id="dispute-statement-kinds"><a class="header" href="#dispute-statement-kinds">Dispute Statement Kinds</a></h2>
 <p>Kinds of dispute statements. Each of these can be combined with a candidate hash, session index, validator public key, and validator signature to reproduce and check the original statement.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -208,7 +208,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#explicitdisputestatement" id="explicitdisputestatement">ExplicitDisputeStatement</a></h2>
+<h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement">ExplicitDisputeStatement</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -219,7 +219,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#multidisputestatementset" id="multidisputestatementset">MultiDisputeStatementSet</a></h2>
+<h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset">MultiDisputeStatementSet</a></h2>
 <p>Sets of statements for many (zero or more) disputes.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -227,7 +227,7 @@ enum InvalidDisputeStatementKind {
 </span>type MultiDisputeStatementSet = Vec&lt;DisputeStatementSet&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#disputestate" id="disputestate">DisputeState</a></h2>
+<h2 id="disputestate"><a class="header" href="#disputestate">DisputeState</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

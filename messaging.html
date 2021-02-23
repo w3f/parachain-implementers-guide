@@ -163,12 +163,12 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#messaging-overview" id="messaging-overview">Messaging Overview</a></h1>
+                        <h1 id="messaging-overview"><a class="header" href="#messaging-overview">Messaging Overview</a></h1>
 <p>The Polkadot Host has a few mechanisms that are responsible for message passing. They can be generally divided
 on two categories: Horizontal and Vertical. Horizontal Message Passing (HMP) refers to mechanisms
 that are responsible for exchanging messages between parachains. Vertical Message Passing (VMP) is
 used for communication between the relay chain and parachains.</p>
-<h2><a class="header" href="#vertical-message-passing" id="vertical-message-passing">Vertical Message Passing</a></h2>
+<h2 id="vertical-message-passing"><a class="header" href="#vertical-message-passing">Vertical Message Passing</a></h2>
 <p><img src="messaging_overview_0.generated.svg" alt="" /></p>
 <p>Downward Message Passing (DMP) is a mechanism for delivering messages to parachains from the relay chain.</p>
 <p>Each parachain has its own queue that stores all pending inbound downward messages. A parachain
@@ -194,9 +194,9 @@ that some dispatchables will be left for later blocks. To make the dispatching m
 in a round robin fashion.</p>
 <p>The second category of special cased XCM messages are for horizontal messaging channel management,
 namely messages meant to request opening and closing HRMP channels (HRMP will be described below).</p>
-<h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
+<h2 id="horizontal-message-passing"><a class="header" href="#horizontal-message-passing">Horizontal Message Passing</a></h2>
 <p><img src="messaging_overview_1.generated.svg" alt="" /></p>
-<h3><a class="header" href="#cross-chain-message-passing" id="cross-chain-message-passing">Cross-Chain Message Passing</a></h3>
+<h3 id="cross-chain-message-passing"><a class="header" href="#cross-chain-message-passing">Cross-Chain Message Passing</a></h3>
 <p>The most important member of this family is XCMP.</p>
 <blockquote>
 <p>ℹ️ XCMP is currently under construction and details are subject for change.</p>

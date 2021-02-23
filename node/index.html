@@ -163,8 +163,8 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#node-architecture" id="node-architecture">Node Architecture</a></h1>
-<h2><a class="header" href="#design-goals" id="design-goals">Design Goals</a></h2>
+                        <h1 id="node-architecture"><a class="header" href="#node-architecture">Node Architecture</a></h1>
+<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
 <ul>
 <li>Modularity: Components of the system should be as self-contained as possible. Communication boundaries between components should be well-defined and mockable. This is key to creating testable, easily reviewable code.</li>
 <li>Minimizing side effects: Components of the system should aim to minimize side effects and to communicate with other components via message-passing.</li>
@@ -173,14 +173,14 @@
 <p>The architecture of the node-side behavior aims to embody the Rust principles of ownership and message-passing to create clean, isolatable code. Each resource should have a single owner, with minimal sharing where unavoidable.</p>
 <p>Many operations that need to be carried out involve the network, which is asynchronous. This asynchrony affects all core subsystems that rely on the network as well. The approach of hierarchical state machines is well-suited to this kind of environment.</p>
 <p>We introduce</p>
-<h2><a class="header" href="#components" id="components">Components</a></h2>
+<h2 id="components"><a class="header" href="#components">Components</a></h2>
 <p>The node architecture consists of the following components:</p>
 <ul>
 <li>The Overseer (and subsystems): A hierarchy of state machines where an overseer supervises subsystems. Subsystems can contain their own internal hierarchy of jobs. This is elaborated on in the next section on Subsystems.</li>
 <li>A block proposer: Logic triggered by the consensus algorithm of the chain when the node should author a block.</li>
 <li>A GRANDPA voting rule: A strategy for selecting chains to vote on in the GRANDPA algorithm to ensure that only valid parachain candidates appear in finalized relay-chain blocks.</li>
 </ul>
-<h2><a class="header" href="#assumptions" id="assumptions">Assumptions</a></h2>
+<h2 id="assumptions"><a class="header" href="#assumptions">Assumptions</a></h2>
 <p>The Node-side code comes with a set of assumptions that we build upon. These assumptions encompass most of the fundamental blockchain functionality.</p>
 <p>We assume the following constraints regarding provided basic functionality:</p>
 <ul>

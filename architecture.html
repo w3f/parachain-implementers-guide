@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#architecture-overview" id="architecture-overview">Architecture Overview</a></h1>
+                        <h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
 <p>This section aims to describe, at a high level, the code architecture and subsystems involved in the implementation of an individual Parachain Host. It also illuminates certain subtleties and challenges faced in the design and implementation of those subsystems.</p>
 <p>To recap, Polkadot includes a blockchain known as the relay-chain. A blockchain is a Directed Acyclic Graph (DAG) of state transitions, where every block can be considered to be the head of a linked-list (known as a &quot;chain&quot; or &quot;fork&quot;) with a cumulative state which is determined by applying the state transition of each block in turn. All paths through the DAG terminate at the Genesis Block. In fact, the blockchain is a tree, since each block can have only one parent.</p>
 <p><img src="architecture_overview_0.generated.svg" alt="" /></p>

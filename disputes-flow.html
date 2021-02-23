@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#disputes-flows" id="disputes-flows">Disputes Flows</a></h1>
+                        <h1 id="disputes-flows"><a class="header" href="#disputes-flows">Disputes Flows</a></h1>
 <p>A component-free description in what-if form with addition state graphs of the dispute.</p>
 <pre class="mermaid">stateDiagram-v2
     [*] --&gt; WaitForBackingVote: negative Vote received
@@ -219,7 +219,7 @@
     PeerConnected --&gt; GossipVotes: Peer connects
     GossipVotes --&gt; [*]
 </pre>
-<h2><a class="header" href="#conditional-formulation" id="conditional-formulation">Conditional formulation</a></h2>
+<h2 id="conditional-formulation"><a class="header" href="#conditional-formulation">Conditional formulation</a></h2>
 <p>The set of validators eligible to vote consists of
 the validators that had duty at the time of backing, plus backing votes by the backing validators.</p>
 <p>If a validator receives an initial dispute message (a set of votes where there are at least two opposing votes contained), and the PoV or Code are hence not reconstructable from local storage, that validator must request the required data from its peers.</p>

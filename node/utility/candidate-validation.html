@@ -163,13 +163,13 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#candidate-validation" id="candidate-validation">Candidate Validation</a></h1>
+                        <h1 id="candidate-validation"><a class="header" href="#candidate-validation">Candidate Validation</a></h1>
 <p>This subsystem is responsible for handling candidate validation requests. It is a simple request/response server.</p>
 <p>A variety of subsystems want to know if a parachain block candidate is valid. None of them care about the detailed mechanics of how a candidate gets validated, just the results. This subsystem handles those details.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#validation-request-type"><code>CandidateValidationMessage</code></a></p>
 <p>Output: Validation result via the provided response side-channel.</p>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This subsystem answers two types of requests: one which draws out validation data from the state, and another which accepts all validation data exhaustively. The goal of both request types is to validate a candidate. There are three possible outputs of validation: either the candidate is valid, the candidate is invalid, or an internal error occurred. Whatever the end result is, it will be returned on the response channel to the requestor.</p>
 <p>Parachain candidates are validated against their validation function: A piece of Wasm code that is describes the state-transition of the parachain. Validation function execution is not metered. This means that an execution which is an infinite loop or simply takes too long must be forcibly exited by some other means. For this reason, we recommend dispatching candidate validation to be done on subprocesses which can be killed if they time-out.</p>
 <p>Upon receiving a validation request, the first thing the candidate validation subsystem should do is make sure it has all the necessary parameters to the validation function. These are:</p>
@@ -179,7 +179,7 @@
 <li>The <a href="../../types/candidate.html#validationdata"><code>ValidationData</code></a>.</li>
 <li>The <a href="../../types/availability.html#proofofvalidity"><code>PoV</code></a>.</li>
 </ul>
-<h3><a class="header" href="#determining-parameters" id="determining-parameters">Determining Parameters</a></h3>
+<h3 id="determining-parameters"><a class="header" href="#determining-parameters">Determining Parameters</a></h3>
 <p>For a <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromExhaustive</code>, these parameters are exhaustively provided.</p>
 <p>For a <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>, some more work needs to be done. Due to the uncertainty of Availability Cores (implemented in the <a href="../../runtime/scheduler.html"><code>Scheduler</code></a> module of the runtime), a candidate at a particular relay-parent and for a particular para may have two different valid validation-data to be executed under depending on what is assumed to happen if the para is occupying a core at the onset of the new block. This is encoded as an <code>OccupiedCoreAssumption</code> in the runtime API.</p>
 <p>The way that we can determine which assumption the candidate is meant to be executed under is simply to do an exhaustive check of both possibilities based on the state of the relay-parent. First we fetch the validation data under the assumption that the block occupying becomes available. If the <code>validation_data_hash</code> of the <code>CandidateDescriptor</code> matches this validation data, we use that. Otherwise, if the <code>validation_data_hash</code> matches the validation data fetched under the <code>TimedOut</code> assumption, we use that. Otherwise, we return a <code>ValidationResult::Invalid</code> response and conclude.</p>
@@ -187,13 +187,13 @@
 <blockquote>
 <p>TODO: This would be a great place for caching to avoid making lots of runtime requests. That would need a job, though.</p>
 </blockquote>
-<h3><a class="header" href="#execution-of-the-parachain-wasm" id="execution-of-the-parachain-wasm">Execution of the Parachain Wasm</a></h3>
+<h3 id="execution-of-the-parachain-wasm"><a class="header" href="#execution-of-the-parachain-wasm">Execution of the Parachain Wasm</a></h3>
 <p>Once we have all parameters, we can spin up a background task to perform the validation in a way that doesn't hold up the entire event loop. Before invoking the validation function itself, this should first do some basic checks:</p>
 <ul>
 <li>The collator signature is valid</li>
 <li>The PoV provided matches the <code>pov_hash</code> field of the descriptor</li>
 </ul>
-<h3><a class="header" href="#checking-validation-outputs" id="checking-validation-outputs">Checking Validation Outputs</a></h3>
+<h3 id="checking-validation-outputs"><a class="header" href="#checking-validation-outputs">Checking Validation Outputs</a></h3>
 <p>If we can assume the presence of the relay-chain state (that is, during processing <a href="../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>) we can run all the checks that the relay-chain would run at the inclusion time thus confirming that the candidate will be accepted.</p>
 
                     </main>

@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#bitfield-distribution" id="bitfield-distribution">Bitfield Distribution</a></h1>
+                        <h1 id="bitfield-distribution"><a class="header" href="#bitfield-distribution">Bitfield Distribution</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:
 <a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a> which are gossiped to all peers, no matter if validator or not.</p>
@@ -176,7 +176,7 @@
 <li><code>ProvisionerMessage::ProvisionableData(ProvisionableData::Bitfield(relay_parent, SignedAvailabilityBitfield))</code> pass
 on the bitfield to the other submodules via the overseer.</li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This is implemented as a gossip system.</p>
 <p>It is necessary to track peer connection, view change, and disconnection events, in order to maintain an index of which peers are interested in which relay parent bitfields.</p>
 <p>Before gossiping incoming bitfields, they must be checked to be signed by one of the validators

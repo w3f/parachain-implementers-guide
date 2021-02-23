@@ -163,12 +163,12 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#candidate-types" id="candidate-types">Candidate Types</a></h1>
+                        <h1 id="candidate-types"><a class="header" href="#candidate-types">Candidate Types</a></h1>
 <p>Para candidates are some of the most common types, both within the runtime and on the Node-side.
 Candidates are the fundamental datatype for advancing parachains and parathreads, encapsulating the collator's signature, the context of the parablock, the commitments to the output, and a commitment to the data which proves it valid.</p>
 <p>In a way, this entire guide is about these candidates: how they are scheduled, constructed, backed, included, and challenged.</p>
 <p>This section will describe the base candidate type, its components, and variants that contain extra data.</p>
-<h2><a class="header" href="#para-id" id="para-id">Para Id</a></h2>
+<h2 id="para-id"><a class="header" href="#para-id">Para Id</a></h2>
 <p>A unique 32-bit identifier referring to a specific para (chain or thread). The relay-chain runtime guarantees that <code>ParaId</code>s are unique for the duration of any session, but recycling and reuse over a longer period of time is permitted.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -176,7 +176,7 @@ Candidates are the fundamental datatype for advancing parachains and parathreads
 </span>struct ParaId(u32);
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidate-receipt" id="candidate-receipt">Candidate Receipt</a></h2>
+<h2 id="candidate-receipt"><a class="header" href="#candidate-receipt">Candidate Receipt</a></h2>
 <p>Much info in a <a href="#full-candidate-receipt"><code>FullCandidateReceipt</code></a> is duplicated from the relay-chain state. When the corresponding relay-chain state is considered widely available, the Candidate Receipt should be favored over the <code>FullCandidateReceipt</code>.</p>
 <p>Examples of situations where the state is readily available includes within the scope of work done by subsystems working on a given relay-parent, or within the logic of the runtime importing a backed candidate.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -191,7 +191,7 @@ struct CandidateReceipt {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#full-candidate-receipt" id="full-candidate-receipt">Full Candidate Receipt</a></h2>
+<h2 id="full-candidate-receipt"><a class="header" href="#full-candidate-receipt">Full Candidate Receipt</a></h2>
 <p>This is the full receipt type. The <code>PersistedValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the block in the blockchain from whose state these values are derived. The <a href="#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
 <p>However, the Full Candidate Receipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -204,7 +204,7 @@ struct FullCandidateReceipt {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#committed-candidate-receipt" id="committed-candidate-receipt">Committed Candidate Receipt</a></h2>
+<h2 id="committed-candidate-receipt"><a class="header" href="#committed-candidate-receipt">Committed Candidate Receipt</a></h2>
 <p>This is a variant of the candidate receipt which includes the commitments of the candidate receipt alongside the descriptor. This should be favored over the <a href="#candidate-receipt"><code>Candidate Receipt</code></a> in situations where the candidate is not going to be executed but the actual data committed to is important. This is often the case in the backing phase.</p>
 <p>The hash of the committed candidate receipt will be the same as the corresponding <a href="#candidate-receipt"><code>Candidate Receipt</code></a>, because it is computed by first hashing the encoding of the commitments to form a plain <a href="#candidate-receipt"><code>Candidate Receipt</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -219,7 +219,7 @@ struct CommittedCandidateReceipt {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidate-descriptor" id="candidate-descriptor">Candidate Descriptor</a></h2>
+<h2 id="candidate-descriptor"><a class="header" href="#candidate-descriptor">Candidate Descriptor</a></h2>
 <p>This struct is pure description of the candidate, in a lightweight format.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -248,7 +248,7 @@ struct CandidateDescriptor {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#persistedvalidationdata" id="persistedvalidationdata">PersistedValidationData</a></h2>
+<h2 id="persistedvalidationdata"><a class="header" href="#persistedvalidationdata">PersistedValidationData</a></h2>
 <p>The validation data provides information about how to create the inputs for validation of a candidate. This information is derived from the chain state and will vary from para to para, although some of the fields may be the same for every para.</p>
 <p>Since this data is used to form inputs to the validation function, it needs to be persisted by the availability system to avoid dependence on availability of the relay-chain state.</p>
 <p>Furthermore, the validation data acts as a way to authorize the additional data the collator needs to pass to the validation function. For example, the validation function can check whether the incoming messages (e.g. downward messages) were actually sent by using the data provided in the validation data using so called MQC heads.</p>
@@ -276,7 +276,7 @@ struct CandidateDescriptor {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#headdata" id="headdata">HeadData</a></h2>
+<h2 id="headdata"><a class="header" href="#headdata">HeadData</a></h2>
 <p>Head data is a type-safe abstraction around bytes (<code>Vec&lt;u8&gt;</code>) for the purposes of representing heads of parachains or parathreads.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -284,7 +284,7 @@ struct CandidateDescriptor {
 </span>struct HeadData(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidate-commitments" id="candidate-commitments">Candidate Commitments</a></h2>
+<h2 id="candidate-commitments"><a class="header" href="#candidate-commitments">Candidate Commitments</a></h2>
 <p>The execution and validation of parachain or parathread candidates produces a number of values which either must be committed to on the relay chain or committed to the state of the relay chain.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -308,7 +308,7 @@ struct CandidateCommitments {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#signing-context" id="signing-context">Signing Context</a></h2>
+<h2 id="signing-context"><a class="header" href="#signing-context">Signing Context</a></h2>
 <p>This struct provides context to signatures by combining with various payloads to localize the signature to a particular session index and relay-chain hash. Having these fields included in the signature makes misbehavior attribution much simpler.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

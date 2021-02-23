@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#overseer-protocol" id="overseer-protocol">Overseer Protocol</a></h1>
+                        <h1 id="overseer-protocol"><a class="header" href="#overseer-protocol">Overseer Protocol</a></h1>
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
-<h2><a class="header" href="#overseer-signal" id="overseer-signal">Overseer Signal</a></h2>
+<h2 id="overseer-signal"><a class="header" href="#overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -186,7 +186,7 @@
 <li>Add a generic varint to <code>OverseerSignal</code>: <code>Message(T)</code>.</li>
 </ol>
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
-<h2><a class="header" href="#active-leaves-update" id="active-leaves-update">Active Leaves Update</a></h2>
+<h2 id="active-leaves-update"><a class="header" href="#active-leaves-update">Active Leaves Update</a></h2>
 <p>Indicates a change in active leaves. Activated leaves should have jobs, whereas deactivated leaves should lead to winding-down of work based on those leaves.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -197,7 +197,7 @@
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#approval-voting" id="approval-voting">Approval Voting</a></h2>
+<h2 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h2>
 <p>Messages received by the approval voting subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -247,7 +247,7 @@ enum ApprovalVotingMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#approval-distribution" id="approval-distribution">Approval Distribution</a></h2>
+<h2 id="approval-distribution"><a class="header" href="#approval-distribution">Approval Distribution</a></h2>
 <p>Messages received by the approval Distribution subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -286,11 +286,11 @@ enum ApprovalDistributionMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#all-messages" id="all-messages">All Messages</a></h2>
+<h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
 <blockquote>
 <p>TODO (now)</p>
 </blockquote>
-<h2><a class="header" href="#availability-distribution-message" id="availability-distribution-message">Availability Distribution Message</a></h2>
+<h2 id="availability-distribution-message"><a class="header" href="#availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
 <p>This is a network protocol that receives messages of type <a href="network.html#availability-distribution-v1"><code>AvailabilityDistributionV1Message</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -307,7 +307,7 @@ enum ApprovalDistributionMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#availability-recovery-message" id="availability-recovery-message">Availability Recovery Message</a></h2>
+<h2 id="availability-recovery-message"><a class="header" href="#availability-recovery-message">Availability Recovery Message</a></h2>
 <p>Messages received by the availability recovery subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -327,7 +327,7 @@ enum AvailabilityRecoveryMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#availability-store-message" id="availability-store-message">Availability Store Message</a></h2>
+<h2 id="availability-store-message"><a class="header" href="#availability-store-message">Availability Store Message</a></h2>
 <p>Messages to and from the availability store.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -349,7 +349,7 @@ enum AvailabilityRecoveryMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#bitfield-distribution-message" id="bitfield-distribution-message">Bitfield Distribution Message</a></h2>
+<h2 id="bitfield-distribution-message"><a class="header" href="#bitfield-distribution-message">Bitfield Distribution Message</a></h2>
 <p>Messages received by the bitfield distribution subsystem.
 This is a network protocol that receives messages of type <a href="network.html#bitfield-distribution-v1"><code>BitfieldDistributionV1Message</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -364,7 +364,7 @@ This is a network protocol that receives messages of type <a href="network.html#
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#bitfield-signing-message" id="bitfield-signing-message">Bitfield Signing Message</a></h2>
+<h2 id="bitfield-signing-message"><a class="header" href="#bitfield-signing-message">Bitfield Signing Message</a></h2>
 <p>Currently, the bitfield signing subsystem receives no specific messages.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -373,7 +373,7 @@ This is a network protocol that receives messages of type <a href="network.html#
 enum BitfieldSigningMessage { }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidate-backing-message" id="candidate-backing-message">Candidate Backing Message</a></h2>
+<h2 id="candidate-backing-message"><a class="header" href="#candidate-backing-message">Candidate Backing Message</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -391,7 +391,7 @@ enum BitfieldSigningMessage { }
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#candidate-selection-message" id="candidate-selection-message">Candidate Selection Message</a></h2>
+<h2 id="candidate-selection-message"><a class="header" href="#candidate-selection-message">Candidate Selection Message</a></h2>
 <p>These messages are sent to the <a href="../node/backing/candidate-selection.html">Candidate Selection subsystem</a> as a means of providing feedback on its outputs.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -406,7 +406,7 @@ enum BitfieldSigningMessage { }
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#chain-api-message" id="chain-api-message">Chain API Message</a></h2>
+<h2 id="chain-api-message"><a class="header" href="#chain-api-message">Chain API Message</a></h2>
 <p>The Chain API subsystem is responsible for providing an interface to chain data.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -440,7 +440,7 @@ enum BitfieldSigningMessage { }
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#collator-protocol-message" id="collator-protocol-message">Collator Protocol Message</a></h2>
+<h2 id="collator-protocol-message"><a class="header" href="#collator-protocol-message">Collator Protocol Message</a></h2>
 <p>Messages received by the <a href="../node/collators/collator-protocol.html">Collator Protocol subsystem</a></p>
 <p>This is a network protocol that receives messages of type <a href="network.html#collator-protocol-v1"><code>CollatorProtocolV1Message</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -471,7 +471,7 @@ enum BitfieldSigningMessage { }
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#network-bridge-message" id="network-bridge-message">Network Bridge Message</a></h2>
+<h2 id="network-bridge-message"><a class="header" href="#network-bridge-message">Network Bridge Message</a></h2>
 <p>Messages received by the network bridge. This subsystem is invoked by others to manipulate access
 to the low-level networking code.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -516,7 +516,7 @@ enum NetworkBridgeMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#misbehavior-report" id="misbehavior-report">Misbehavior Report</a></h2>
+<h2 id="misbehavior-report"><a class="header" href="#misbehavior-report">Misbehavior Report</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -578,7 +578,7 @@ mod generic {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#pov-distribution-message" id="pov-distribution-message">PoV Distribution Message</a></h2>
+<h2 id="pov-distribution-message"><a class="header" href="#pov-distribution-message">PoV Distribution Message</a></h2>
 <p>This is a network protocol that receives messages of type <a href="network.html#pov-distribution-v1"><code>PoVDistributionV1Message</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -597,7 +597,7 @@ mod generic {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#provisioner-message" id="provisioner-message">Provisioner Message</a></h2>
+<h2 id="provisioner-message"><a class="header" href="#provisioner-message">Provisioner Message</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -630,7 +630,7 @@ enum ProvisionerMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#runtime-api-message" id="runtime-api-message">Runtime API Message</a></h2>
+<h2 id="runtime-api-message"><a class="header" href="#runtime-api-message">Runtime API Message</a></h2>
 <p>The Runtime API subsystem is responsible for providing an interface to the state of the chain's runtime.</p>
 <p>This is fueled by an auxiliary type encapsulating all request types defined in the Runtime API section of the guide.</p>
 <blockquote>
@@ -687,7 +687,7 @@ enum RuntimeApiMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#statement-distribution-message" id="statement-distribution-message">Statement Distribution Message</a></h2>
+<h2 id="statement-distribution-message"><a class="header" href="#statement-distribution-message">Statement Distribution Message</a></h2>
 <p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
 <p>This is a network protocol that receives messages of type <a href="network.html#statement-distribution-v1"><code>StatementDistributionV1Message</code></a>.</p>
@@ -706,7 +706,7 @@ It receives updates from the network bridge and signed statements to share with 
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#validation-request-type" id="validation-request-type">Validation Request Type</a></h2>
+<h2 id="validation-request-type"><a class="header" href="#validation-request-type">Validation Request Type</a></h2>
 <p>Various modules request that the <a href="../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message. It returns <a href="candidate.html#validationoutputs"><code>ValidationOutputs</code></a> for successful validation.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

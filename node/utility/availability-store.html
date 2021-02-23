@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#availability-store" id="availability-store">Availability Store</a></h1>
+                        <h1 id="availability-store"><a class="header" href="#availability-store">Availability Store</a></h1>
 <p>This is a utility subsystem responsible for keeping available certain data and pruning that data.</p>
 <p>The two data types:</p>
 <ul>
@@ -175,9 +175,9 @@
 <p>Availability chunks need to be kept available until the dispute period for the corresponding candidate has ended. We can accomplish this by using the same criterion as the above. This gives us a pruning condition of the block finalizing availability of the chunk being final for 1 day + 1 hour.</p>
 <p>There is also the case where a validator commits to make a PoV available, but the corresponding candidate is never backed. In this case, we keep the PoV available for 1 hour.</p>
 <p>There may be multiple competing blocks all ending the availability phase for a particular candidate. Until finality, it will be unclear which of those is actually the canonical chain, so the pruning records for PoVs and Availability chunks should keep track of all such blocks.</p>
-<h2><a class="header" href="#lifetime-of-the-block-data-and-chunks-in-storage" id="lifetime-of-the-block-data-and-chunks-in-storage">Lifetime of the block data and chunks in storage</a></h2>
+<h2 id="lifetime-of-the-block-data-and-chunks-in-storage"><a class="header" href="#lifetime-of-the-block-data-and-chunks-in-storage">Lifetime of the block data and chunks in storage</a></h2>
 <p><img src="availability_store_0.generated.svg" alt="" /></p>
-<h2><a class="header" href="#database-schema" id="database-schema">Database Schema</a></h2>
+<h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
 <p>We use an underlying Key-Value database where we assume we have the following operations available:</p>
 <ul>
 <li><code>write(key, value)</code></li>
@@ -217,13 +217,13 @@ enum State {
 </span></code></pre></pre>
 <p>We maintain the invariant that if a candidate has a meta entry, its available data exists on disk if <code>data_available</code> is true. All chunks mentioned in the meta entry are available.</p>
 <p>Additionally, there is exactly one <code>prune_by_time</code> entry which holds the candidate hash unless the state is <code>Unfinalized</code>. There may be zero, one, or many &quot;unfinalized&quot; keys with the given candidate, and this will correspond to the <code>state</code> of the meta entry.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <p>Output:</p>
 <ul>
 <li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>For each head in the <code>activated</code> list:</p>
 <ul>
 <li>Note any new candidates backed in the block. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
@@ -306,7 +306,7 @@ enum State {
 </ul>
 <p>This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
 to be run very often.</p>
-<h2><a class="header" href="#basic-scenarios-to-test" id="basic-scenarios-to-test">Basic scenarios to test</a></h2>
+<h2 id="basic-scenarios-to-test"><a class="header" href="#basic-scenarios-to-test">Basic scenarios to test</a></h2>
 <p>Basically we need to test the correctness of data flow through state FSMs described earlier. These tests obviously assume that some mocking of time is happening.</p>
 <ul>
 <li>

@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#network-types" id="network-types">Network Types</a></h1>
+                        <h1 id="network-types"><a class="header" href="#network-types">Network Types</a></h1>
 <p>These types are those that are actually sent over the network to subsystems.</p>
-<h2><a class="header" href="#universal-types" id="universal-types">Universal Types</a></h2>
+<h2 id="universal-types"><a class="header" href="#universal-types">Universal Types</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -188,8 +188,8 @@ enum ObservedRole {
 struct CompressedPoV(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#v1-network-subsystem-message-types" id="v1-network-subsystem-message-types">V1 Network Subsystem Message Types</a></h2>
-<h3><a class="header" href="#approval-distribution-v1" id="approval-distribution-v1">Approval Distribution V1</a></h3>
+<h2 id="v1-network-subsystem-message-types"><a class="header" href="#v1-network-subsystem-message-types">V1 Network Subsystem Message Types</a></h2>
+<h3 id="approval-distribution-v1"><a class="header" href="#approval-distribution-v1">Approval Distribution V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -204,7 +204,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#availability-distribution-v1" id="availability-distribution-v1">Availability Distribution V1</a></h3>
+<h3 id="availability-distribution-v1"><a class="header" href="#availability-distribution-v1">Availability Distribution V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -214,7 +214,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#availability-recovery-v1" id="availability-recovery-v1">Availability Recovery V1</a></h3>
+<h3 id="availability-recovery-v1"><a class="header" href="#availability-recovery-v1">Availability Recovery V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -233,7 +233,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#bitfield-distribution-v1" id="bitfield-distribution-v1">Bitfield Distribution V1</a></h3>
+<h3 id="bitfield-distribution-v1"><a class="header" href="#bitfield-distribution-v1">Bitfield Distribution V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -243,7 +243,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#pov-distribution-v1" id="pov-distribution-v1">PoV Distribution V1</a></h3>
+<h3 id="pov-distribution-v1"><a class="header" href="#pov-distribution-v1">PoV Distribution V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -257,7 +257,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#statement-distribution-v1" id="statement-distribution-v1">Statement Distribution V1</a></h3>
+<h3 id="statement-distribution-v1"><a class="header" href="#statement-distribution-v1">Statement Distribution V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -267,7 +267,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#collator-protocol-v1" id="collator-protocol-v1">Collator Protocol V1</a></h3>
+<h3 id="collator-protocol-v1"><a class="header" href="#collator-protocol-v1">Collator Protocol V1</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -286,8 +286,8 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#v1-wire-protocols" id="v1-wire-protocols">V1 Wire Protocols</a></h2>
-<h3><a class="header" href="#validation-v1" id="validation-v1">Validation V1</a></h3>
+<h2 id="v1-wire-protocols"><a class="header" href="#v1-wire-protocols">V1 Wire Protocols</a></h2>
+<h3 id="validation-v1"><a class="header" href="#validation-v1">Validation V1</a></h3>
 <p>These are the messages for the protocol on the validation peer-set.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -302,7 +302,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#collation-v1" id="collation-v1">Collation V1</a></h3>
+<h3 id="collation-v1"><a class="header" href="#collation-v1">Collation V1</a></h3>
 <p>These are the messages for the protocol on the collation peer-set</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -312,7 +312,7 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#network-bridge-event" id="network-bridge-event">Network Bridge Event</a></h2>
+<h2 id="network-bridge-event"><a class="header" href="#network-bridge-event">Network Bridge Event</a></h2>
 <p>These updates are posted from the <a href="../node/utility/network-bridge.html">Network Bridge Subsystem</a> to other subsystems based on registered listeners.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

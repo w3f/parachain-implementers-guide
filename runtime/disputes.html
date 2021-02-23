@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#disputes-module" id="disputes-module">Disputes Module</a></h1>
+                        <h1 id="disputes-module"><a class="header" href="#disputes-module">Disputes Module</a></h1>
 <p>After a backed candidate is made available, it is included and proceeds into an acceptance period during which validators are randomly selected to do (secondary) approval checks of the parablock. Any reports disputing the validity of the candidate will cause escalation, where even more validators are requested to check the block, and so on, until either the parablock is determined to be invalid or valid. Those on the wrong side of the dispute are slashed and, if the parablock is deemed invalid, the relay chain is rolled back to a point before that block was included.</p>
 <p>However, this isn't the end of the story. We are working in a forkful blockchain environment, which carries three important considerations:</p>
 <ol>
@@ -185,7 +185,7 @@
 </ol>
 <p>If, as is expected, the chain is unfinalized, the freeze will have no effect as no honest validator will attempt to build on the frozen chain. However, if the approval checking protocol has failed and the bad parablock is finalized, the freeze serves to put the chain into a governance-only mode.</p>
 <p>The storage of this module is designed around tracking <a href="../types/disputes.html#disputestate"><code>DisputeState</code>s</a>, updating them with votes, and tracking blocks included by this branch of the relay chain. It also contains a <code>Frozen</code> parameter designed to freeze the state of all parachains.</p>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Storage Layout:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -215,18 +215,18 @@ PostConclusionAcceptancePeriod: BlockNumber;
 ConclusionByTimeOutPeriod: BlockNumber;
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
+<h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>If the current session is not greater than <code>dispute_period + 1</code>, nothing to do here.</li>
 <li>Set <code>pruning_target = current_session - dispute_period - 1</code>. We add the extra <code>1</code> because we want to keep things for <code>dispute_period</code> <em>full</em> sessions. The stuff at the end of the most recent session has been around for ~0 sessions, not ~1.</li>
 <li>If <code>LastPrunedSession</code> is <code>None</code>, then set <code>LastPrunedSession</code> to <code>Some(pruning_target)</code> and return.</li>
 <li>Otherwise, clear out all disputes and included candidates in the range <code>last_pruned..=pruning_target</code> and set <code>LastPrunedSession</code> to <code>Some(pruning_target)</code>.</li>
 </ol>
-<h2><a class="header" href="#block-initialization" id="block-initialization">Block Initialization</a></h2>
+<h2 id="block-initialization"><a class="header" href="#block-initialization">Block Initialization</a></h2>
 <ol>
 <li>Iterate through all disputes. If any have not concluded and started more than <code>ConclusionByTimeOutPeriod</code> blocks ago, set them to <code>Concluded</code> and mildly punish all validators associated, as they have failed to distribute available data.</li>
 </ol>
-<h2><a class="header" href="#routines" id="routines">Routines</a></h2>
+<h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <ul>
 <li>
 <p><code>provide_multi_dispute_data(MultiDisputeStatementSet) -&gt; Vec&lt;(SessionIndex, Hash)&gt;</code>:</p>

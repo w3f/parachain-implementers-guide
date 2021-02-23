@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#collation-generation" id="collation-generation">Collation Generation</a></h1>
+                        <h1 id="collation-generation"><a class="header" href="#collation-generation">Collation Generation</a></h1>
 <p>The collation generation subsystem is executed on collator nodes and produces candidates to be distributed to validators. If configured to produce collations for a para, it produces collations and then feeds them to the <a href="collator-protocol.html">Collator Protocol</a> subsystem, which handles the networking.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <code>CollationGenerationMessage</code></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -177,7 +177,7 @@
 </span></code></pre></pre>
 <p>No more than one initialization message should ever be sent to the collation generation subsystem.</p>
 <p>Output: <code>CollationDistributionMessage</code></p>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>The process of generating a collation for a parachain is very parachain-specific. As such, the details of how to do so are left beyond the scope of this description. The subsystem should be implemented as an abstract wrapper, which is aware of this configuration:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

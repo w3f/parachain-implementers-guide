@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#parainherent" id="parainherent">ParaInherent</a></h1>
+                        <h1 id="parainherent"><a class="header" href="#parainherent">ParaInherent</a></h1>
 <p>This module is responsible for providing all data given to the runtime by the block author to the various parachains modules. The entry-point is mandatory, in that it must be invoked exactly once within every block, and it is also &quot;inherent&quot;, in that it is provided with no origin by the block author. The data within it carries its own authentication; i.e. the data takes the form of signed statements by validators. If any of the steps within fails, the entry-point is considered as having failed and the block will be invalid.</p>
 <p>This module does not have the same initialization/finalization concerns as the others, as it only requires that entry points be triggered after all modules have initialized and that finalization happens after entry points are triggered. Both of these are assumptions we have already made about the runtime's order of operations, so this module doesn't need to be initialized or finalized by the <code>Initializer</code>.</p>
 <p>There are a couple of important notes to the operations in this inherent as they relate to disputes.</p>
@@ -173,18 +173,18 @@
 <li><code>Inclusion::collect_disputed</code> is kind of expensive so it's important to gate this on whether there are actually any new disputes. Which should be never.</li>
 <li>And we don't accept parablocks that have open disputes or disputes that have concluded against the candidate. It's important to import dispute statements before backing, but this is already the case as disputes are imported before processing bitfields.</li>
 </ol>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>Included: Option&lt;()&gt;,
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#finalization" id="finalization">Finalization</a></h2>
+<h2 id="finalization"><a class="header" href="#finalization">Finalization</a></h2>
 <ol>
 <li>Take (get and clear) the value of <code>Included</code>. If it is not <code>Some</code>, throw an unrecoverable error.</li>
 </ol>
-<h2><a class="header" href="#entry-points" id="entry-points">Entry Points</a></h2>
+<h2 id="entry-points"><a class="header" href="#entry-points">Entry Points</a></h2>
 <ul>
 <li><code>enter</code>: This entry-point accepts three parameters: The relay-chain parent block header, <a href="../types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> and <a href="../types/backing.html#backed-candidate"><code>BackedCandidates</code></a>.
 <ol>

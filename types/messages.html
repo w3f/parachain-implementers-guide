@@ -163,11 +163,11 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#message-types" id="message-types">Message types</a></h1>
+                        <h1 id="message-types"><a class="header" href="#message-types">Message types</a></h1>
 <p>Types of messages that are passed between parachains and the relay chain: UMP, DMP, XCMP.</p>
 <p>There is also HRMP (Horizontally Relay-routed Message Passing) which provides the same functionality
 although with smaller scalability potential.</p>
-<h2><a class="header" href="#vertical-message-passing" id="vertical-message-passing">Vertical Message Passing</a></h2>
+<h2 id="vertical-message-passing"><a class="header" href="#vertical-message-passing">Vertical Message Passing</a></h2>
 <p>Types required for message passing between the relay-chain and a parachain.</p>
 <p>Actual contents of the messages is specified by the XCM standard.</p>
 <pre><code class="language-rust ignore">/// A message sent from a parachain to the relay-chain.
@@ -188,8 +188,8 @@ struct InboundDownwardMessage {
 	pub msg: DownwardMessage,
 }
 </code></pre>
-<h2><a class="header" href="#horizontal-message-passing" id="horizontal-message-passing">Horizontal Message Passing</a></h2>
-<h2><a class="header" href="#hrmpchannelid" id="hrmpchannelid">HrmpChannelId</a></h2>
+<h2 id="horizontal-message-passing"><a class="header" href="#horizontal-message-passing">Horizontal Message Passing</a></h2>
+<h2 id="hrmpchannelid"><a class="header" href="#hrmpchannelid">HrmpChannelId</a></h2>
 <p>A type that uniquely identifies an HRMP channel. An HRMP channel is established between two paras.
 In text, we use the notation <code>(A, B)</code> to specify a channel between A and B. The channels are
 unidirectional, meaning that <code>(A, B)</code> and <code>(B, A)</code> refer to different channels. The convention is
@@ -201,7 +201,7 @@ identified by <code>(A, B)</code>.</p>
     recipient: ParaId,
 }
 </code></pre>
-<h2><a class="header" href="#horizontal-message" id="horizontal-message">Horizontal Message</a></h2>
+<h2 id="horizontal-message"><a class="header" href="#horizontal-message">Horizontal Message</a></h2>
 <p>This is a message sent from a parachain to another parachain that travels through the relay chain.
 This message ends up in the recipient's mailbox. A size of a horizontal message is defined by its
 <code>data</code> payload.</p>

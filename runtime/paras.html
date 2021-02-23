@@ -163,15 +163,15 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#paras-module" id="paras-module">Paras Module</a></h1>
+                        <h1 id="paras-module"><a class="header" href="#paras-module">Paras Module</a></h1>
 <p>The Paras module is responsible for storing information on parachains and parathreads. Registered
 parachains and parathreads cannot change except at session boundaries and after at least a full
 session has passed. This is primarily to ensure that the number and meaning of bits required for the
 availability bitfields does not change except at session boundaries.</p>
 <p>It's also responsible for managing parachain validation code upgrades as well as maintaining
 availability of old parachain code and its pruning.</p>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
-<h3><a class="header" href="#utility-structs" id="utility-structs">Utility Structs</a></h3>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
+<h3 id="utility-structs"><a class="header" href="#utility-structs">Utility Structs</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -235,7 +235,7 @@ pub enum ParaLifecycle {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h4><a class="header" href="#para-lifecycle" id="para-lifecycle">Para Lifecycle</a></h4>
+<h4 id="para-lifecycle"><a class="header" href="#para-lifecycle">Para Lifecycle</a></h4>
 <p>Because the state of parachains and parathreads are delayed by a session, we track the specific
 state of the para using the <code>ParaLifecycle</code> enum.</p>
 <pre><code>None                 Parathread                  Parachain
@@ -264,7 +264,7 @@ state of the para using the <code>ParaLifecycle</code> enum.</p>
  +                        +                          +
 </code></pre>
 <p>During the transition period, the para object is still considered in its existing state.</p>
-<h3><a class="header" href="#storage-layout" id="storage-layout">Storage Layout</a></h3>
+<h3 id="storage-layout"><a class="header" href="#storage-layout">Storage Layout</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -301,7 +301,7 @@ ActionsQueue: map SessionIndex =&gt; Vec&lt;ParaId&gt;;
 UpcomingParasGenesis: map ParaId =&gt; Option&lt;ParaGenesisArgs&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#session-change" id="session-change">Session Change</a></h2>
+<h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>Execute all queued actions for paralifecycle changes:</li>
 <li>Clean up outgoing paras.
@@ -324,12 +324,12 @@ parameters.</li>
 <code>ParaLifecycle</code>.</li>
 <li>Return list of outgoing paras to the initializer for use by other modules.</li>
 </ol>
-<h2><a class="header" href="#initialization" id="initialization">Initialization</a></h2>
+<h2 id="initialization"><a class="header" href="#initialization">Initialization</a></h2>
 <ol>
 <li>Do pruning based on all entries in <code>PastCodePruning</code> with <code>BlockNumber &lt;= now</code>. Update the
 corresponding <code>PastCodeMeta</code> and <code>PastCode</code> accordingly.</li>
 </ol>
-<h2><a class="header" href="#routines" id="routines">Routines</a></h2>
+<h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <ul>
 <li><code>schedule_para_initialize(ParaId, ParaGenesisArgs)</code>: Schedule a para to be initialized at the next
 session. Noop if para is already registered in the system with some <code>ParaLifecycle</code>.</li>
@@ -362,7 +362,7 @@ This is the <code>expected_at</code> number, not the <code>activated_at</code> n
 PersistedValidationData of the given para, assuming the context is the parent block. Returns
 <code>None</code> if the para is not known.</li>
 </ul>
-<h2><a class="header" href="#finalization" id="finalization">Finalization</a></h2>
+<h2 id="finalization"><a class="header" href="#finalization">Finalization</a></h2>
 <p>No finalization routine runs for this module.</p>
 
                     </main>

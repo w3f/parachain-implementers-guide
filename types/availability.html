@@ -163,10 +163,10 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#availability" id="availability">Availability</a></h1>
+                        <h1 id="availability"><a class="header" href="#availability">Availability</a></h1>
 <p>One of the key roles of validators is to ensure availability of all data necessary to validate
 candidates for the duration of a challenge period. This is done via an erasure-coding of the data to keep available.</p>
-<h2><a class="header" href="#signed-availability-bitfield" id="signed-availability-bitfield">Signed Availability Bitfield</a></h2>
+<h2 id="signed-availability-bitfield"><a class="header" href="#signed-availability-bitfield">Signed Availability Bitfield</a></h2>
 <p>A bitfield <a href="backing.html#signed-wrapper">signed</a> by a particular validator about the availability of pending candidates.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -176,7 +176,7 @@ candidates for the duration of a challenge period. This is done via an erasure-c
 struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted by validator index, ascending
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#semantics" id="semantics">Semantics</a></h3>
+<h3 id="semantics"><a class="header" href="#semantics">Semantics</a></h3>
 <p>A <code>SignedAvailabilityBitfield</code> represents the view from a particular validator's perspective. Each bit in the bitfield corresponds to a single <a href="../runtime-api/availability-cores.html">availability core</a>. A <code>1</code> bit indicates that the validator believes the following statements to be true for a core:</p>
 <ul>
 <li>the availability core is occupied</li>
@@ -184,7 +184,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <li>the validator's <a href="../node/utility/availability-store.html">Availability Store</a> contains a chunk of that parablock's PoV.</li>
 </ul>
 <p>In other words, it is the transpose of <a href="../runtime-api/availability-cores.html"><code>OccupiedCore::availability</code></a>.</p>
-<h2><a class="header" href="#proof-of-validity" id="proof-of-validity">Proof-of-Validity</a></h2>
+<h2 id="proof-of-validity"><a class="header" href="#proof-of-validity">Proof-of-Validity</a></h2>
 <p>Often referred to as PoV, this is a type-safe wrapper around bytes (<code>Vec&lt;u8&gt;</code>) when referring to data that acts as a stateless-client proof of validity of a candidate, when used as input to the validation function of the para.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -192,7 +192,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </span>struct PoV(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#available-data" id="available-data">Available Data</a></h2>
+<h2 id="available-data"><a class="header" href="#available-data">Available Data</a></h2>
 <p>This is the data we want to keep available for each <a href="candidate.html">candidate</a> included in the relay chain. This is the PoV of the block, as well as the <a href="candidate.html#persistedvalidationdata"><code>PersistedValidationData</code></a></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -208,7 +208,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <blockquote>
 <p>TODO: With XCMP, we also need to keep available the outgoing messages as a result of para-validation.</p>
 </blockquote>
-<h2><a class="header" href="#erasure-chunk" id="erasure-chunk">Erasure Chunk</a></h2>
+<h2 id="erasure-chunk"><a class="header" href="#erasure-chunk">Erasure Chunk</a></h2>
 <p>The <a href="#availabledata"><code>AvailableData</code></a> is split up into an erasure-coding as part of the availability process. Each validator gets a chunk. This describes one of those chunks, along with its proof against a merkle root hash, which should be apparent from context, and is the <code>erasure_root</code> field of a <a href="candidate.html#candidatedescriptor"><code>CandidateDescriptor</code></a>.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

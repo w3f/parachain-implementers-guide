@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#runtime-apis" id="runtime-apis">Runtime APIs</a></h1>
+                        <h1 id="runtime-apis"><a class="header" href="#runtime-apis">Runtime APIs</a></h1>
 <p>Runtime APIs are the means by which the node-side code extracts information from the state of the runtime.</p>
 <p>Every block in the relay-chain contains a <em>state root</em> which is the root hash of a state trie encapsulating all storage of runtime modules after execution of the block. This is a cryptographic commitment to a unique state. We use the terminology of accessing the <em>state at</em> a block to refer accessing the state referred to by the state root of that block.</p>
 <p>Although Runtime APIs are often used for simple storage access, they are actually empowered to do arbitrary computation. The implementation of the Runtime APIs lives within the Runtime as Wasm code and exposes extern functions that can be invoked with arguments and have a return value. Runtime APIs have access to a variety of host functions, which are contextual functions provided by the Wasm execution context, that allow it to carry out many different types of behaviors.</p>

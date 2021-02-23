@@ -163,10 +163,10 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#backing-types" id="backing-types">Backing Types</a></h1>
+                        <h1 id="backing-types"><a class="header" href="#backing-types">Backing Types</a></h1>
 <p><a href="candidate.html">Candidates</a> go through many phases before being considered included in a fork of the relay chain and eventually accepted.</p>
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
-<h2><a class="header" href="#validity-attestation" id="validity-attestation">Validity Attestation</a></h2>
+<h2 id="validity-attestation"><a class="header" href="#validity-attestation">Validity Attestation</a></h2>
 <p>An attestation of validity for a candidate, used as part of a backing. Both the <code>Seconded</code> and <code>Valid</code> statements are considered attestations of validity. This structure is only useful where the candidate referenced is apparent.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -181,7 +181,7 @@
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#signed-wrapper" id="signed-wrapper">Signed Wrapper</a></h2>
+<h2 id="signed-wrapper"><a class="header" href="#signed-wrapper">Signed Wrapper</a></h2>
 <p>There are a few distinct types which we desire to sign, and validate the signatures of. Instead of duplicating this work, we extract a signed wrapper.</p>
 <pre><code class="language-rust ignore">/// A signed type which encapsulates the common desire to sign some data and validate a signature.
 ///
@@ -204,7 +204,7 @@ impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;
 </code></pre>
 <p>Note the presence of the <a href="../types/candidate.html#signing-context"><code>SigningContext</code></a> in the signatures of the <code>sign</code> and <code>validate</code> methods. To ensure cryptographic security, the actual signed payload is always the SCALE encoding of <code>(payload.into(), signing_context)</code>. Including the signing context prevents replay attacks.</p>
 <p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
-<h2><a class="header" href="#statement-type" id="statement-type">Statement Type</a></h2>
+<h2 id="statement-type"><a class="header" href="#statement-type">Statement Type</a></h2>
 <p>The <a href="../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -237,7 +237,7 @@ enum CompactStatement {
 <span class="boring">}
 </span></code></pre></pre>
 <p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
-<h2><a class="header" href="#signed-statement-type" id="signed-statement-type">Signed Statement Type</a></h2>
+<h2 id="signed-statement-type"><a class="header" href="#signed-statement-type">Signed Statement Type</a></h2>
 <p>A statement which has been <a href="#signed-wrapper">cryptographically signed</a> by a validator.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -250,7 +250,7 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
-<h2><a class="header" href="#backed-candidate" id="backed-candidate">Backed Candidate</a></h2>
+<h2 id="backed-candidate"><a class="header" href="#backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

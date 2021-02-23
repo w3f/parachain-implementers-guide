@@ -163,10 +163,10 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#configuration-module" id="configuration-module">Configuration Module</a></h1>
+                        <h1 id="configuration-module"><a class="header" href="#configuration-module">Configuration Module</a></h1>
 <p>This module is responsible for managing all configuration of the parachain host in-flight. It provides a central point for configuration updates to prevent races between configuration changes and parachain-processing logic. Configuration can only change during the session change routine, and as this module handles the session change notification first it provides an invariant that the configuration does not change throughout the entire session. Both the <a href="scheduler.html">scheduler</a> and <a href="inclusion.html">inclusion</a> modules rely on this invariant to ensure proper behavior of the scheduler.</p>
 <p>The configuration that we will be tracking is the <a href="../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> struct.</p>
-<h2><a class="header" href="#storage" id="storage">Storage</a></h2>
+<h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>The configuration module is responsible for two main pieces of storage.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -177,9 +177,9 @@ Configuration: HostConfiguration;
 PendingConfiguration: Option&lt;HostConfiguration&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#session-change" id="session-change">Session change</a></h2>
+<h2 id="session-change"><a class="header" href="#session-change">Session change</a></h2>
 <p>The session change routine for the Configuration module is simple. If the <code>PendingConfiguration</code> is <code>Some</code>, take its value and set <code>Configuration</code> to be equal to it. Reset <code>PendingConfiguration</code> to <code>None</code>.</p>
-<h2><a class="header" href="#routines" id="routines">Routines</a></h2>
+<h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -198,7 +198,7 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2><a class="header" href="#entry-points" id="entry-points">Entry-points</a></h2>
+<h2 id="entry-points"><a class="header" href="#entry-points">Entry-points</a></h2>
 <p>The Configuration module exposes an entry point for each configuration member. These entry-points accept calls only from governance origins. These entry-points will use the <code>update_configuration</code> routine to update the specific configuration field.</p>
 
                     </main>

@@ -163,7 +163,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#approval-distribution" id="approval-distribution">Approval Distribution</a></h1>
+                        <h1 id="approval-distribution"><a class="header" href="#approval-distribution">Approval Distribution</a></h1>
 <p>A subsystem for the distribution of assignments and approvals for approval checks on candidates over the network.</p>
 <p>The <a href="approval-voting.html">Approval Voting</a> subsystem is responsible for active participation in a protocol designed to select a sufficient number of validators to check each and every candidate which appears in the relay chain. Statements of participation in this checking process are divided into two kinds:</p>
 <ul>
@@ -181,7 +181,7 @@
 <p>For our own local view, these two queries  must not yield false negatives. When applied to our peers' views, it is acceptable for them to yield false negatives. The reason for that is that our peers' views may be beyond ours, and we are not capable of fully evaluating them. Once we have caught up, we can check again for false negatives to continue distributing.</p>
 <p>For assignments, what we need to be checking is whether we are aware of the (block, candidate) pair that the assignment references. For approvals, we need to be aware of an assignment by the same validator which references the candidate being approved.</p>
 <p>However, awareness on its own of a (block, candidate) pair would imply that even ancient candidates all the way back to the genesis are relevant. We are actually not interested in anything before finality.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input:</p>
 <ul>
 <li><code>ApprovalDistributionMessage::NewBlocks</code></li>
@@ -196,7 +196,7 @@
 <li><code>ApprovalVotingMessage::CheckAndImportApproval</code></li>
 <li><code>NetworkBridgeMessage::SendValidationMessage::ApprovalDistribution</code></li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -250,36 +250,36 @@ struct CandidateEntry {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#network-updates" id="network-updates">Network updates</a></h3>
-<h4><a class="header" href="#networkbridgeeventpeerconnected" id="networkbridgeeventpeerconnected"><code>NetworkBridgeEvent::PeerConnected</code></a></h4>
+<h3 id="network-updates"><a class="header" href="#network-updates">Network updates</a></h3>
+<h4 id="networkbridgeeventpeerconnected"><a class="header" href="#networkbridgeeventpeerconnected"><code>NetworkBridgeEvent::PeerConnected</code></a></h4>
 <p>Add a blank view to the <code>peer_views</code> state.</p>
-<h4><a class="header" href="#networkbridgeeventpeerdisconnected" id="networkbridgeeventpeerdisconnected"><code>NetworkBridgeEvent::PeerDisconnected</code></a></h4>
+<h4 id="networkbridgeeventpeerdisconnected"><a class="header" href="#networkbridgeeventpeerdisconnected"><code>NetworkBridgeEvent::PeerDisconnected</code></a></h4>
 <p>Remove the view under the associated <code>PeerId</code> from <code>State::peer_views</code>.</p>
 <p>Iterate over every <code>BlockEntry</code> and remove <code>PeerId</code> from it.</p>
-<h4><a class="header" href="#networkbridgeeventpeerviewchange" id="networkbridgeeventpeerviewchange"><code>NetworkBridgeEvent::PeerViewChange</code></a></h4>
+<h4 id="networkbridgeeventpeerviewchange"><a class="header" href="#networkbridgeeventpeerviewchange"><code>NetworkBridgeEvent::PeerViewChange</code></a></h4>
 <p>Invoke <code>unify_with_peer(peer, view)</code> to catch them up to messages we have.</p>
 <p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their 'finalized_number` forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
 <p>One of the safeguards we can implement is to reject view updates from peers where the new <code>finalized_number</code> is less than the previous.</p>
 <p>We augment that by defining <code>constrain(x)</code> to output the x bounded by the first and last numbers in <code>state.blocks_by_number</code>.</p>
 <p>From there, we can loop backwards from <code>constrain(view.finalized_number)</code> until <code>constrain(last_view.finalized_number)</code> is reached, removing the <code>PeerId</code> from all <code>BlockEntry</code>s referenced at that height. We can break the loop early if we ever exit the bound supplied by the first block in <code>state.blocks_by_number</code>.</p>
-<h4><a class="header" href="#networkbridgeeventpeermessage" id="networkbridgeeventpeermessage"><code>NetworkBridgeEvent::PeerMessage</code></a></h4>
+<h4 id="networkbridgeeventpeermessage"><a class="header" href="#networkbridgeeventpeermessage"><code>NetworkBridgeEvent::PeerMessage</code></a></h4>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Assignment(assignment_cert, claimed_index)</code>, then call <code>import_and_circulate_assignment(MessageSource::Peer(sender), assignment_cert, claimed_index)</code></p>
 <p>If the message is of type <code>ApprovalDistributionV1Message::Approval(approval_vote)</code>, then call <code>import_and_circulate_approval(MessageSource::Peer(sender), approval_vote)</code></p>
-<h3><a class="header" href="#subsystem-updates" id="subsystem-updates">Subsystem Updates</a></h3>
-<h4><a class="header" href="#approvaldistributionmessagenewblocks" id="approvaldistributionmessagenewblocks"><code>ApprovalDistributionMessage::NewBlocks</code></a></h4>
+<h3 id="subsystem-updates"><a class="header" href="#subsystem-updates">Subsystem Updates</a></h3>
+<h4 id="approvaldistributionmessagenewblocks"><a class="header" href="#approvaldistributionmessagenewblocks"><code>ApprovalDistributionMessage::NewBlocks</code></a></h4>
 <p>Create <code>BlockEntry</code> and <code>CandidateEntries</code> for all blocks.</p>
 <p>For all peers:</p>
 <ul>
 <li>Compute <code>view_intersection</code> as the intersection of the peer's view blocks with the hashes of the new blocks.</li>
 <li>Invoke <code>unify_with_peer(peer, view_intersection)</code>.</li>
 </ul>
-<h4><a class="header" href="#approvaldistributionmessagedistributeasignment" id="approvaldistributionmessagedistributeasignment"><code>ApprovalDistributionMessage::DistributeAsignment</code></a></h4>
+<h4 id="approvaldistributionmessagedistributeasignment"><a class="header" href="#approvaldistributionmessagedistributeasignment"><code>ApprovalDistributionMessage::DistributeAsignment</code></a></h4>
 <p>Call <code>import_and_circulate_assignment</code> with <code>MessageSource::Local</code>.</p>
-<h4><a class="header" href="#approvaldistributionmessagedistributeapproval" id="approvaldistributionmessagedistributeapproval"><code>ApprovalDistributionMessage::DistributeApproval</code></a></h4>
+<h4 id="approvaldistributionmessagedistributeapproval"><a class="header" href="#approvaldistributionmessagedistributeapproval"><code>ApprovalDistributionMessage::DistributeApproval</code></a></h4>
 <p>Call <code>import_and_circulate_approval</code> with <code>MessageSource::Local</code>.</p>
-<h4><a class="header" href="#overseersignalblockfinalized" id="overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
+<h4 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
 <p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
-<h3><a class="header" href="#utility" id="utility">Utility</a></h3>
+<h3 id="utility"><a class="header" href="#utility">Utility</a></h3>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -289,7 +289,7 @@ struct CandidateEntry {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h4><a class="header" href="#import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex" id="import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex"><code>import_and_circulate_assignment(source: MessageSource, assignment: IndirectAssignmentCert, claimed_candidate_index: CandidateIndex)</code></a></h4>
+<h4 id="import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex"><a class="header" href="#import_and_circulate_assignmentsource-messagesource-assignment-indirectassignmentcert-claimed_candidate_index-candidateindex"><code>import_and_circulate_assignment(source: MessageSource, assignment: IndirectAssignmentCert, claimed_candidate_index: CandidateIndex)</code></a></h4>
 <p>Imports an assignment cert referenced by block hash and candidate index. As a postcondition, if the cert is valid, it will have distributed the cert to all peers who have the block in their view, with the exclusion of the peer referenced by the <code>MessageSource</code>.</p>
 <p>We maintain a few invariants:</p>
 <ul>
@@ -328,7 +328,7 @@ If we did this check earlier, a peer could provide data out-of-view repeatedly a
 <li>Set the approval state for the validator index to <code>ApprovalState::Assigned</code> unless the approval state is set already. This should not happen as long as the approval voting subsystem instructs us to ignore duplicate assignments.</li>
 <li>Dispatch a <code>ApprovalDistributionV1Message::Assignment(assignment, candidate_index)</code> to all peers in the <code>BlockEntry</code>'s <code>known_by</code> set, excluding the peer in the <code>source</code>, if <code>source</code> has kind <code>MessageSource::Peer</code>. Add the fingerprint of the assignment to the knowledge of each peer.</li>
 </ul>
-<h4><a class="header" href="#import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote" id="import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><code>import_and_circulate_approval(source: MessageSource, approval: IndirectSignedApprovalVote)</code></a></h4>
+<h4 id="import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><a class="header" href="#import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><code>import_and_circulate_approval(source: MessageSource, approval: IndirectSignedApprovalVote)</code></a></h4>
 <p>Imports an approval signature referenced by block hash and candidate index:</p>
 <ul>
 <li>Load the BlockEntry using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
@@ -363,7 +363,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 </ul>
 </li>
 </ul>
-<h4><a class="header" href="#unify_with_peerpeer-peerid-view" id="unify_with_peerpeer-peerid-view"><code>unify_with_peer(peer: PeerId, view)</code>:</a></h4>
+<h4 id="unify_with_peerpeer-peerid-view"><a class="header" href="#unify_with_peerpeer-peerid-view"><code>unify_with_peer(peer: PeerId, view)</code>:</a></h4>
 <ol>
 <li>Initialize a set <code>fresh_blocks = {}</code></li>
 </ol>

@@ -163,17 +163,17 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#runtime-api" id="runtime-api">Runtime API</a></h1>
+                        <h1 id="runtime-api"><a class="header" href="#runtime-api">Runtime API</a></h1>
 <p>The Runtime API subsystem is responsible for providing a single point of access to runtime state data via a set of pre-determined queries. This prevents shared ownership of a blockchain client resource by providing</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></p>
 <p>Output: None</p>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>On receipt of <code>RuntimeApiMessage::Request(relay_parent, request)</code>, answer the request using the post-state of the relay_parent provided and provide the response to the side-channel embedded within the request.</p>
 <blockquote>
 <p>TODO Do some caching. The underlying rocksdb already has a cache of trie nodes so duplicate requests are unlikely to hit disk. Not required for functionality.</p>
 </blockquote>
-<h2><a class="header" href="#jobs" id="jobs">Jobs</a></h2>
+<h2 id="jobs"><a class="header" href="#jobs">Jobs</a></h2>
 <blockquote>
 <p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on relay_parents that are not active based on <code>ActiveLeavesUpdate</code> messages. Maybe with some leeway for things that have just been stopped.</p>
 </blockquote>

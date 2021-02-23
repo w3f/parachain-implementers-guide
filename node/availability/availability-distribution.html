@@ -163,10 +163,10 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#availability-distribution" id="availability-distribution">Availability Distribution</a></h1>
+                        <h1 id="availability-distribution"><a class="header" href="#availability-distribution">Availability Distribution</a></h1>
 <p>Distribute availability erasure-coded chunks to validators.</p>
 <p>After a candidate is backed, the availability of the PoV block must be confirmed by 2/3+ of all validators. Validating a candidate successfully and contributing it to being backable leads to the PoV and erasure-coding being stored in the <a href="../utility/availability-store.html">Availability Store</a>.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
@@ -179,7 +179,7 @@
 <li>AvailabilityStore::QueryPoV(candidate_hash, response_channel)</li>
 <li>AvailabilityStore::StoreChunk(candidate_hash, chunk_index, inclusion_proof, chunk_data)</li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>For each relay-parent in our local view update, look at all backed candidates pending availability. Distribute via gossip all erasure chunks for all candidates that we have to peers.</p>
 <p>We define an operation <code>live_candidates(relay_heads) -&gt; Set&lt;CandidateHash&gt;</code> which returns a set of hashes corresponding to <a href="../../types/candidate.html#candidate-receipt"><code>CandidateReceipt</code>s</a>.</p>
 <p>This is defined as all candidates pending availability in any of those relay-chain heads or any of their last <code>K</code> ancestors in the same session. We assume that state is not pruned within <code>K</code> blocks of the chain-head. <code>K</code> commonly is small and is currently fixed to <code>K=3</code>.</p>

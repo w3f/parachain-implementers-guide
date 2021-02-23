@@ -163,10 +163,10 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#availability-recovery" id="availability-recovery">Availability Recovery</a></h1>
+                        <h1 id="availability-recovery"><a class="header" href="#availability-recovery">Availability Recovery</a></h1>
 <p>This subsystem is the inverse of the <a href="availability-distribution.html">Availability Distribution</a> subsystem: validators will serve the availability chunks kept in the availability store to nodes who connect to them. And the subsystem will also implement the other side: the logic for nodes to connect to validators, request availability pieces, and reconstruct the <code>AvailableData</code>.</p>
 <p>This version of the availability recovery subsystem is based off of direct connections to validators. In order to recover any given <code>AvailableData</code>, we must recover at least <code>f + 1</code> pieces from validators of the session. Thus, we will connect to and query randomly chosen validators until we have received <code>f + 1</code> pieces.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
@@ -179,7 +179,7 @@
 <li>NetworkBridge::ReportPeer</li>
 <li>AvailabilityStore::QueryChunk</li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>We hold a state which tracks the current recovery interactions we have live, as well as which request IDs correspond to which interactions. An interaction is a structure encapsulating all interaction with the network necessary to recover the available data.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -278,41 +278,41 @@ struct Interaction {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3><a class="header" href="#signal-handling" id="signal-handling">Signal Handling</a></h3>
+<h3 id="signal-handling"><a class="header" href="#signal-handling">Signal Handling</a></h3>
 <p>On <code>ActiveLeavesUpdate</code>, if <code>activated</code> is non-empty, set <code>state.live_block_hash</code> to the first block in <code>Activated</code>.</p>
 <p>Ignore <code>BlockFinalized</code> signals.</p>
 <p>On <code>Conclude</code>, shut down the subsystem.</p>
-<h4><a class="header" href="#availabilityrecoverymessagerecoveravailabledatareceipt-session-optionbacking_group_index-response" id="availabilityrecoverymessagerecoveravailabledatareceipt-session-optionbacking_group_index-response"><code>AvailabilityRecoveryMessage::RecoverAvailableData(receipt, session, Option&lt;backing_group_index&gt;, response)</code></a></h4>
+<h4 id="availabilityrecoverymessagerecoveravailabledatareceipt-session-optionbacking_group_index-response"><a class="header" href="#availabilityrecoverymessagerecoveravailabledatareceipt-session-optionbacking_group_index-response"><code>AvailabilityRecoveryMessage::RecoverAvailableData(receipt, session, Option&lt;backing_group_index&gt;, response)</code></a></h4>
 <ol>
 <li>Check the <code>availability_lru</code> for the candidate and return the data if so.</li>
 <li>Check if there is already an interaction handle for the request. If so, add the response handle to it.</li>
 <li>Otherwise, load the session info for the given session under the state of <code>live_block_hash</code>, and initiate an interaction with <em>launch_interaction</em>. Add an interaction handle to the state and add the response channel to it.</li>
 <li>If the session info is not available, return <code>RecoveryError::Unavailable</code> on the response channel.</li>
 </ol>
-<h3><a class="header" href="#from-interaction-logic" id="from-interaction-logic">From-interaction logic</a></h3>
-<h4><a class="header" href="#frominteractionconcluded" id="frominteractionconcluded"><code>FromInteraction::Concluded</code></a></h4>
+<h3 id="from-interaction-logic"><a class="header" href="#from-interaction-logic">From-interaction logic</a></h3>
+<h4 id="frominteractionconcluded"><a class="header" href="#frominteractionconcluded"><code>FromInteraction::Concluded</code></a></h4>
 <ol>
 <li>Load the entry from the <code>interactions</code> map. It should always exist, if not for logic errors. Send the result to each member of <code>awaiting</code>.</li>
 <li>Add the entry to the availability_lru.</li>
 </ol>
-<h4><a class="header" href="#frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response" id="frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeChunkRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
+<h4 id="frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response"><a class="header" href="#frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeChunkRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
 <ol>
 <li>Add an <code>Awaited::Chunk</code> to the <code>discovering_validators</code> map under <code>discovery_pub</code>.</li>
 <li>Issue a <code>NetworkBridgeMessage::ConnectToValidators</code>.</li>
 <li>Add the stream of connected validator events to <code>state.connecting_validators</code>.</li>
 </ol>
-<h4><a class="header" href="#frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response" id="frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeDataRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
+<h4 id="frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response"><a class="header" href="#frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeDataRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
 <ol>
 <li>Add an <code>Awaited::FullData</code> to the <code>discovering_validators</code> map under <code>discovery_pub</code>.</li>
 <li>Issue a <code>NetworkBridgeMessage::ConnectToValidators</code>.</li>
 <li>Add the stream of connected validator events to <code>state.connecting_validators</code>.</li>
 </ol>
-<h4><a class="header" href="#frominteractionreportpeerpeer-rep" id="frominteractionreportpeerpeer-rep"><code>FromInteraction::ReportPeer(peer, rep)</code></a></h4>
+<h4 id="frominteractionreportpeerpeer-rep"><a class="header" href="#frominteractionreportpeerpeer-rep"><code>FromInteraction::ReportPeer(peer, rep)</code></a></h4>
 <ol>
 <li>Issue a <code>NetworkBridgeMessage::ReportPeer(peer, rep)</code>.</li>
 </ol>
-<h3><a class="header" href="#responding-to-network-events" id="responding-to-network-events">Responding to network events.</a></h3>
-<h4><a class="header" href="#on-connecting_validators-event" id="on-connecting_validators-event">On <code>connecting_validators</code> event:</a></h4>
+<h3 id="responding-to-network-events"><a class="header" href="#responding-to-network-events">Responding to network events.</a></h3>
+<h4 id="on-connecting_validators-event"><a class="header" href="#on-connecting_validators-event">On <code>connecting_validators</code> event:</a></h4>
 <ol>
 <li>If the validator exists under <code>discovering_validators</code>, remove the entry.</li>
 <li>For each <code>Awaited</code> in the entry, </li>
@@ -320,28 +320,28 @@ struct Interaction {
 <li>If <code>Awaited::FullData</code> issue a <code>AvailabilityRecoveryV1Message::RequestFullData(next_request_id, candidate_hash, validator_index)</code> and make an entry in the <code>live_requests</code> map.</li>
 <li>Increment <code>next_request_id</code>.</li>
 </ol>
-<h4><a class="header" href="#on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index" id="on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index">On receiving <code>AvailabilityRecoveryV1::RequestChunk(r_id, candidate_hash, validator_index)</code></a></h4>
+<h4 id="on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index"><a class="header" href="#on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index">On receiving <code>AvailabilityRecoveryV1::RequestChunk(r_id, candidate_hash, validator_index)</code></a></h4>
 <ol>
 <li>Issue a <code>AvailabilityStore::QueryChunk(candidate_hash, validator_index, response)</code> message.</li>
 <li>Whatever the result, issue a <code>AvailabilityRecoveryV1Message::Chunk(r_id, response)</code> message.</li>
 </ol>
-<h4><a class="header" href="#on-receiving-availabilityrecoveryv1chunkr_id-chunk" id="on-receiving-availabilityrecoveryv1chunkr_id-chunk">On receiving <code>AvailabilityRecoveryV1::Chunk(r_id, chunk)</code></a></h4>
+<h4 id="on-receiving-availabilityrecoveryv1chunkr_id-chunk"><a class="header" href="#on-receiving-availabilityrecoveryv1chunkr_id-chunk">On receiving <code>AvailabilityRecoveryV1::Chunk(r_id, chunk)</code></a></h4>
 <ol>
 <li>If there exists an entry under <code>r_id</code>, remove it. If there doesn't exist one, report the peer and return. If the entry is not <code>Awaited::Chunk</code> or the peer in the entry doesn't match the sending peer, reinstate the entry, report the peer, and return.</li>
 <li>Send the chunk response on the <code>awaited_chunk</code> for the interaction to handle.</li>
 </ol>
-<h4><a class="header" href="#on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash" id="on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash">On receiving <code>AvailabilityRecoveryV1::RequestFullData(r_id, candidate_hash)</code></a></h4>
+<h4 id="on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash"><a class="header" href="#on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash">On receiving <code>AvailabilityRecoveryV1::RequestFullData(r_id, candidate_hash)</code></a></h4>
 <ol>
 <li>Issue a <code>AvailabilityStore::QueryAvailableData(candidate_hash, response)</code> message.</li>
 <li>Whatever the result, issue a <code>AvailabilityRecoveryV1Message::FullData(r_id, response)</code> message.</li>
 </ol>
-<h4><a class="header" href="#on-receiving-availabilityrecoveryv1fulldatar_id-data" id="on-receiving-availabilityrecoveryv1fulldatar_id-data">On receiving <code>AvailabilityRecoveryV1::FullData(r_id, data)</code></a></h4>
+<h4 id="on-receiving-availabilityrecoveryv1fulldatar_id-data"><a class="header" href="#on-receiving-availabilityrecoveryv1fulldatar_id-data">On receiving <code>AvailabilityRecoveryV1::FullData(r_id, data)</code></a></h4>
 <ol>
 <li>If there exists an entry under <code>r_id</code>, remove it. If there doesn't exist one, report the peer and return. If the entry is not <code>Awaited::FullData</code> or the peer in the entry doesn't match the sending peer, reinstate the entry, report the peer, and return.</li>
 <li>Send the data response on the <code>response</code> channel for the interaction to handle.</li>
 </ol>
-<h3><a class="header" href="#interaction-logic" id="interaction-logic">Interaction logic</a></h3>
-<h4><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index" id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
+<h3 id="interaction-logic"><a class="header" href="#interaction-logic">Interaction logic</a></h3>
+<h4 id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
 <ol>
 <li>Compute the threshold from the session info. It should be <code>f + 1</code>, where <code>n = 3f + k</code>, where <code>k in {1, 2, 3}</code>, and <code>n</code> is the number of validators.</li>
 <li>Set the various fields of <code>InteractionParams</code> based on the validator lists in <code>session_info</code> and information about the candidate.</li>
@@ -351,7 +351,7 @@ struct Interaction {
 <li>Initialize <code>received_chunks</code> to an empty set, as well as <code>requesting_chunks</code>.</li>
 </ol>
 <p>Launch the interaction as a background task running <code>interaction_loop(interaction)</code>.</p>
-<h4><a class="header" href="#interaction_loopinteraction" id="interaction_loopinteraction"><code>interaction_loop(interaction)</code></a></h4>
+<h4 id="interaction_loopinteraction"><a class="header" href="#interaction_loopinteraction"><code>interaction_loop(interaction)</code></a></h4>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

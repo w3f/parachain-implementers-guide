@@ -163,9 +163,9 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1><a class="header" href="#bitfield-signing" id="bitfield-signing">Bitfield Signing</a></h1>
+                        <h1 id="bitfield-signing"><a class="header" href="#bitfield-signing">Bitfield Signing</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
-<h2><a class="header" href="#protocol" id="protocol">Protocol</a></h2>
+<h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input:</p>
 <p>There is no dedicated input mechanism for bitfield signing. Instead, Bitfield Signing produces a bitfield representing the current state of availability on <code>StartWork</code>.</p>
 <p>Output:</p>
@@ -173,9 +173,9 @@
 <li>BitfieldDistribution::DistributeBitfield: distribute a locally signed bitfield</li>
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
-<h2><a class="header" href="#functionality" id="functionality">Functionality</a></h2>
+<h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
-<h2><a class="header" href="#bitfield-signing-job" id="bitfield-signing-job">Bitfield Signing Job</a></h2>
+<h2 id="bitfield-signing-job"><a class="header" href="#bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>
 <ul>
