@@ -28,8 +28,7 @@ jobs:
 
     - name: Setup mdbook-linkcheck
       run: |
-        curl -LSfs https://japaric.github.io/trust/install.sh | \
-        sh -s -- --git Michael-F-Bryan/mdbook-linkcheck
+        cargo install mdbook-linkcheck
 
     - name: Use Rust toolchain
       uses: actions-rs/toolchain@v1
