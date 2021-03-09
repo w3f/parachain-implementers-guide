@@ -2844,7 +2844,6 @@ Dispatch a <code>CandidateValidationMessage::Validate(validation function, candi
 </ul>
 <h2 id="functionality-4"><a class="header" href="#functionality-4">Functionality</a></h2>
 <p>Implemented as a gossip protocol. Handle updates to our view and peers' views. Neighbor packets are used to inform peers which chain heads we are interested in data for.</p>
-<p>Statement Distribution is the only backing subsystem which has any notion of peer nodes, who are any full nodes on the network. Validators will also act as peer nodes.</p>
 <p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement.</p>
 <p>Track equivocating validators and stop accepting information from them. Establish a data-dependency order:</p>
 <ul>
