@@ -655,6 +655,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <p>The other parachains modules are initialized in this order:</p>
 <ol>
 <li>Configuration</li>
+<li>Shared</li>
 <li>Paras</li>
 <li>Scheduler</li>
 <li>Inclusion</li>
@@ -664,7 +665,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <li>UMP</li>
 <li>HRMP</li>
 </ol>
-<p>The <a href="runtime/configuration.html">Configuration Module</a> is first, since all other modules need to operate under the same configuration as each other. It would lead to inconsistency if, for example, the scheduler ran first and then the configuration was updated before the Inclusion module.</p>
+<p>The <a href="runtime/configuration.html">Configuration Module</a> is first, since all other modules need to operate under the same configuration as each other. Then the [Shared][shared.md] module is invoked, which determines the set of active validators. It would lead to inconsistency if, for example, the scheduler ran first and then the configuration was updated before the Inclusion module.</p>
 <p>Set <code>HasInitialized</code> to true.</p>
 <h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <p>Store the session change information in <code>BufferedSessionChange</code> along with the block number at which it was submitted, plus one. Although the expected operational parameters of the block authorship system should prevent more than one change from being buffered at any time, it may occur. Regardless, we always need to track the block number at which the session change can be applied so as to remain flexible over session change notifications being issued before or after initialization of the current block.</p>
@@ -1109,7 +1110,7 @@ enum FreedReason {
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>/// All the validator groups. One for each core.
+</span>/// All the validator groups. One for each core. Indices are into the `ActiveValidators` storage.
 ValidatorGroups: Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;;
 /// A queue of upcoming claims and which core they should be mapped onto.
 ParathreadQueue: ParathreadQueue;
@@ -1136,6 +1137,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li>Set <code>SessionStartBlock</code> to current block number + 1, as session changes are applied at the end of the block.</li>
 <li>Clear all <code>Some</code> members of <code>AvailabilityCores</code>. Return all parathread claims to queue with retries un-incremented.</li>
 <li>Set <code>configuration = Configuration::configuration()</code> (see <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a>)</li>
+<li>Fetch <code>Shared::ActiveValidators</code> as AV.</li>
 <li>Determine the number of cores &amp; validator groups as <code>n_cores</code>. This is the maximum of
 <ol>
 <li><code>Paras::parachains().len() + configuration.parathread_cores</code></li>
@@ -1145,9 +1147,9 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <li>Resize <code>AvailabilityCores</code> to have length <code>n_cores</code> with all <code>None</code> entries.</li>
 <li>Compute new validator groups by shuffling using a secure randomness beacon
 <ul>
-<li>We obtain &quot;shuffled validators&quot; <code>SV</code> by shuffling the validators using the <code>SessionChangeNotification</code>'s random seed.</li>
-<li>Note that the total number of validators <code>V</code> in <code>SV</code> may not be evenly divided by <code>n_cores</code>.</li>
-<li>The groups are selected by partitioning <code>SV</code>. The first V % N groups will have (V / n_cores) + 1 members, while the remaining groups will have (V / N) members each.</li>
+<li>Note that the total number of validators <code>V</code> in AV may not be evenly divided by <code>n_cores</code>.</li>
+<li>The groups are selected by partitioning AV.  The first V % N groups will have (V / n_cores) + 1 members, while the remaining groups will have (V / N) members each.</li>
+<li>Instead of using the indices within AV, which point to the broader set, indices <em>into</em> AV should be used. This implies that groups should have simply ascending validator indices.</li>
 </ul>
 </li>
 <li>Prune the parathread queue to remove all retries beyond <code>configuration.parathread_retries</code>.
@@ -1238,16 +1240,12 @@ bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
 PendingAvailability: map ParaId =&gt; CandidatePendingAvailability;
 /// The commitments of candidates pending availability, by ParaId.
 PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
-
-/// The current validators, by their parachain session keys.
-Validators: Vec&lt;ValidatorId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="session-change-5"><a class="header" href="#session-change-5">Session Change</a></h2>
 <ol>
 <li>Clear out all candidates pending availability.</li>
 <li>Clear out all validator bitfields.</li>
-<li>Update <code>Validators</code> with the validators from the session change notification.</li>
 </ol>
 <h2 id="routines-4"><a class="header" href="#routines-4">Routines</a></h2>
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>
@@ -1921,7 +1919,7 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <h2 id="session-change-9"><a class="header" href="#session-change-9">Session Change</a></h2>
 <ol>
 <li>Update <code>EarliestStoredSession</code> based on <code>config.dispute_period</code> and remove all entries from <code>Sessions</code> from the previous value up to the new value.</li>
-<li>Create a new entry in <code>Sessions</code> with information about the current session.</li>
+<li>Create a new entry in <code>Sessions</code> with information about the current session. Use <code>shared::ActiveValidators</code> to determine the indices into the broader validator sets (validation, assignment, discovery) which are actually used for parachain validation. Only these validators should appear in the <code>SessionInfo</code>.</li>
 </ol>
 <h2 id="routines-8"><a class="header" href="#routines-8">Routines</a></h2>
 <ul>
@@ -5395,6 +5393,8 @@ pub enum CandidateValidationMessage {
 	pub scheduling_lookahead: u32,
 	/// The maximum number of validators to have per core. `None` means no maximum.
 	pub max_validators_per_core: Option&lt;u32&gt;,
+	/// The maximum number of validators to use for parachains, in total. `None` means no maximum.
+	pub max_validators: Option&lt;u32&gt;,
 	/// The amount of sessions to keep for disputes.
 	pub dispute_period: SessionIndex,
 	/// The amount of consensus slots that must pass between submitting an assignment and

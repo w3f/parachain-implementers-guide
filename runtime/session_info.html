@@ -211,7 +211,7 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>Update <code>EarliestStoredSession</code> based on <code>config.dispute_period</code> and remove all entries from <code>Sessions</code> from the previous value up to the new value.</li>
-<li>Create a new entry in <code>Sessions</code> with information about the current session.</li>
+<li>Create a new entry in <code>Sessions</code> with information about the current session. Use <code>shared::ActiveValidators</code> to determine the indices into the broader validator sets (validation, assignment, discovery) which are actually used for parachain validation. Only these validators should appear in the <code>SessionInfo</code>.</li>
 </ol>
 <h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <ul>

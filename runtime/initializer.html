@@ -182,6 +182,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <p>The other parachains modules are initialized in this order:</p>
 <ol>
 <li>Configuration</li>
+<li>Shared</li>
 <li>Paras</li>
 <li>Scheduler</li>
 <li>Inclusion</li>
@@ -191,7 +192,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <li>UMP</li>
 <li>HRMP</li>
 </ol>
-<p>The <a href="configuration.html">Configuration Module</a> is first, since all other modules need to operate under the same configuration as each other. It would lead to inconsistency if, for example, the scheduler ran first and then the configuration was updated before the Inclusion module.</p>
+<p>The <a href="configuration.html">Configuration Module</a> is first, since all other modules need to operate under the same configuration as each other. Then the [Shared][shared.md] module is invoked, which determines the set of active validators. It would lead to inconsistency if, for example, the scheduler ran first and then the configuration was updated before the Inclusion module.</p>
 <p>Set <code>HasInitialized</code> to true.</p>
 <h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <p>Store the session change information in <code>BufferedSessionChange</code> along with the block number at which it was submitted, plus one. Although the expected operational parameters of the block authorship system should prevent more than one change from being buffered at any time, it may occur. Regardless, we always need to track the block number at which the session change can be applied so as to remain flexible over session change notifications being issued before or after initialization of the current block.</p>

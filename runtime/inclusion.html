@@ -197,16 +197,12 @@ bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
 PendingAvailability: map ParaId =&gt; CandidatePendingAvailability;
 /// The commitments of candidates pending availability, by ParaId.
 PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
-
-/// The current validators, by their parachain session keys.
-Validators: Vec&lt;ValidatorId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
 <ol>
 <li>Clear out all candidates pending availability.</li>
 <li>Clear out all validator bitfields.</li>
-<li>Update <code>Validators</code> with the validators from the session change notification.</li>
 </ol>
 <h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <p>All failed checks should lead to an unrecoverable error making the block invalid.</p>
