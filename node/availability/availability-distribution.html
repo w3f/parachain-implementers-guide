@@ -180,7 +180,7 @@ a request/response protocol, defined by <code>Protocol::AvailabilityFetching</co
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>)</li>
+<li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>, IfDisconnected::TryConnect)</li>
 <li>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</li>
 <li>AvailabilityStore::StoreChunk(candidate_hash, chunk)</li>
 <li>RuntimeApiRequest::SessionIndexForChild</li>
