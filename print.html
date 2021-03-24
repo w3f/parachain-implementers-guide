@@ -4354,6 +4354,10 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <ul>
 <li>Adjust peer reputation according to cost or benefit provided</li>
 </ul>
+<h3 id="disconnectpeer"><a class="header" href="#disconnectpeer">DisconnectPeer</a></h3>
+<ul>
+<li>Disconnect the peer from the peer-set requested, if connected.</li>
+</ul>
 <h3 id="sendvalidationmessage--sendvalidationmessages"><a class="header" href="#sendvalidationmessage--sendvalidationmessages">SendValidationMessage / SendValidationMessages</a></h3>
 <ul>
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the validation peer-set.</li>
@@ -5082,7 +5086,9 @@ enum PeerSet {
 
 enum NetworkBridgeMessage {
     /// Report a cost or benefit of a peer. Negative values are costs, positive are benefits.
-    ReportPeer(PeerSet, PeerId, cost_benefit: i32),
+    ReportPeer(PeerId, cost_benefit: i32),
+    /// Disconnect a peer from the given peer-set without affecting their reputation.
+    DisconnectPeer(PeerId, PeerSet),
     /// Send a message to one or more peers on the validation peerset.
     SendValidationMessage([PeerId], ValidationProtocolV1),
     /// Send a message to one or more peers on the collation peerset.
