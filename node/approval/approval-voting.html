@@ -540,8 +540,9 @@ struct State {
 <ul>
 <li>Check whether a candidate is approved under a particular block.</li>
 <li>Requires <code>(block_entry, candidate_entry, approval_entry, n_tranches)</code></li>
+<li>If we have <code>3 * n_approvals &gt; n_validators</code>, return true. This is because any set with f+1 validators must have at least one honest validator, who has approved the candidate.</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::Pending</code>, return false</li>
-<li>If <code>n_tranches</code> is <code>RequiredTranches::All</code>,  then we return <code>3 * n_approvals &gt; 2 * n_validators</code>.</li>
+<li>If <code>n_tranches</code> is <code>RequiredTranches::All</code>, return false.</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::Exact { tranche, tolerated_missing, .. }</code>, then we return whether all assigned validators up to <code>tranche</code> less <code>tolerated_missing</code> have approved. e.g. if we had 5 tranches and 1 tolerated missing, we would accept only if all but 1 of assigned validators in tranches 0..=5 have approved. In that example, we also accept all validators in tranches 0..=5 having approved, but that would indicate that the <code>RequiredTranches</code> value was incorrectly constructed, so it is not realistic. <code>tolerated_missing</code> actually represents covered no-shows. If there are more missing approvals than there are tolerated missing, that indicates that there are some assignments which are not yet no-shows, but may become no-shows, and we should wait for the validators to either approve or become no-shows.</li>
 </ul>
 <h3 id="time"><a class="header" href="#time">Time</a></h3>
