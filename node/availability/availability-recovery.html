@@ -184,29 +184,11 @@
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>type DataResponse&lt;T&gt; = Result&lt;(PeerId, ValidatorIndex, T), Unavailable&gt;;
-
-enum Awaited {
-    Chunk(AwaitedData&lt;ErasureChunk&gt;),
-    FullData(AwaitedData&lt;AvailableData&gt;),
-}
-
-struct AwaitedData&lt;T&gt; {
-    issued_at: Instant,
-    validator_index: ValidatorIndex,
-    candidate_hash: CandidateHash,
-    response: ResponseChannel&lt;DataResponse&lt;T&gt;&gt;,
-}
-
-struct State {
+</span>struct State {
     /// Each interaction is implemented as its own async task, and these handles are for communicating with them.
     interactions: Map&lt;CandidateHash, InteractionHandle&gt;,
     /// A recent block hash for which state should be available.
     live_block_hash: Hash,
-    discovering_validators: Map&lt;AuthorityDiscoveryId, Vec&lt;Awaited&gt;&gt;,
-    live_requests: Map&lt;RequestId, (PeerId, Awaited)&gt;,
-    next_request_id: RequestId,
-    connecting_validators: Stream&lt;(AuthorityDiscoveryId, PeerId)&gt;,
 
     /// interaction communication. This is cloned and given to interactions that are spun up.
     from_interaction_tx: Sender&lt;FromInteraction&gt;,
@@ -225,25 +207,8 @@ struct Unavailable;
 enum FromInteraction {
     // An interaction concluded.
     Concluded(CandidateHash, Result&lt;AvailableData, RecoveryError&gt;),
-    // Make a request of a particular chunk from a particular validator.
-    MakeChunkRequest(
-        AuthorityDiscoveryId, 
-        CandidateHash, 
-        ValidatorIndex, 
-        ResponseChannel&lt;DataResponse&lt;ErasureChunk&gt;&gt;,
-    ),
-    // Make a request of the full data from a particular validator.
-    MakeDataRequest(
-        AuthorityDiscoveryId,
-        CandidateHash,
-        ValidatorIndex,
-        ResponseChannel&lt;DataResponse&lt;AvailableData&gt;&gt;,
-    )
-    // Report a peer.
-    ReportPeer(
-        PeerId,
-        Rep,
-    ),
+    // Send a request on the network.
+    NetworkRequest(Requests),
 }
 
 struct InteractionParams {
@@ -260,7 +225,6 @@ enum InteractionPhase {
         // a random shuffling of the validators from the backing group which indicates the order
         // in which we connect to them and request the chunk.
         shuffled_backers: Vec&lt;ValidatorIndex&gt;,
-        requesting_pov: Option&lt;Receiver&lt;DataResponse&lt;AvailableData&gt;&gt;&gt;
     }
     RequestChunks {
         // a random shuffling of the validators which indicates the order in which we connect to the validators and
@@ -295,50 +259,9 @@ struct Interaction {
 <li>Load the entry from the <code>interactions</code> map. It should always exist, if not for logic errors. Send the result to each member of <code>awaiting</code>.</li>
 <li>Add the entry to the availability_lru.</li>
 </ol>
-<h4 id="frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response"><a class="header" href="#frominteractionmakechunkrequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeChunkRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
+<h4 id="frominteractionnetworkrequestrequests"><a class="header" href="#frominteractionnetworkrequestrequests"><code>FromInteraction::NetworkRequest(requests)</code></a></h4>
 <ol>
-<li>Add an <code>Awaited::Chunk</code> to the <code>discovering_validators</code> map under <code>discovery_pub</code>.</li>
-<li>Issue a <code>NetworkBridgeMessage::ConnectToValidators</code>.</li>
-<li>Add the stream of connected validator events to <code>state.connecting_validators</code>.</li>
-</ol>
-<h4 id="frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response"><a class="header" href="#frominteractionmakedatarequestdiscovery_pub-candidate_hash-validator_index-response"><code>FromInteraction::MakeDataRequest(discovery_pub, candidate_hash, validator_index, response)</code></a></h4>
-<ol>
-<li>Add an <code>Awaited::FullData</code> to the <code>discovering_validators</code> map under <code>discovery_pub</code>.</li>
-<li>Issue a <code>NetworkBridgeMessage::ConnectToValidators</code>.</li>
-<li>Add the stream of connected validator events to <code>state.connecting_validators</code>.</li>
-</ol>
-<h4 id="frominteractionreportpeerpeer-rep"><a class="header" href="#frominteractionreportpeerpeer-rep"><code>FromInteraction::ReportPeer(peer, rep)</code></a></h4>
-<ol>
-<li>Issue a <code>NetworkBridgeMessage::ReportPeer(peer, rep)</code>.</li>
-</ol>
-<h3 id="responding-to-network-events"><a class="header" href="#responding-to-network-events">Responding to network events.</a></h3>
-<h4 id="on-connecting_validators-event"><a class="header" href="#on-connecting_validators-event">On <code>connecting_validators</code> event:</a></h4>
-<ol>
-<li>If the validator exists under <code>discovering_validators</code>, remove the entry.</li>
-<li>For each <code>Awaited</code> in the entry, </li>
-<li>If <code>Awaited::Chunk</code> issue a <code>AvailabilityRecoveryV1Message::RequestChunk(next_request_id, candidate_hash, validator_index)</code> and make an entry in the <code>live_requests</code> map.</li>
-<li>If <code>Awaited::FullData</code> issue a <code>AvailabilityRecoveryV1Message::RequestFullData(next_request_id, candidate_hash, validator_index)</code> and make an entry in the <code>live_requests</code> map.</li>
-<li>Increment <code>next_request_id</code>.</li>
-</ol>
-<h4 id="on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index"><a class="header" href="#on-receiving-availabilityrecoveryv1requestchunkr_id-candidate_hash-validator_index">On receiving <code>AvailabilityRecoveryV1::RequestChunk(r_id, candidate_hash, validator_index)</code></a></h4>
-<ol>
-<li>Issue a <code>AvailabilityStore::QueryChunk(candidate_hash, validator_index, response)</code> message.</li>
-<li>Whatever the result, issue a <code>AvailabilityRecoveryV1Message::Chunk(r_id, response)</code> message.</li>
-</ol>
-<h4 id="on-receiving-availabilityrecoveryv1chunkr_id-chunk"><a class="header" href="#on-receiving-availabilityrecoveryv1chunkr_id-chunk">On receiving <code>AvailabilityRecoveryV1::Chunk(r_id, chunk)</code></a></h4>
-<ol>
-<li>If there exists an entry under <code>r_id</code>, remove it. If there doesn't exist one, report the peer and return. If the entry is not <code>Awaited::Chunk</code> or the peer in the entry doesn't match the sending peer, reinstate the entry, report the peer, and return.</li>
-<li>Send the chunk response on the <code>awaited_chunk</code> for the interaction to handle.</li>
-</ol>
-<h4 id="on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash"><a class="header" href="#on-receiving-availabilityrecoveryv1requestfulldatar_id-candidate_hash">On receiving <code>AvailabilityRecoveryV1::RequestFullData(r_id, candidate_hash)</code></a></h4>
-<ol>
-<li>Issue a <code>AvailabilityStore::QueryAvailableData(candidate_hash, response)</code> message.</li>
-<li>Whatever the result, issue a <code>AvailabilityRecoveryV1Message::FullData(r_id, response)</code> message.</li>
-</ol>
-<h4 id="on-receiving-availabilityrecoveryv1fulldatar_id-data"><a class="header" href="#on-receiving-availabilityrecoveryv1fulldatar_id-data">On receiving <code>AvailabilityRecoveryV1::FullData(r_id, data)</code></a></h4>
-<ol>
-<li>If there exists an entry under <code>r_id</code>, remove it. If there doesn't exist one, report the peer and return. If the entry is not <code>Awaited::FullData</code> or the peer in the entry doesn't match the sending peer, reinstate the entry, report the peer, and return.</li>
-<li>Send the data response on the <code>response</code> channel for the interaction to handle.</li>
+<li>Forward with <code>NetworkBridgeMessage::SendRequests</code>.</li>
 </ol>
 <h3 id="interaction-logic"><a class="header" href="#interaction-logic">Interaction logic</a></h3>
 <h4 id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
@@ -361,10 +284,13 @@ const N_PARALLEL: usize = 50;
 </span></code></pre></pre>
 <p>Loop:</p>
 <ul>
-<li>If the phase is <code>InteractionPhase::RequestFromBackers</code>
+<li>
+<p>If the phase is <code>InteractionPhase::RequestFromBackers</code></p>
 <ul>
-<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>. 
+<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>. </li>
+<li>If the <code>requesting_pov</code> is <code>None</code>, take the next backer off the <code>shuffled_backers</code>.
 <ul>
+<li>If the backer is <code>Some</code>, issue a <code>FromInteraction::NetworkRequest</code> with a network request for the <code>AvailableData</code> and wait for the response.</li>
 <li>If it concludes with a <code>None</code> result, return to beginning. </li>
 <li>If it concludes with available data, attempt a re-encoding. 
 <ul>
@@ -372,26 +298,20 @@ const N_PARALLEL: usize = 50;
 <li>If it has an incorrect erasure-root, issue a <code>FromInteraction::ReportPeer</code> message and return to beginning.</li>
 </ul>
 </li>
-</ul>
-</li>
-<li>If the <code>requesting_pov</code> is <code>None</code>, take the next backer off the <code>shuffled_backers</code>.
-<ul>
-<li>If the backer is <code>Some</code>, initialize <code>(tx, rx)</code>, issue a <code>FromInteraction::MakeFullDataRequest(validator, candidate_hash, validator_index, tx)</code>, set <code>requesting_pov</code> to <code>Some</code> and return.</li>
 <li>If the backer is <code>None</code>, set the phase to <code>InteractionPhase::RequestChunks</code> with a random shuffling of validators and empty <code>received_chunks</code> and <code>requesting_chunks</code>.</li>
 </ul>
 </li>
 </ul>
 </li>
-<li>If the phase is <code>InteractionPhase::RequestChunks</code>:
+<li>
+<p>If the phase is <code>InteractionPhase::RequestChunks</code>:</p>
 <ul>
 <li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks, and any failures should lead to issuance of a <code>FromInteraction::ReportPeer</code> message.</li>
 <li>If <code>received_chunks</code> has more than <code>threshold</code> entries, attempt to recover the data. If that fails, or a re-encoding produces an incorrect erasure-root, break and issue a <code>Concluded(RecoveryError::Invalid)</code>. If correct, break and issue <code>Concluded(Ok(available_data))</code>.</li>
 <li>While there are fewer than <code>N_PARALLEL</code> entries in <code>requesting_chunks</code>,
 <ul>
 <li>Pop the next item from <code>shuffling</code>. If it's empty and <code>requesting_chunks</code> is empty, break and set the phase to <code>Concluded(None)</code>.</li>
-<li>Initialize <code>(tx, rx)</code>.</li>
-<li>Issue a <code>FromInteraction::MakeChunkRequest(validator, candidate_hash, validator_index, tx)</code>.</li>
-<li>Add <code>rx</code> to <code>requesting_chunks</code>.</li>
+<li>Issue a <code>FromInteraction::NetworkRequest</code> and wait for the response in <code>requesting_chunks</code>.</li>
 </ul>
 </li>
 </ul>

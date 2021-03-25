@@ -172,11 +172,11 @@ validators request their chunks from backing nodes and store those received chun
 their local availability store.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>This subsystem has no associated peer set right now, but instead relies on
-a request/response protocol, defined by <code>Protocol::AvailabilityFetching</code>.</p>
+a request/response protocol, defined by <code>Protocol::ChunkFetching</code>.</p>
 <p>Input:</p>
 <ul>
 <li>OverseerSignal::ActiveLeaves(<code>[ActiveLeavesUpdate]</code>)</li>
-<li>AvailabilityDistributionMessage{msg: AvailabilityFetchingRequest}</li>
+<li>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</li>
 </ul>
 <p>Output:</p>
 <ul>
@@ -191,7 +191,7 @@ a request/response protocol, defined by <code>Protocol::AvailabilityFetching</co
 <h3 id="requesting"><a class="header" href="#requesting">Requesting</a></h3>
 <p>This subsystems monitors currently occupied cores for all active leaves. For
 each occupied core it will spawn a task fetching the erasure chunk which has the
-<code>ValidatorIndex</code> of the node. For this an <code>AvailabilityFetchingRequest</code> is
+<code>ValidatorIndex</code> of the node. For this an <code>ChunkFetchingRequest</code> is
 issued, via substrate's generic request/response protocol.</p>
 <p>The spawned task will start trying to fetch the chunk from validators in
 responsible group of the occupied core, in a random order. For ensuring that we
@@ -212,7 +212,7 @@ as we would like as many validators as possible to have their chunk. See this
 <a href="https://github.com/paritytech/polkadot/issues/2513">issue</a> for more details.</p>
 <h3 id="serving"><a class="header" href="#serving">Serving</a></h3>
 <p>On the other side the subsystem will listen for incoming
-<code>AvailabilityFetchingRequest</code>s from the network bridge and will respond to
+<code>ChunkFetchingRequest</code>s from the network bridge and will respond to
 queries, by looking the requested chunk up in the availability store.</p>
 
                     </main>
