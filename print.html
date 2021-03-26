@@ -4710,7 +4710,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ActiveLeavesUpdate {
-    activated: [Hash], // in practice, these should probably be a SmallVec
+    activated: [(Hash, Number)], // in practice, these should probably be a SmallVec
     deactivated: [Hash],
 }
 <span class="boring">}
