@@ -391,7 +391,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <p>For each block in the view:</p>
 <ol start="2">
 <li>
-<p>Load the <code>BlockEntry</code> for the block. If the block is unknown, or the number is less than or equal to the view's finalized number, go to step 6.</p>
+<p>Load the <code>BlockEntry</code> for the block. If the block is unknown, or the number is less than or equal to the view's finalized number go to step 6.</p>
 </li>
 <li>
 <p>Inspect the <code>known_by</code> set of the <code>BlockEntry</code>. If the peer is already present, go to step 6.</p>
@@ -400,12 +400,13 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <p>Add the peer to <code>known_by</code> with a cloned version of <code>block_entry.knowledge</code>. and add the hash of the block to <code>fresh_blocks</code>.</p>
 </li>
 <li>
-<p>Return to step 2 with the ancestor of the block.</p>
+<p>Return to step 2 with the ancestor of the block, keeping track of the block depth (+1).</p>
 </li>
 <li>
-<p>For each block in <code>fresh_blocks</code>, send all assignments and approvals for all candidates in those blocks to the peer.</p>
+<p>For each block in <code>fresh_blocks</code>, send all assignments and approvals for all candidates in those blocks to the peer if the block depth threshold is not reached, otherwise, send only assignments and approvals origination with the local source.</p>
 </li>
 </ol>
+<p>The reason we only send our local assignments and approvals when a certain block depth is reached when unifying with a peer is to avoid DoS attacks. It also helps when a node starts with a large difference between finalized and the highest block.</p>
 
                     </main>
 
