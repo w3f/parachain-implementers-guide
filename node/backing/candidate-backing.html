@@ -176,7 +176,7 @@
 <li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 <li><a href="../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></li>
 <li><a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a></li>
-<li><a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a></li>
 <li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
@@ -196,9 +196,10 @@
 <h3 id="on-receiving-candidatebackingmessage"><a class="header" href="#on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
 <li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::GetBackedCandidates</code>, get all backable candidates from the statement table and send them back.</li>
-<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request. After successfully dispatching the <code>Seconded</code> statement we have to distribute the PoV.</li>
-<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the <code>PoVDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
+<li>If the message is a <a href="../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the backing node via <code>AvailabilityDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
 </ul>
+<p>If the seconding node did not provide us with the <code>PoV</code> we will retry fetching from other backing validators.</p>
 <blockquote>
 <p>big TODO: &quot;contextual execution&quot;</p>
 <ul>
@@ -267,14 +268,12 @@
 </span></code></pre></pre>
 <h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch Pov Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
-Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FetchPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
-<h3 id="distribute-pov-block"><a class="header" href="#distribute-pov-block">Distribute Pov Block</a></h3>
-<p>Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::DistributePoV(relay_parent, candidate_descriptor, pov)</code>.</p>
+Dispatch a [<code>AvailabilityDistributionMessage</code>][PDM]<code>::FetchPoV{ validator_index, pov_hash, candidate_hash, tx, } and listen on the passed receiver for a response. Availability distribution will send the request to the validator specified by </code>validator_index`, which might not be serving it for whatever reasons, therefore we need to retry with other backing validators in that case.</p>
 <h3 id="validate-pov-block"><a class="header" href="#validate-pov-block">Validate PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
 <h3 id="distribute-signed-statement"><a class="header" href="#distribute-signed-statement">Distribute Signed Statement</a></h3>
-<p>Dispatch a <a href="../../types/overseer-protocol.html#pov-distribution-message"><code>StatementDistributionMessage</code></a><code>::Share(relay_parent, SignedFullStatement)</code>.</p>
+<p>Dispatch a [<code>StatementDistributionMessage</code>][PDM]<code>::Share(relay_parent, SignedFullStatement)</code>.</p>
 
                     </main>
 

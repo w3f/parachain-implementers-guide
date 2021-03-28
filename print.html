@@ -2728,7 +2728,7 @@ struct CollationGenerationConfig {
 <li><a href="node/backing/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 <li><a href="node/backing/../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelectionMessage</code></a></li>
 <li><a href="node/backing/../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a></li>
-<li><a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></li>
+<li><a href="node/backing/../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a></li>
 <li><a href="node/backing/../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a></li>
 </ul>
 <h2 id="functionality-3"><a class="header" href="#functionality-3">Functionality</a></h2>
@@ -2748,9 +2748,10 @@ struct CollationGenerationConfig {
 <h3 id="on-receiving-candidatebackingmessage"><a class="header" href="#on-receiving-candidatebackingmessage">On Receiving <code>CandidateBackingMessage</code></a></h3>
 <ul>
 <li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::GetBackedCandidates</code>, get all backable candidates from the statement table and send them back.</li>
-<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request. After successfully dispatching the <code>Seconded</code> statement we have to distribute the PoV.</li>
-<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the <code>PoVDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
+<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Second</code>, sign and dispatch a <code>Seconded</code> statement only if we have not seconded any other candidate and have not signed a <code>Valid</code> statement for the requested candidate. Signing both a <code>Seconded</code> and <code>Valid</code> message is a double-voting misbehavior with a heavy penalty, and this could occur if another validator has seconded the same candidate and we've received their message before the internal seconding request.</li>
+<li>If the message is a <a href="node/backing/../../types/overseer-protocol.html#candidate-backing-message"><code>CandidateBackingMessage</code></a><code>::Statement</code>, count the statement to the quorum. If the statement in the message is <code>Seconded</code> and it contains a candidate that belongs to our assignment, request the corresponding <code>PoV</code> from the backing node via <code>AvailabilityDistribution</code> and launch validation. Issue our own <code>Valid</code> or <code>Invalid</code> statement as a result.</li>
 </ul>
+<p>If the seconding node did not provide us with the <code>PoV</code> we will retry fetching from other backing validators.</p>
 <blockquote>
 <p>big TODO: &quot;contextual execution&quot;</p>
 <ul>
@@ -2819,14 +2820,12 @@ struct CollationGenerationConfig {
 </span></code></pre></pre>
 <h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch Pov Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
-Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::FetchPoV(relay_parent, candidate_hash, sender)</code> and listen on the receiver for a response.</p>
-<h3 id="distribute-pov-block"><a class="header" href="#distribute-pov-block">Distribute Pov Block</a></h3>
-<p>Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::DistributePoV(relay_parent, candidate_descriptor, pov)</code>.</p>
+Dispatch a [<code>AvailabilityDistributionMessage</code>][PDM]<code>::FetchPoV{ validator_index, pov_hash, candidate_hash, tx, } and listen on the passed receiver for a response. Availability distribution will send the request to the validator specified by </code>validator_index`, which might not be serving it for whatever reasons, therefore we need to retry with other backing validators in that case.</p>
 <h3 id="validate-pov-block"><a class="header" href="#validate-pov-block">Validate PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
 <h3 id="distribute-signed-statement"><a class="header" href="#distribute-signed-statement">Distribute Signed Statement</a></h3>
-<p>Dispatch a <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>StatementDistributionMessage</code></a><code>::Share(relay_parent, SignedFullStatement)</code>.</p>
+<p>Dispatch a [<code>StatementDistributionMessage</code>][PDM]<code>::Share(relay_parent, SignedFullStatement)</code>.</p>
 <h1 id="statement-distribution"><a class="header" href="#statement-distribution">Statement Distribution</a></h1>
 <p>The Statement Distribution Subsystem is responsible for distributing statements about seconded candidates between validators.</p>
 <h2 id="protocol-4"><a class="header" href="#protocol-4">Protocol</a></h2>
@@ -2871,178 +2870,72 @@ Dispatch a <code>CandidateValidationMessage::Validate(validation function, candi
 <p>There is another caveat to the fix: we don't want to allow the peer to flood us because it has set things up in a way that it knows we will drop all of its traffic.
 We also track how many statements we have received per peer, per candidate, and per chain-head. This is any statement concerning a particular candidate: <code>Seconded</code>, <code>Valid</code>, or <code>Invalid</code>. If we ever receive a statement from a peer which would push any of these counters beyond twice the amount of validators at the chain-head, we begin to lower the peer's standing and eventually disconnect. This bound is a massive overestimate and could be reduced to twice the number of validators in the corresponding validator group. It is worth noting that the goal at the time of writing is to ensure any finite bound on the amount of stored data, as any equivocation results in a large slash.</p>
 <h1 id="pov-distribution"><a class="header" href="#pov-distribution">PoV Distribution</a></h1>
-<p>This subsystem is responsible for distributing PoV blocks. For now, unified with <a href="node/backing/statement-distribution.html">Statement Distribution subsystem</a>.</p>
-<h2 id="protocol-5"><a class="header" href="#protocol-5">Protocol</a></h2>
-<p><code>PeerSet</code>: <code>Validation</code></p>
-<p>Input: <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a></p>
-<p>Output:</p>
-<ul>
-<li>NetworkBridge::SendMessage(<code>[PeerId]</code>, message)</li>
-<li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
-</ul>
-<h2 id="functionality-5"><a class="header" href="#functionality-5">Functionality</a></h2>
-<p>This network protocol is responsible for distributing <a href="node/backing/../../types/availability.html#proof-of-validity"><code>PoV</code>s</a> by gossip. Since PoVs are heavy in practice, gossip is far from the most efficient way to distribute them. In the future, this should be replaced by a better network protocol that finds validators who have validated the block and connects to them directly. This protocol is described.</p>
-<p>This protocol is described in terms of &quot;us&quot; and our peers, with the understanding that this is the procedure that any honest node will run. It has the following goals:</p>
-<ul>
-<li>We never have to buffer an unbounded amount of data</li>
-<li>PoVs will flow transitively across a network of honest nodes, stemming from the validators that originally seconded candidates requiring those PoVs.</li>
-</ul>
-<p>As we are gossiping, we need to track which PoVs our peers are waiting for to avoid sending them data that they are not expecting. It is not reasonable to expect our peers to buffer unexpected PoVs, just as we will not buffer unexpected PoVs. So notifying our peers about what is being awaited is key. However it is important that the notifications system is also bounded.</p>
-<p>For this, in order to avoid reaching into the internals of the <a href="node/backing/statement-distribution.html">Statement Distribution</a> Subsystem, we can rely on an expected property of candidate backing: that each validator can second up to 2 candidates per chain head. This will typically be only one, because they are only supposed to issue one, but they can equivocate if they are willing to  be slashed. So we can set a cap on the number of PoVs each peer is allowed to notify us that they are waiting for at a given relay-parent. This cap will be twice the number of validators at that relay-parent. In practice, this is a very lax upper bound that can be reduced much further if desired.</p>
-<p>The view update mechanism of the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a> ensures that peers are only allowed to consider a certain set of relay-parents as live. So this bounding mechanism caps the amount of data we need to store per peer at any time at <code>sum({ 2 * n_validators_at_head(head) * sizeof(hash) for head in view_heads })</code>. Additionally, peers should only be allowed to notify us of PoV hashes they are waiting for in the context of relay-parents in our own local view, which means that <code>n_validators_at_head</code> is implied to be <code>0</code> for relay-parents not in our own local view.</p>
-<p>View updates from peers and our own view updates are received from the network bridge. These will lag somewhat behind the <code>ActiveLeavesUpdate</code> messages received from the overseer, which will influence the actual data we store. The <code>OurViewUpdate</code>s from the <a href="node/backing/../../types/overseer-protocol.html#network-bridge-update"><code>NetworkBridgeEvent</code></a> must be considered canonical in terms of our peers' perception of us.</p>
-<p>Lastly, the system needs to be bootstrapped with our own perception of which PoVs we are cognizant of but awaiting data for. This is done by receipt of the <a href="node/backing/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a>::FetchPoV variant. Proper operation of this subsystem depends on the descriptors passed faithfully representing candidates which have been seconded by other validators.</p>
-<h2 id="formal-description"><a class="header" href="#formal-description">Formal Description</a></h2>
-<p>This protocol can be implemented as a state machine with the following state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>struct State {
-	relay_parent_state: Map&lt;Hash, BlockBasedState&gt;,
-	peer_state: Map&lt;PeerId, PeerState&gt;,
-	our_view: View,
-}
-
-struct BlockBasedState {
-	known: Map&lt;Hash, PoV&gt;, // should be a shared PoV in practice. these things are heavy.
-	fetching: Map&lt;Hash, [ResponseChannel&lt;PoV&gt;]&gt;,
-	n_validators: usize,
-}
-
-struct PeerState {
-	awaited: Map&lt;Hash, Set&lt;Hash&gt;&gt;,
-}
-<span class="boring">}
-</span></code></pre></pre>
-<p>We also use the <a href="node/backing/../../types/network.html#pov-distribution"><code>PoVDistributionV1Message</code></a> as our <code>NetworkMessage</code>, which are sent and received by the <a href="node/backing/../utility/network-bridge.html">Network Bridge</a></p>
-<p>Here is the logic of the state machine:</p>
-<p><em>Overseer Signals</em></p>
-<ul>
-<li>On <code>ActiveLeavesUpdate(relay_parent)</code>:
-<ul>
-<li>For each relay-parent in the <code>activated</code> list:
-<ul>
-<li>Get the number of validators at that relay parent by querying the <a href="node/backing/../utility/runtime-api.html">Runtime API</a> for the validators and then counting them.</li>
-<li>Create a blank entry in <code>relay_parent_state</code> under <code>relay_parent</code> with correct <code>n_validators</code> set.</li>
-</ul>
-</li>
-<li>For each relay-parent in the <code>deactivated</code> list:
-<ul>
-<li>Remove the entry for <code>relay_parent</code> from <code>relay_parent_state</code>.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>On <code>Conclude</code>: conclude.</li>
-</ul>
-<p><em>PoV Distribution Messages</em></p>
-<ul>
-<li>On <code>FetchPoV(relay_parent, descriptor, response_channel)</code>
-<ul>
-<li>If there is no entry in <code>relay_parent_state</code> under <code>relay_parent</code>, ignore.</li>
-<li>If there is a PoV under <code>descriptor.pov_hash</code> in the <code>known</code> map, send that PoV on the channel and return.</li>
-<li>Otherwise, place the <code>response_channel</code> in the <code>fetching</code> map under <code>descriptor.pov_hash</code>.</li>
-<li>If the <code>pov_hash</code> had no previous entry in <code>fetching</code> and there are <code>2 * n_validators</code> or fewer entries in the <code>fetching</code> set, send <code>NetworkMessage::Awaiting(relay_parent, vec![pov_hash])</code> to all peers.</li>
-</ul>
-</li>
-<li>On <code>DistributePoV(relay_parent, descriptor, PoV)</code>
-<ul>
-<li>If there is no entry in <code>relay_parent_state</code> under <code>relay_parent</code>, ignore.</li>
-<li>Complete and remove any channels under <code>descriptor.pov_hash</code> in the <code>fetching</code> map.</li>
-<li>Send <code>NetworkMessage::SendPoV(relay_parent, descriptor.pov_hash, PoV)</code> to all peers who have the <code>descriptor.pov_hash</code> in the set under <code>relay_parent</code> in the <code>peer.awaited</code> map and remove the entry from <code>peer.awaited</code>.</li>
-<li>Note the PoV under <code>descriptor.pov_hash</code> in <code>known</code>.</li>
-</ul>
-</li>
-</ul>
-<p><em>Network Bridge Updates</em></p>
-<ul>
-<li>On <code>PeerConnected(peer_id, observed_role)</code>
-<ul>
-<li>Make a fresh entry in the <code>peer_state</code> map for the <code>peer_id</code>.</li>
-</ul>
-</li>
-<li>On <code>PeerDisconnected(peer_id)</code>
-<ul>
-<li>Remove the entry for <code>peer_id</code> from the <code>peer_state</code> map.</li>
-</ul>
-</li>
-<li>On <code>PeerMessage(peer_id, bytes)</code>
-<ul>
-<li>If the bytes do not decode to a <code>NetworkMessage</code> or the <code>peer_id</code> has no entry in the <code>peer_state</code> map, report and ignore.</li>
-<li>If this is <code>NetworkMessage::Awaiting(relay_parent, pov_hashes)</code>:
-<ul>
-<li>If there is no entry under <code>peer_state.awaited</code> for the <code>relay_parent</code>, report and ignore.</li>
-<li>If <code>relay_parent</code> is not contained within <code>our_view</code>, report and ignore.</li>
-<li>Otherwise, if the peer's <code>awaited</code> map combined with the <code>pov_hashes</code> would have more than <code> 2 * relay_parent_state[relay_parent].n_validators</code> entries, report and ignore. Note that we are leaning on the property of the network bridge that it sets our view based on <code>activated</code> heads in <code>ActiveLeavesUpdate</code> signals.</li>
-<li>For each new <code>pov_hash</code> in <code>pov_hashes</code>, if there is a <code>pov</code> under <code>pov_hash</code> in the <code>known</code> map, send the peer a <code>NetworkMessage::SendPoV(relay_parent, pov_hash, pov)</code>.</li>
-<li>Otherwise, add the <code>pov_hash</code> to the <code>awaited</code> map</li>
-</ul>
-</li>
-<li>If this is <code>NetworkMessage::SendPoV(relay_parent, pov_hash, pov)</code>:
-<ul>
-<li>If there is no entry under <code>relay_parent</code> in <code>relay_parent_state</code> or no entry under <code>pov_hash</code> in our <code>fetching</code> map for that <code>relay_parent</code>, report and ignore.</li>
-<li>If the blake2-256 hash of the pov doesn't equal <code>pov_hash</code>, report and ignore.</li>
-<li>Complete and remove any listeners in the <code>fetching</code> map under <code>pov_hash</code>. However, leave an empty set of listeners in the <code>fetching</code> map to denote that this was something we once awaited. This will allow us to recognize peers who have sent us something we were expecting, but just a little late.</li>
-<li>Add to <code>known</code> map.</li>
-<li>Remove the <code>pov_hash</code> from the <code>peer.awaited</code> map, if any.</li>
-<li>Send <code>NetworkMessage::SendPoV(relay_parent, descriptor.pov_hash, PoV)</code> to all peers who have the <code>descriptor.pov_hash</code> in the set under <code>relay_parent</code> in the <code>peer.awaited</code> map and remove the entry from <code>peer.awaited</code>.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>On <code>PeerViewChange(peer_id, view)</code>
-<ul>
-<li>If Peer is unknown, ignore.</li>
-<li>Ensure there is an entry under <code>relay_parent</code> for each <code>relay_parent</code> in <code>view</code> within the <code>peer.awaited</code> map, creating blank <code>awaited</code> lists as necessary.</li>
-<li>Remove all entries under <code>peer.awaited</code> that are not within <code>view</code>.</li>
-<li>For all hashes in <code>view</code> but were not within the old, send the peer all the keys in our <code>fetching</code> map under the block-based state for that hash - i.e. notify the peer of everything we are awaiting at that hash.</li>
-</ul>
-</li>
-<li>On <code>OurViewChange(view)</code>
-<ul>
-<li>Update <code>our_view</code> to <code>view</code></li>
-</ul>
-</li>
-</ul>
 <h1 id="availability-subsystems"><a class="header" href="#availability-subsystems">Availability Subsystems</a></h1>
 <p>The availability subsystems are responsible for ensuring that Proofs of Validity of backed candidates are widely available within the validator set, without requiring every node to retain a full copy. They accomplish this by broadly distributing erasure-coded chunks of the PoV, keeping track of which validator has which chunk by means of signed bitfields. They are also responsible for reassembling a complete PoV when required, e.g. when a fisherman reports a potentially invalid block.</p>
 <h1 id="availability-distribution"><a class="header" href="#availability-distribution">Availability Distribution</a></h1>
-<p>Distribute availability erasure-coded chunks to validators.</p>
-<p>After a candidate is backed, the availability of the PoV block must be confirmed
-by 2/3+ of all validators. Backing nodes will serve chunks for a PoV block from
-their <a href="node/availability/../utility/availability-store.html">Availability Store</a>, all other
-validators request their chunks from backing nodes and store those received chunks in
-their local availability store.</p>
-<h2 id="protocol-6"><a class="header" href="#protocol-6">Protocol</a></h2>
-<p>This subsystem has no associated peer set right now, but instead relies on
-a request/response protocol, defined by <code>Protocol::ChunkFetching</code>.</p>
+<p>This subsystem is responsible for distribution availability data to peers.
+Availability data are chunks, <code>PoV</code>s and <code>AvailableData</code> (which is <code>PoV</code> +
+<code>PersistedValidationData</code>). It does so via request response protocols.</p>
+<p>In particular this subsystem is responsible for:</p>
+<ul>
+<li>Respond to network requests requesting availability data by querying the
+<a href="node/availability/../utility/availability-store.html">Availability Store</a>.</li>
+<li>Request chunks from backing validators to put them in the local <code>Availability Store</code> whenever we find an occupied core on the chain,
+this is to ensure availability by at least 2/3+ of all validators, this
+happens after a candidate is backed.</li>
+<li>Fetch <code>PoV</code> from validators, when requested via <code>FetchPoV</code> message from
+backing (pov_requester module).</li>
+<li></li>
+</ul>
+<p>The backing subsystem is responsible of making available data available in the
+local <code>Availability Store</code> upon validation. This subsystem will serve any
+network requests by querying that store.</p>
+<h2 id="protocol-5"><a class="header" href="#protocol-5">Protocol</a></h2>
+<p>This subsystem does not handle any peer set messages, but the <code>pov_requester</code>
+does  connecto to validators of the same backing group on the validation peer
+set, to ensure fast propagation of statements between those validators and for
+ensuring already established connections for requesting <code>PoV</code>s. Other than that
+this subsystem drives request/response protocols.</p>
 <p>Input:</p>
 <ul>
 <li>OverseerSignal::ActiveLeaves(<code>[ActiveLeavesUpdate]</code>)</li>
 <li>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</li>
+<li>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</li>
+<li>AvailabilityDistributionMessage{msg: FetchPoV}</li>
 </ul>
 <p>Output:</p>
 <ul>
 <li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>, IfDisconnected::TryConnect)</li>
 <li>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</li>
 <li>AvailabilityStore::StoreChunk(candidate_hash, chunk)</li>
+<li>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</li>
 <li>RuntimeApiRequest::SessionIndexForChild</li>
 <li>RuntimeApiRequest::SessionInfo</li>
 <li>RuntimeApiRequest::AvailabilityCores</li>
 </ul>
-<h2 id="functionality-6"><a class="header" href="#functionality-6">Functionality</a></h2>
-<h3 id="requesting"><a class="header" href="#requesting">Requesting</a></h3>
-<p>This subsystems monitors currently occupied cores for all active leaves. For
-each occupied core it will spawn a task fetching the erasure chunk which has the
-<code>ValidatorIndex</code> of the node. For this an <code>ChunkFetchingRequest</code> is
-issued, via substrate's generic request/response protocol.</p>
+<h2 id="functionality-5"><a class="header" href="#functionality-5">Functionality</a></h2>
+<h3 id="pov-requester"><a class="header" href="#pov-requester">PoV Requester</a></h3>
+<p>The PoV requester in the <code>pov_requester</code> module takes care of staying connected
+to validators of the current backing group of this very validator on the <code>Validation</code>
+peer set and it will handle <code>FetchPoV</code> requests by issuing network requests to
+those validators. It will check the hash of the received <code>PoV</code>, but will not do any
+further validation. That needs to be done by the original <code>FetchPoV</code> sender
+(backing subsystem).</p>
+<h3 id="chunk-requester"><a class="header" href="#chunk-requester">Chunk Requester</a></h3>
+<p>After a candidate is backed, the availability of the PoV block must be confirmed
+by 2/3+ of all validators. The chunk requester is responsible of making that
+availability a reality.</p>
+<p>It does that by querying checking occupied cores for all active leaves. For each
+occupied core it will spawn a task fetching the erasure chunk which has the
+<code>ValidatorIndex</code> of the node. For this an <code>ChunkFetchingRequest</code> is issued, via
+substrate's generic request/response protocol.</p>
 <p>The spawned task will start trying to fetch the chunk from validators in
 responsible group of the occupied core, in a random order. For ensuring that we
-use already open TCP connections wherever possible, the subsystem maintains a
+use already open TCP connections wherever possible, the requester maintains a
 cache and preserves that random order for the entire session.</p>
 <p>Note however that, because not all validators in a group have to be actual
 backers, not all of them are required to have the needed chunk. This in turn
-could lead to low throughput, as we have to wait for a fetches to fail,
+could lead to low throughput, as we have to wait for fetches to fail,
 before reaching a validator finally having our chunk. We do rank back validators
 not delivering our chunk, but as backers could vary from block to block on a
 perfectly legitimate basis, this is still not ideal. See issues <a href="https://github.com/paritytech/polkadot/issues/2509">2509</a> and <a href="https://github.com/paritytech/polkadot/issues/2512">2512</a>
@@ -3054,13 +2947,16 @@ availability reached 2/3 fast enough (slot becomes free). This is not desirable
 as we would like as many validators as possible to have their chunk. See this
 <a href="https://github.com/paritytech/polkadot/issues/2513">issue</a> for more details.</p>
 <h3 id="serving"><a class="header" href="#serving">Serving</a></h3>
-<p>On the other side the subsystem will listen for incoming
-<code>ChunkFetchingRequest</code>s from the network bridge and will respond to
-queries, by looking the requested chunk up in the availability store.</p>
+<p>On the other side the subsystem will listen for incoming <code>ChunkFetchingRequest</code>s
+and <code>PoVFetchingRequest</code>s from the network bridge and will respond to queries,
+by looking the requested chunks and <code>PoV</code>s up in the availability store, this
+happens in the <code>responder</code> module.</p>
+<p>We rely on the backing subsystem to make available data available locally in the
+<code>Availability Store</code> after it has validated it.</p>
 <h1 id="availability-recovery"><a class="header" href="#availability-recovery">Availability Recovery</a></h1>
 <p>This subsystem is the inverse of the <a href="node/availability/availability-distribution.html">Availability Distribution</a> subsystem: validators will serve the availability chunks kept in the availability store to nodes who connect to them. And the subsystem will also implement the other side: the logic for nodes to connect to validators, request availability pieces, and reconstruct the <code>AvailableData</code>.</p>
 <p>This version of the availability recovery subsystem is based off of direct connections to validators. In order to recover any given <code>AvailableData</code>, we must recover at least <code>f + 1</code> pieces from validators of the session. Thus, we will connect to and query randomly chosen validators until we have received <code>f + 1</code> pieces.</p>
-<h2 id="protocol-7"><a class="header" href="#protocol-7">Protocol</a></h2>
+<h2 id="protocol-6"><a class="header" href="#protocol-6">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
@@ -3073,7 +2969,7 @@ queries, by looking the requested chunk up in the availability store.</p>
 <li>NetworkBridge::ReportPeer</li>
 <li>AvailabilityStore::QueryChunk</li>
 </ul>
-<h2 id="functionality-7"><a class="header" href="#functionality-7">Functionality</a></h2>
+<h2 id="functionality-6"><a class="header" href="#functionality-6">Functionality</a></h2>
 <p>We hold a state which tracks the current recovery interactions we have live, as well as which request IDs correspond to which interactions. An interaction is a structure encapsulating all interaction with the network necessary to recover the available data.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -3213,7 +3109,7 @@ const N_PARALLEL: usize = 50;
 </ul>
 <h1 id="bitfield-distribution"><a class="header" href="#bitfield-distribution">Bitfield Distribution</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
-<h2 id="protocol-8"><a class="header" href="#protocol-8">Protocol</a></h2>
+<h2 id="protocol-7"><a class="header" href="#protocol-7">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:
 <a href="node/availability/../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a> which are gossiped to all peers, no matter if validator or not.</p>
@@ -3224,7 +3120,7 @@ const N_PARALLEL: usize = 50;
 <li><code>ProvisionerMessage::ProvisionableData(ProvisionableData::Bitfield(relay_parent, SignedAvailabilityBitfield))</code> pass
 on the bitfield to the other submodules via the overseer.</li>
 </ul>
-<h2 id="functionality-8"><a class="header" href="#functionality-8">Functionality</a></h2>
+<h2 id="functionality-7"><a class="header" href="#functionality-7">Functionality</a></h2>
 <p>This is implemented as a gossip system.</p>
 <p>It is necessary to track peer connection, view change, and disconnection events, in order to maintain an index of which peers are interested in which relay parent bitfields.</p>
 <p>Before gossiping incoming bitfields, they must be checked to be signed by one of the validators
@@ -3235,7 +3131,7 @@ Accept and distribute only one bitfield per validator.</p>
 <p>Peers connecting after a set of valid bitfield gossip messages was received, those messages must be cached and sent upon connection of new peers or re-connecting peers.</p>
 <h1 id="bitfield-signing"><a class="header" href="#bitfield-signing">Bitfield Signing</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
-<h2 id="protocol-9"><a class="header" href="#protocol-9">Protocol</a></h2>
+<h2 id="protocol-8"><a class="header" href="#protocol-8">Protocol</a></h2>
 <p>Input:</p>
 <p>There is no dedicated input mechanism for bitfield signing. Instead, Bitfield Signing produces a bitfield representing the current state of availability on <code>StartWork</code>.</p>
 <p>Output:</p>
@@ -3243,7 +3139,7 @@ Accept and distribute only one bitfield per validator.</p>
 <li>BitfieldDistribution::DistributeBitfield: distribute a locally signed bitfield</li>
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
-<h2 id="functionality-9"><a class="header" href="#functionality-9">Functionality</a></h2>
+<h2 id="functionality-8"><a class="header" href="#functionality-8">Functionality</a></h2>
 <p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
 <h2 id="bitfield-signing-job"><a class="header" href="#bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
@@ -3265,7 +3161,7 @@ If not running as a validator, do nothing.</p>
 <p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of DelayTranches, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which DelayTranche those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
 <p>Another main component of this subsystem is the logic for determining when a (Block, Candidate) pair has been approved and when to broadcast and trigger our own assignment. Once a (Block, Candidate) pair has been approved, we mark a corresponding bit in the BlockEntry that indicates the candidate has been approved under the block. When we trigger our own assignment, we broadcast it via Approval Distribution, begin fetching the data from Availability Recovery, and then pass it through to the Candidate Validation. Once these steps are successful, we issue our approval vote. If any of these steps fail, we don't issue any vote and will &quot;no-show&quot; from the perspective of other validators. In the future we will initiate disputes as well.</p>
 <p>Where this all fits into Polkadot is via block finality. Our goal is to not finalize any block containing a candidate that is not approved. We provide a hook for a custom GRANDPA voting rule - GRANDPA makes requests of the form (target, minimum) consisting of a target block (i.e. longest chain) that it would like to finalize, and a minimum block which, due to the rules of GRANDPA, must be voted on. The minimum is typically the last finalized block, but may be beyond it, in the case of having a last-round-estimate beyond the last finalized. Thus, our goal is to inform GRANDPA of some block between target and minimum which we believe can be finalized safely. We do this by iterating backwards from the target to the minimum and finding the longest continuous chain from minimum where all candidates included by those blocks have been approved.</p>
-<h2 id="protocol-10"><a class="header" href="#protocol-10">Protocol</a></h2>
+<h2 id="protocol-9"><a class="header" href="#protocol-9">Protocol</a></h2>
 <p>Input:</p>
 <ul>
 <li><code>ApprovalVotingMessage::CheckAndImportAssignment</code></li>
@@ -3281,7 +3177,7 @@ If not running as a validator, do nothing.</p>
 <li><code>AvailabilityRecoveryMessage::Recover</code></li>
 <li><code>CandidateExecutionMessage::ValidateFromExhaustive</code></li>
 </ul>
-<h2 id="functionality-10"><a class="header" href="#functionality-10">Functionality</a></h2>
+<h2 id="functionality-9"><a class="header" href="#functionality-9">Functionality</a></h2>
 <p>The approval voting subsystem is responsible for casting votes and determining approval of candidates and as a result, blocks.</p>
 <p>This subsystem wraps a database which is used to store metadata about unfinalized blocks and the candidates within them. Candidates may appear in multiple blocks, and assignment criteria are chosen differently based on the hash of the block they appear in.</p>
 <h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
@@ -3665,7 +3561,7 @@ struct State {
 <p>For our own local view, these two queries  must not yield false negatives. When applied to our peers' views, it is acceptable for them to yield false negatives. The reason for that is that our peers' views may be beyond ours, and we are not capable of fully evaluating them. Once we have caught up, we can check again for false negatives to continue distributing.</p>
 <p>For assignments, what we need to be checking is whether we are aware of the (block, candidate) pair that the assignment references. For approvals, we need to be aware of an assignment by the same validator which references the candidate being approved.</p>
 <p>However, awareness on its own of a (block, candidate) pair would imply that even ancient candidates all the way back to the genesis are relevant. We are actually not interested in anything before finality.</p>
-<h2 id="protocol-11"><a class="header" href="#protocol-11">Protocol</a></h2>
+<h2 id="protocol-10"><a class="header" href="#protocol-10">Protocol</a></h2>
 <p>Input:</p>
 <ul>
 <li><code>ApprovalDistributionMessage::NewBlocks</code></li>
@@ -3680,7 +3576,7 @@ struct State {
 <li><code>ApprovalVotingMessage::CheckAndImportApproval</code></li>
 <li><code>NetworkBridgeMessage::SendValidationMessage::ApprovalDistribution</code></li>
 </ul>
-<h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
+<h2 id="functionality-10"><a class="header" href="#functionality-10">Functionality</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -3891,8 +3787,8 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 </li>
 </ol>
 <h1 id="dispute-participation-1"><a class="header" href="#dispute-participation-1">Dispute Participation</a></h1>
-<h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
-<h2 id="functionality-12"><a class="header" href="#functionality-12">Functionality</a></h2>
+<h2 id="protocol-11"><a class="header" href="#protocol-11">Protocol</a></h2>
+<h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
 <h1 id="utility-subsystems"><a class="header" href="#utility-subsystems">Utility Subsystems</a></h1>
 <p>The utility subsystems are an assortment which don't have a natural home in another subsystem collection.</p>
 <h1 id="availability-store"><a class="header" href="#availability-store">Availability Store</a></h1>
@@ -3949,13 +3845,13 @@ enum State {
 </span></code></pre></pre>
 <p>We maintain the invariant that if a candidate has a meta entry, its available data exists on disk if <code>data_available</code> is true. All chunks mentioned in the meta entry are available.</p>
 <p>Additionally, there is exactly one <code>prune_by_time</code> entry which holds the candidate hash unless the state is <code>Unfinalized</code>. There may be zero, one, or many &quot;unfinalized&quot; keys with the given candidate, and this will correspond to the <code>state</code> of the meta entry.</p>
-<h2 id="protocol-13"><a class="header" href="#protocol-13">Protocol</a></h2>
+<h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <p>Output:</p>
 <ul>
 <li><a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 </ul>
-<h2 id="functionality-13"><a class="header" href="#functionality-13">Functionality</a></h2>
+<h2 id="functionality-12"><a class="header" href="#functionality-12">Functionality</a></h2>
 <p>For each head in the <code>activated</code> list:</p>
 <ul>
 <li>Note any new candidates backed in the block. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
@@ -4083,10 +3979,10 @@ to be run very often.</p>
 <h1 id="candidate-validation"><a class="header" href="#candidate-validation">Candidate Validation</a></h1>
 <p>This subsystem is responsible for handling candidate validation requests. It is a simple request/response server.</p>
 <p>A variety of subsystems want to know if a parachain block candidate is valid. None of them care about the detailed mechanics of how a candidate gets validated, just the results. This subsystem handles those details.</p>
-<h2 id="protocol-14"><a class="header" href="#protocol-14">Protocol</a></h2>
+<h2 id="protocol-13"><a class="header" href="#protocol-13">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#validation-request-type"><code>CandidateValidationMessage</code></a></p>
 <p>Output: Validation result via the provided response side-channel.</p>
-<h2 id="functionality-14"><a class="header" href="#functionality-14">Functionality</a></h2>
+<h2 id="functionality-13"><a class="header" href="#functionality-13">Functionality</a></h2>
 <p>This subsystem answers two types of requests: one which draws out validation data from the state, and another which accepts all validation data exhaustively. The goal of both request types is to validate a candidate. There are three possible outputs of validation: either the candidate is valid, the candidate is invalid, or an internal error occurred. Whatever the end result is, it will be returned on the response channel to the requestor.</p>
 <p>Parachain candidates are validated against their validation function: A piece of Wasm code that is describes the state-transition of the parachain. Validation function execution is not metered. This means that an execution which is an infinite loop or simply takes too long must be forcibly exited by some other means. For this reason, we recommend dispatching candidate validation to be done on subprocesses which can be killed if they time-out.</p>
 <p>Upon receiving a validation request, the first thing the candidate validation subsystem should do is make sure it has all the necessary parameters to the validation function. These are:</p>
@@ -4130,7 +4026,7 @@ to be run very often.</p>
 <blockquote>
 <p>TODO: The provisioner is responsible for selecting remote disputes to replay. Let's figure out the details.</p>
 </blockquote>
-<h2 id="protocol-15"><a class="header" href="#protocol-15">Protocol</a></h2>
+<h2 id="protocol-14"><a class="header" href="#protocol-14">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a>. Backed candidates come from the <a href="node/utility/../backing/candidate-backing.html">Candidate Backing subsystem</a>, signed bitfields come from the <a href="node/utility/../availability/bitfield-distribution.html">Bitfield Distribution subsystem</a>, and misbehavior reports and disputes come from the <a href="node/utility/misbehavior-arbitration.html">Misbehavior Arbitration subsystem</a>.</p>
 <p>At initialization, this subsystem has no outputs.</p>
 <p>Block authors request the inherent data they should use for constructing the inherent in the block which contains parachain execution information.</p>
@@ -4185,7 +4081,7 @@ to be run very often.</p>
 </ul>
 <h3 id="notes"><a class="header" href="#notes">Notes</a></h3>
 <p>See also: <a href="node/utility/../../runtime/scheduler.html#availability-cores">Scheduler Module: Availability Cores</a>.</p>
-<h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
+<h2 id="functionality-14"><a class="header" href="#functionality-14">Functionality</a></h2>
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3 id="on-overseer-signal-1"><a class="header" href="#on-overseer-signal-1">On Overseer Signal</a></h3>
 <ul>
@@ -4221,7 +4117,7 @@ to be run very often.</p>
 <li>The network provides peer-set management utilities for discovering the peer-IDs of validators and a means of dialing peers with given IDs.</li>
 </ul>
 <p>The network bridge makes use of the peer-set feature, but is not generic over peer-set. Instead, it exposes two peer-sets that event producers can attach to: <code>Validation</code> and <code>Collation</code>. More information can be found on the documentation of the <a href="node/utility/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a>.</p>
-<h2 id="protocol-16"><a class="header" href="#protocol-16">Protocol</a></h2>
+<h2 id="protocol-15"><a class="header" href="#protocol-15">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></p>
 <p>Output:</p>
 <ul>
@@ -4231,7 +4127,7 @@ to be run very often.</p>
 <li><a href="node/utility/../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="node/utility/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 </ul>
-<h2 id="functionality-16"><a class="header" href="#functionality-16">Functionality</a></h2>
+<h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -4317,15 +4213,15 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <blockquote>
 <p>TODO</p>
 </blockquote>
-<h2 id="protocol-17"><a class="header" href="#protocol-17">Protocol</a></h2>
-<h2 id="functionality-17"><a class="header" href="#functionality-17">Functionality</a></h2>
+<h2 id="protocol-16"><a class="header" href="#protocol-16">Protocol</a></h2>
+<h2 id="functionality-16"><a class="header" href="#functionality-16">Functionality</a></h2>
 <h2 id="jobs-if-any"><a class="header" href="#jobs-if-any">Jobs, if any</a></h2>
 <h1 id="runtime-api"><a class="header" href="#runtime-api">Runtime API</a></h1>
 <p>The Runtime API subsystem is responsible for providing a single point of access to runtime state data via a set of pre-determined queries. This prevents shared ownership of a blockchain client resource by providing</p>
-<h2 id="protocol-18"><a class="header" href="#protocol-18">Protocol</a></h2>
+<h2 id="protocol-17"><a class="header" href="#protocol-17">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></p>
 <p>Output: None</p>
-<h2 id="functionality-18"><a class="header" href="#functionality-18">Functionality</a></h2>
+<h2 id="functionality-17"><a class="header" href="#functionality-17">Functionality</a></h2>
 <p>On receipt of <code>RuntimeApiMessage::Request(relay_parent, request)</code>, answer the request using the post-state of the relay_parent provided and provide the response to the side-channel embedded within the request.</p>
 <blockquote>
 <p>TODO Do some caching. The underlying rocksdb already has a cache of trie nodes so duplicate requests are unlikely to hit disk. Not required for functionality.</p>
@@ -4336,10 +4232,10 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 </blockquote>
 <h1 id="chain-api"><a class="header" href="#chain-api">Chain API</a></h1>
 <p>The Chain API subsystem is responsible for providing a single point of access to chain state data via a set of pre-determined queries.</p>
-<h2 id="protocol-19"><a class="header" href="#protocol-19">Protocol</a></h2>
+<h2 id="protocol-18"><a class="header" href="#protocol-18">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage</code></a></p>
 <p>Output: None</p>
-<h2 id="functionality-19"><a class="header" href="#functionality-19">Functionality</a></h2>
+<h2 id="functionality-18"><a class="header" href="#functionality-18">Functionality</a></h2>
 <p>On receipt of <code>ChainApiMessage</code>, answer the request and provide the response to the side-channel embedded within the request.</p>
 <p>Currently, the following requests are supported:</p>
 <ul>
@@ -4815,13 +4711,27 @@ enum ApprovalDistributionMessage {
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionMessage {
-    /// Distribute an availability chunk to other validators.
-    DistributeChunk(Hash, ErasureChunk),
-    /// Fetch an erasure chunk from network by candidate hash and chunk index.
-    FetchChunk(Hash, u32),
-    /// Event from the network.
-    /// An update on network state from the network bridge.
-    NetworkBridgeUpdateV1(NetworkBridgeEvent&lt;AvailabilityDistributionV1Message&gt;),
+      /// Incoming network request for an availability chunk.
+      ChunkFetchingRequest(IncomingRequest&lt;req_res_v1::ChunkFetchingRequest&gt;),
+      /// Incoming network request for a seconded PoV.
+      PoVFetchingRequest(IncomingRequest&lt;req_res_v1::PoVFetchingRequest&gt;),
+      /// Instruct availability distribution to fetch a remote PoV.
+      ///
+      /// NOTE: The result of this fetch is not yet locally validated and could be bogus.
+      FetchPoV {
+	      /// The relay parent giving the necessary context.
+	      relay_parent: Hash,
+	      /// Validator to fetch the PoV from.
+	      from_validator: ValidatorIndex,
+	      /// Candidate hash to fetch the PoV for.
+	      candidate_hash: CandidateHash,
+	      /// Expected hash of the PoV, a PoV not matching this hash will be rejected.
+	      pov_hash: Hash,
+	      /// Sender for getting back the result of this fetch.
+	      ///
+	      /// The sender will be canceled if the fetching failed for some reason.
+	      tx: oneshot::Sender&lt;PoV&gt;,
+      },
 }
 <span class="boring">}
 </span></code></pre></pre>

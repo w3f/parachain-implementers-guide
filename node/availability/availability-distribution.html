@@ -164,42 +164,69 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="availability-distribution"><a class="header" href="#availability-distribution">Availability Distribution</a></h1>
-<p>Distribute availability erasure-coded chunks to validators.</p>
-<p>After a candidate is backed, the availability of the PoV block must be confirmed
-by 2/3+ of all validators. Backing nodes will serve chunks for a PoV block from
-their <a href="../utility/availability-store.html">Availability Store</a>, all other
-validators request their chunks from backing nodes and store those received chunks in
-their local availability store.</p>
+<p>This subsystem is responsible for distribution availability data to peers.
+Availability data are chunks, <code>PoV</code>s and <code>AvailableData</code> (which is <code>PoV</code> +
+<code>PersistedValidationData</code>). It does so via request response protocols.</p>
+<p>In particular this subsystem is responsible for:</p>
+<ul>
+<li>Respond to network requests requesting availability data by querying the
+<a href="../utility/availability-store.html">Availability Store</a>.</li>
+<li>Request chunks from backing validators to put them in the local <code>Availability Store</code> whenever we find an occupied core on the chain,
+this is to ensure availability by at least 2/3+ of all validators, this
+happens after a candidate is backed.</li>
+<li>Fetch <code>PoV</code> from validators, when requested via <code>FetchPoV</code> message from
+backing (pov_requester module).</li>
+<li></li>
+</ul>
+<p>The backing subsystem is responsible of making available data available in the
+local <code>Availability Store</code> upon validation. This subsystem will serve any
+network requests by querying that store.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
-<p>This subsystem has no associated peer set right now, but instead relies on
-a request/response protocol, defined by <code>Protocol::ChunkFetching</code>.</p>
+<p>This subsystem does not handle any peer set messages, but the <code>pov_requester</code>
+does  connecto to validators of the same backing group on the validation peer
+set, to ensure fast propagation of statements between those validators and for
+ensuring already established connections for requesting <code>PoV</code>s. Other than that
+this subsystem drives request/response protocols.</p>
 <p>Input:</p>
 <ul>
 <li>OverseerSignal::ActiveLeaves(<code>[ActiveLeavesUpdate]</code>)</li>
 <li>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</li>
+<li>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</li>
+<li>AvailabilityDistributionMessage{msg: FetchPoV}</li>
 </ul>
 <p>Output:</p>
 <ul>
 <li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>, IfDisconnected::TryConnect)</li>
 <li>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</li>
 <li>AvailabilityStore::StoreChunk(candidate_hash, chunk)</li>
+<li>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</li>
 <li>RuntimeApiRequest::SessionIndexForChild</li>
 <li>RuntimeApiRequest::SessionInfo</li>
 <li>RuntimeApiRequest::AvailabilityCores</li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
-<h3 id="requesting"><a class="header" href="#requesting">Requesting</a></h3>
-<p>This subsystems monitors currently occupied cores for all active leaves. For
-each occupied core it will spawn a task fetching the erasure chunk which has the
-<code>ValidatorIndex</code> of the node. For this an <code>ChunkFetchingRequest</code> is
-issued, via substrate's generic request/response protocol.</p>
+<h3 id="pov-requester"><a class="header" href="#pov-requester">PoV Requester</a></h3>
+<p>The PoV requester in the <code>pov_requester</code> module takes care of staying connected
+to validators of the current backing group of this very validator on the <code>Validation</code>
+peer set and it will handle <code>FetchPoV</code> requests by issuing network requests to
+those validators. It will check the hash of the received <code>PoV</code>, but will not do any
+further validation. That needs to be done by the original <code>FetchPoV</code> sender
+(backing subsystem).</p>
+<h3 id="chunk-requester"><a class="header" href="#chunk-requester">Chunk Requester</a></h3>
+<p>After a candidate is backed, the availability of the PoV block must be confirmed
+by 2/3+ of all validators. The chunk requester is responsible of making that
+availability a reality.</p>
+<p>It does that by querying checking occupied cores for all active leaves. For each
+occupied core it will spawn a task fetching the erasure chunk which has the
+<code>ValidatorIndex</code> of the node. For this an <code>ChunkFetchingRequest</code> is issued, via
+substrate's generic request/response protocol.</p>
 <p>The spawned task will start trying to fetch the chunk from validators in
 responsible group of the occupied core, in a random order. For ensuring that we
-use already open TCP connections wherever possible, the subsystem maintains a
+use already open TCP connections wherever possible, the requester maintains a
 cache and preserves that random order for the entire session.</p>
 <p>Note however that, because not all validators in a group have to be actual
 backers, not all of them are required to have the needed chunk. This in turn
-could lead to low throughput, as we have to wait for a fetches to fail,
+could lead to low throughput, as we have to wait for fetches to fail,
 before reaching a validator finally having our chunk. We do rank back validators
 not delivering our chunk, but as backers could vary from block to block on a
 perfectly legitimate basis, this is still not ideal. See issues <a href="https://github.com/paritytech/polkadot/issues/2509">2509</a> and <a href="https://github.com/paritytech/polkadot/issues/2512">2512</a>
@@ -211,9 +238,12 @@ availability reached 2/3 fast enough (slot becomes free). This is not desirable
 as we would like as many validators as possible to have their chunk. See this
 <a href="https://github.com/paritytech/polkadot/issues/2513">issue</a> for more details.</p>
 <h3 id="serving"><a class="header" href="#serving">Serving</a></h3>
-<p>On the other side the subsystem will listen for incoming
-<code>ChunkFetchingRequest</code>s from the network bridge and will respond to
-queries, by looking the requested chunk up in the availability store.</p>
+<p>On the other side the subsystem will listen for incoming <code>ChunkFetchingRequest</code>s
+and <code>PoVFetchingRequest</code>s from the network bridge and will respond to queries,
+by looking the requested chunks and <code>PoV</code>s up in the availability store, this
+happens in the <code>responder</code> module.</p>
+<p>We rely on the backing subsystem to make available data available locally in the
+<code>Availability Store</code> after it has validated it.</p>
 
                     </main>
 
