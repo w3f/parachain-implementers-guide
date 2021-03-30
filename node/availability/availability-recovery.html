@@ -185,31 +185,27 @@
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
-    /// Each interaction is implemented as its own async task, and these handles are for communicating with them.
-    interactions: Map&lt;CandidateHash, InteractionHandle&gt;,
+    /// Each interaction is implemented as its own remote async task, and these handles are remote
+    /// for it.
+    interactions: FuturesUnordered&lt;InteractionHandle&gt;,
+    /// A multiplexer over receivers from live interactions.
+    interaction_receivers: FuturesUnordered&lt;ResponseReceiver&lt;Concluded&gt;&gt;,
     /// A recent block hash for which state should be available.
     live_block_hash: Hash,
-
-    /// interaction communication. This is cloned and given to interactions that are spun up.
-    from_interaction_tx: Sender&lt;FromInteraction&gt;,
-    /// receiver for messages from interactions.
-    from_interaction_rx: Receiver&lt;FromInteraction&gt;,
-
     // An LRU cache of recently recovered data.
     availability_lru: LruCache&lt;CandidateHash, Result&lt;AvailableData, RecoveryError&gt;&gt;,
 }
 
+/// This is a future, which concludes either when a response is received from the interaction,
+/// or all the `awaiting` channels have closed.
 struct InteractionHandle {
+    candidate_hash: CandidateHash,
+    interaction_response: RemoteHandle&lt;Concluded&gt;,
     awaiting: Vec&lt;ResponseChannel&lt;Result&lt;AvailableData, RecoveryError&gt;&gt;&gt;,
 }
 
 struct Unavailable;
-enum FromInteraction {
-    // An interaction concluded.
-    Concluded(CandidateHash, Result&lt;AvailableData, RecoveryError&gt;),
-    // Send a request on the network.
-    NetworkRequest(Requests),
-}
+struct Concluded(CandidateHash, Result&lt;AvailableData, RecoveryError&gt;);
 
 struct InteractionParams {
     validator_authority_keys: Vec&lt;AuthorityId&gt;,
@@ -231,12 +227,12 @@ enum InteractionPhase {
         // request the chunk from them.
         shuffling: Vec&lt;ValidatorIndex&gt;, 
         received_chunks: Map&lt;ValidatorIndex, ErasureChunk&gt;,
-        requesting_chunks: FuturesUnordered&lt;Receiver&lt;DataResponse&lt;ErasureChunk&gt;&gt;&gt;,
+        requesting_chunks: FuturesUnordered&lt;Receiver&lt;ErasureChunkRequestResponse&gt;&gt;,
     }
 }
 
 struct Interaction {
-    to_state: Sender&lt;FromInteraction&gt;,
+    to_subsystems: SubsystemSender,
     params: InteractionParams,
     phase: InteractionPhase,
 }
@@ -259,22 +255,18 @@ struct Interaction {
 <li>Load the entry from the <code>interactions</code> map. It should always exist, if not for logic errors. Send the result to each member of <code>awaiting</code>.</li>
 <li>Add the entry to the availability_lru.</li>
 </ol>
-<h4 id="frominteractionnetworkrequestrequests"><a class="header" href="#frominteractionnetworkrequestrequests"><code>FromInteraction::NetworkRequest(requests)</code></a></h4>
-<ol>
-<li>Forward with <code>NetworkBridgeMessage::SendRequests</code>.</li>
-</ol>
 <h3 id="interaction-logic"><a class="header" href="#interaction-logic">Interaction logic</a></h3>
 <h4 id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
 <ol>
 <li>Compute the threshold from the session info. It should be <code>f + 1</code>, where <code>n = 3f + k</code>, where <code>k in {1, 2, 3}</code>, and <code>n</code> is the number of validators.</li>
 <li>Set the various fields of <code>InteractionParams</code> based on the validator lists in <code>session_info</code> and information about the candidate.</li>
 <li>If the <code>backing_group_index</code> is <code>Some</code>, start in the <code>RequestFromBackers</code> phase with a shuffling of the backing group validator indices and a <code>None</code> requesting value.</li>
-<li>Otherwise, start in the <code>RequestChunks</code> phase with <code>received_chunks</code> and <code>requesting_chunks</code> both empty.</li>
-<li>Set the <code>to_state</code> sender to be equal to a clone of <code>state.from_interaction_tx</code>.</li>
+<li>Otherwise, start in the <code>RequestChunks</code> phase with <code>received_chunks</code>,<code>requesting_chunks</code>, and <code>next_shuffling</code> all empty.</li>
+<li>Set the <code>to_subsystems</code> sender to be equal to a clone of the <code>SubsystemContext</code>'s sender.</li>
 <li>Initialize <code>received_chunks</code> to an empty set, as well as <code>requesting_chunks</code>.</li>
 </ol>
 <p>Launch the interaction as a background task running <code>interaction_loop(interaction)</code>.</p>
-<h4 id="interaction_loopinteraction"><a class="header" href="#interaction_loopinteraction"><code>interaction_loop(interaction)</code></a></h4>
+<h4 id="interaction_loopinteraction---resultavailabledata-recoeryerror"><a class="header" href="#interaction_loopinteraction---resultavailabledata-recoeryerror"><code>interaction_loop(interaction) -&gt; Result&lt;AvailableData, RecoeryError&gt;</code></a></h4>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -294,11 +286,11 @@ const N_PARALLEL: usize = 50;
 <li>If it concludes with a <code>None</code> result, return to beginning. </li>
 <li>If it concludes with available data, attempt a re-encoding. 
 <ul>
-<li>If it has the correct erasure-root, break and issue a <code>Concluded(Ok(available_data))</code>. </li>
+<li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>. </li>
 <li>If it has an incorrect erasure-root, issue a <code>FromInteraction::ReportPeer</code> message and return to beginning.</li>
 </ul>
 </li>
-<li>If the backer is <code>None</code>, set the phase to <code>InteractionPhase::RequestChunks</code> with a random shuffling of validators and empty <code>received_chunks</code> and <code>requesting_chunks</code>.</li>
+<li>If the backer is <code>None</code>, set the phase to <code>InteractionPhase::RequestChunks</code> with a random shuffling of validators and empty <code>next_shuffling</code>, <code>received_chunks</code>, and <code>requesting_chunks</code>.</li>
 </ul>
 </li>
 </ul>
@@ -306,11 +298,12 @@ const N_PARALLEL: usize = 50;
 <li>
 <p>If the phase is <code>InteractionPhase::RequestChunks</code>:</p>
 <ul>
-<li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks, and any failures should lead to issuance of a <code>FromInteraction::ReportPeer</code> message.</li>
-<li>If <code>received_chunks</code> has more than <code>threshold</code> entries, attempt to recover the data. If that fails, or a re-encoding produces an incorrect erasure-root, break and issue a <code>Concluded(RecoveryError::Invalid)</code>. If correct, break and issue <code>Concluded(Ok(available_data))</code>.</li>
+<li>If <code>received_chunks + requesting_chunks + shuffling</code> lengths are less than the threshold, break and return <code>Err(Unavailable)</code>.</li>
+<li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks. If the request simply fails due to network issues, push onto the back of <code>shuffling</code> to be retried.</li>
+<li>If <code>received_chunks</code> has more than <code>threshold</code> entries, attempt to recover the data. If that fails, or a re-encoding produces an incorrect erasure-root, break and issue a <code>Err(RecoveryError::Invalid)</code>. If correct, break and issue <code>Ok(available_data)</code>.</li>
 <li>While there are fewer than <code>N_PARALLEL</code> entries in <code>requesting_chunks</code>,
 <ul>
-<li>Pop the next item from <code>shuffling</code>. If it's empty and <code>requesting_chunks</code> is empty, break and set the phase to <code>Concluded(None)</code>.</li>
+<li>Pop the next item from <code>shuffling</code>. If it's empty and <code>requesting_chunks</code> is empty, return <code>Err(RecoveryError::Unavailable)</code>.</li>
 <li>Issue a <code>FromInteraction::NetworkRequest</code> and wait for the response in <code>requesting_chunks</code>.</li>
 </ul>
 </li>
