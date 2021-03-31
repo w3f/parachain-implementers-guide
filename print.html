@@ -3089,7 +3089,7 @@ const N_PARALLEL: usize = 50;
 <p>If the phase is <code>InteractionPhase::RequestChunks</code>:</p>
 <ul>
 <li>If <code>received_chunks + requesting_chunks + shuffling</code> lengths are less than the threshold, break and return <code>Err(Unavailable)</code>.</li>
-<li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks. If the request simply fails due to network issues, push onto the back of <code>shuffling</code> to be retried.</li>
+<li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks. If the request simply fails due to network issues, insert into the front of <code>shuffling</code> to be retried.</li>
 <li>If <code>received_chunks</code> has more than <code>threshold</code> entries, attempt to recover the data. If that fails, or a re-encoding produces an incorrect erasure-root, break and issue a <code>Err(RecoveryError::Invalid)</code>. If correct, break and issue <code>Ok(available_data)</code>.</li>
 <li>While there are fewer than <code>N_PARALLEL</code> entries in <code>requesting_chunks</code>,
 <ul>
