@@ -3093,23 +3093,29 @@ struct Interaction {
 const N_PARALLEL: usize = 50;
 <span class="boring">}
 </span></code></pre></pre>
-<p>Loop:</p>
 <ul>
 <li>
+<p>Request <code>AvailabilityStoreMessage::QueryAvailableData</code>. If it exists, return that.</p>
+</li>
+<li>
 <p>If the phase is <code>InteractionPhase::RequestFromBackers</code></p>
+<ul>
+<li>Loop:
 <ul>
 <li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>. </li>
 <li>If the <code>requesting_pov</code> is <code>None</code>, take the next backer off the <code>shuffled_backers</code>.
 <ul>
-<li>If the backer is <code>Some</code>, issue a <code>FromInteraction::NetworkRequest</code> with a network request for the <code>AvailableData</code> and wait for the response.</li>
+<li>If the backer is <code>Some</code>, issue a <code>NetworkBridgeMessage::Requests</code> with a network request for the <code>AvailableData</code> and wait for the response.</li>
 <li>If it concludes with a <code>None</code> result, return to beginning. </li>
 <li>If it concludes with available data, attempt a re-encoding. 
 <ul>
 <li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>. </li>
-<li>If it has an incorrect erasure-root, issue a <code>FromInteraction::ReportPeer</code> message and return to beginning.</li>
+<li>If it has an incorrect erasure-root, return to beginning.</li>
 </ul>
 </li>
-<li>If the backer is <code>None</code>, set the phase to <code>InteractionPhase::RequestChunks</code> with a random shuffling of validators and empty <code>next_shuffling</code>, <code>received_chunks</code>, and <code>requesting_chunks</code>.</li>
+<li>If the backer is <code>None</code>, set the phase to <code>InteractionPhase::RequestChunks</code> with a random shuffling of validators and empty <code>next_shuffling</code>, <code>received_chunks</code>, and <code>requesting_chunks</code> and break the loop.</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -3117,13 +3123,18 @@ const N_PARALLEL: usize = 50;
 <li>
 <p>If the phase is <code>InteractionPhase::RequestChunks</code>:</p>
 <ul>
+<li>Request <code>AvailabilityStoreMessage::QueryAllChunks</code>. For each chunk that exists, add it to <code>received_chunks</code> and remote the validator from <code>shuffling</code>.</li>
+<li>Loop:
+<ul>
 <li>If <code>received_chunks + requesting_chunks + shuffling</code> lengths are less than the threshold, break and return <code>Err(Unavailable)</code>.</li>
 <li>Poll for new updates from <code>requesting_chunks</code>. Check merkle proofs of any received chunks. If the request simply fails due to network issues, insert into the front of <code>shuffling</code> to be retried.</li>
 <li>If <code>received_chunks</code> has more than <code>threshold</code> entries, attempt to recover the data. If that fails, or a re-encoding produces an incorrect erasure-root, break and issue a <code>Err(RecoveryError::Invalid)</code>. If correct, break and issue <code>Ok(available_data)</code>.</li>
 <li>While there are fewer than <code>N_PARALLEL</code> entries in <code>requesting_chunks</code>,
 <ul>
 <li>Pop the next item from <code>shuffling</code>. If it's empty and <code>requesting_chunks</code> is empty, return <code>Err(RecoveryError::Unavailable)</code>.</li>
-<li>Issue a <code>FromInteraction::NetworkRequest</code> and wait for the response in <code>requesting_chunks</code>.</li>
+<li>Issue a <code>NetworkBridgeMessage::Requests</code> and wait for the response in <code>requesting_chunks</code>.</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -4131,6 +4142,11 @@ enum State {
 <li>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></li>
 </ul>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+<p>On <code>QueryAllChunks</code> message:</p>
+<ul>
+<li>Query <code>(&quot;meta&quot;, candidate_hash)</code>. If <code>None</code>, send an empty response and return.</li>
+<li>For all <code>1</code> bits in the <code>chunks_stored</code>, query <code>(&quot;chunk&quot;, candidate_hash, index)</code>. Ignore but warn on errors, and return a vector of all loaded chunks.</li>
+</ul>
 <p>On `QueryChunkAvailability message:</p>
 <ul>
 <li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</li>
@@ -5032,12 +5048,14 @@ enum AvailabilityRecoveryMessage {
     QueryDataAvailability(CandidateHash, ResponseChannel&lt;bool&gt;),
     /// Query a specific availability chunk of the candidate's erasure-coding by validator index.
     /// Returns the chunk and its inclusion proof against the candidate's erasure-root.
-    QueryChunk(CandidateHash, ValidatorIndex, ResponseChannel&lt;Option&lt;AvailabilityChunkAndProof&gt;&gt;),
+    QueryChunk(CandidateHash, ValidatorIndex, ResponseChannel&lt;Option&lt;ErasureChunk&gt;&gt;),
+    /// Query all chunks that we have locally for the given candidate hash.
+    QueryAllChunks(CandidateHash, ResponseChannel&lt;Vec&lt;ErasureChunk&gt;&gt;),
     /// Store a specific chunk of the candidate's erasure-coding by validator index, with an
     /// accompanying proof.
-    StoreChunk(CandidateHash, ValidatorIndex, AvailabilityChunkAndProof, ResponseChannel&lt;Result&lt;()&gt;&gt;),
+    StoreChunk(CandidateHash, ErasureChunk, ResponseChannel&lt;Result&lt;()&gt;&gt;),
     /// Store `AvailableData`. If `ValidatorIndex` is provided, also store this validator's
-    /// `AvailabilityChunkAndProof`.
+    /// `ErasureChunk`.
     StoreAvailableData(CandidateHash, Option&lt;ValidatorIndex&gt;, u32, AvailableData, ResponseChannel&lt;Result&lt;()&gt;&gt;),
 }
 <span class="boring">}

@@ -274,6 +274,11 @@ enum State {
 <li>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></li>
 </ul>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+<p>On <code>QueryAllChunks</code> message:</p>
+<ul>
+<li>Query <code>(&quot;meta&quot;, candidate_hash)</code>. If <code>None</code>, send an empty response and return.</li>
+<li>For all <code>1</code> bits in the <code>chunks_stored</code>, query <code>(&quot;chunk&quot;, candidate_hash, index)</code>. Ignore but warn on errors, and return a vector of all loaded chunks.</li>
+</ul>
 <p>On `QueryChunkAvailability message:</p>
 <ul>
 <li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</li>
