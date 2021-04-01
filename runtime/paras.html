@@ -274,10 +274,10 @@ Parachains: Vec&lt;ParaId&gt;,
 ParaLifecycle: map ParaId =&gt; Option&lt;ParaLifecycle&gt;,
 /// The head-data of every registered para.
 Heads: map ParaId =&gt; Option&lt;HeadData&gt;;
-/// The validation code of every live para.
-ValidationCode: map ParaId =&gt; Option&lt;ValidationCode&gt;;
-/// Actual past code, indicated by the para id as well as the block number at which it became outdated.
-PastCode: map (ParaId, BlockNumber) =&gt; Option&lt;ValidationCode&gt;;
+/// The validation code hash of every live para.
+CurrentCodeHash: map ParaId =&gt; Option&lt;Hash&gt;;
+/// Actual past code hash, indicated by the para id as well as the block number at which it became outdated.
+PastCodeHash: map (ParaId, BlockNumber) =&gt; Option&lt;Hash&gt;;
 /// Past code of parachains. The parachains themselves may not be registered anymore,
 /// but we also keep their code on-chain for the same amount of time as outdated code
 /// to keep it available for secondary checkers.
@@ -294,11 +294,15 @@ PastCodePruning: Vec&lt;(ParaId, BlockNumber)&gt;;
 /// in the context of a relay chain block with a number &gt;= `expected_at`.
 FutureCodeUpgrades: map ParaId =&gt; Option&lt;BlockNumber&gt;;
 /// The actual future code of a para.
-FutureCode: map ParaId =&gt; Option&lt;ValidationCode&gt;;
+FutureCodeHash: map ParaId =&gt; Option&lt;Hash&gt;;
 /// The actions to perform during the start of a specific session index.
 ActionsQueue: map SessionIndex =&gt; Vec&lt;ParaId&gt;;
 /// Upcoming paras instantiation arguments.
 UpcomingParasGenesis: map ParaId =&gt; Option&lt;ParaGenesisArgs&gt;;
+/// The number of references on the validation code in `CodeByHash` storage.
+CodeByHashRefs: map Hash =&gt; u32;
+/// Validation code stored by its hash.
+CoeByHash: map Hash =&gt; Option&lt;ValidationCode&gt;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="session-change"><a class="header" href="#session-change">Session Change</a></h2>
@@ -306,15 +310,15 @@ UpcomingParasGenesis: map ParaId =&gt; Option&lt;ParaGenesisArgs&gt;;
 <li>Execute all queued actions for paralifecycle changes:</li>
 <li>Clean up outgoing paras.
 <ol>
-<li>This means removing the entries under <code>Heads</code>, <code>ValidationCode</code>, <code>FutureCodeUpgrades</code>, and
+<li>This means removing the entries under <code>Heads</code>, <code>CurrentCode</code>, <code>FutureCodeUpgrades</code>, and
 <code>FutureCode</code>. An according entry should be added to <code>PastCode</code>, <code>PastCodeMeta</code>, and
-<code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>ValidationCode</code> value. This is
+<code>PastCodePruning</code> using the outgoing <code>ParaId</code> and removed <code>CurrentCode</code> value. This is
 because any outdated validation code must remain available on-chain for a determined amount
 of blocks, and validation code outdated by de-registering the para is still subject to that
 invariant.</li>
 </ol>
 </li>
-<li>Apply all incoming paras by initializing the <code>Heads</code> and <code>ValidationCode</code> using the genesis
+<li>Apply all incoming paras by initializing the <code>Heads</code> and <code>CurrentCode</code> using the genesis
 parameters.</li>
 <li>Amend the <code>Parachains</code> list and <code>ParaLifecycle</code> to reflect changes in registered parachains.</li>
 <li>Amend the <code>ParaLifecycle</code> set to reflect changes in registered parathreads.</li>
@@ -336,7 +340,7 @@ session. Noop if para is already registered in the system with some <code>ParaLi
 <li><code>schedule_para_cleanup(ParaId)</code>: Schedule a para to be cleaned up after the next full session.</li>
 <li><code>schedule_parathread_upgrade(ParaId)</code>: Schedule a parathread to be upgraded to a parachain.</li>
 <li><code>schedule_parachain_downgrade(ParaId)</code>: Schedule a parachain to be downgraded to a parathread.</li>
-<li><code>schedule_code_upgrade(ParaId, ValidationCode, expected_at: BlockNumber)</code>: Schedule a future code
+<li><code>schedule_code_upgrade(ParaId, CurrentCode, expected_at: BlockNumber)</code>: Schedule a future code
 upgrade of the given parachain, to be applied after inclusion of a block of the same parachain
 executed in the context of a relay-chain block with number &gt;= <code>expected_at</code>.</li>
 <li><code>note_new_head(ParaId, HeadData, BlockNumber)</code>: note that a para has progressed to a new head,
@@ -348,6 +352,7 @@ height. A second block number parameter may be used to tell the lookup to procee
 intermediate parablock has been included at the given relay-chain height. This may return past,
 current, or (with certain choices of <code>assume_intermediate</code>) future code. <code>assume_intermediate</code>, if
 provided, must be before <code>at</code>. If the validation code has been pruned, this will return <code>None</code>.</li>
+<li><code>validation_code_hash_at(ParaId, at: BlockNumber, assume_intermediate: Option&lt;BlockNumber&gt;)</code>: Just like <code>validation_code_at</code>, but returns the code hash.</li>
 <li><code>lifecycle(ParaId) -&gt; Option&lt;ParaLifecycle&gt;</code>: Return the <code>ParaLifecycle</code> of a para.</li>
 <li><code>is_parachain(ParaId) -&gt; bool</code>: Returns true if the para ID references any live parachain,
 including those which may be transitioning to a parathread in the future.</li>
@@ -358,9 +363,6 @@ or live parachain.</li>
 <li><code>last_code_upgrade(id: ParaId, include_future: bool) -&gt; Option&lt;BlockNumber&gt;</code>: The block number of
 the last scheduled upgrade of the requested para. Includes future upgrades if the flag is set.
 This is the <code>expected_at</code> number, not the <code>activated_at</code> number.</li>
-<li><code>persisted_validation_data(id: ParaId) -&gt; Option&lt;PersistedValidationData&gt;</code>: Get the
-PersistedValidationData of the given para, assuming the context is the parent block. Returns
-<code>None</code> if the para is not known.</li>
 </ul>
 <h2 id="finalization"><a class="header" href="#finalization">Finalization</a></h2>
 <p>No finalization routine runs for this module.</p>
