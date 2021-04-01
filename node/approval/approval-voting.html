@@ -218,6 +218,7 @@ struct ApprovalEntry {
     tranches: Vec&lt;TrancheEntry&gt;, // sorted ascending by tranche number.
     backing_group: GroupIndex,
     our_assignment: Option&lt;OurAssignment&gt;,
+    our_approval_sig: Option&lt;ValidatorSignature&gt;,
     assignments: Bitfield, // n_validators bits
     approved: bool,
 }
@@ -374,7 +375,7 @@ struct State {
 <li>Note the candidate index within the approval entry.</li>
 </ul>
 </li>
-<li><a href="#check-full-approval">Check for full approval of the candidate entry</a> of the candidate_entry, filtering by this specific approval entry.</li>
+<li><a href="#schedule-wakeup">Schedule a wakeup</a> for this block, candidate pair.</li>
 <li>return the appropriate <code>AssignmentCheckResult</code> on the response channel.</li>
 </ul>
 <h4 id="approvalvotingmessagecheckandimportapproval"><a class="header" href="#approvalvotingmessagecheckandimportapproval"><code>ApprovalVotingMessage::CheckAndImportApproval</code></a></h4>
@@ -401,24 +402,18 @@ struct State {
 <h3 id="updates-and-auxiliary-logic"><a class="header" href="#updates-and-auxiliary-logic">Updates and Auxiliary Logic</a></h3>
 <h4 id="import-checked-approval"><a class="header" href="#import-checked-approval">Import Checked Approval</a></h4>
 <ul>
-<li>Import an approval vote which we can assume to have passed signature checks.</li>
+<li>Import an approval vote which we can assume to have passed signature checks and correspond to an imported assignment.</li>
 <li>Requires <code>(BlockEntry, CandidateEntry, ValidatorIndex)</code></li>
 <li>Set the corresponding bit of the <code>approvals</code> bitfield in the <code>CandidateEntry</code> to <code>1</code>. If already <code>1</code>, return.</li>
-<li><a href="#check-full-approval">Check full approval of the candidate</a></li>
-</ul>
-<h4 id="check-full-approval"><a class="header" href="#check-full-approval">Check Full Approval</a></h4>
+<li>Checks the approval state of a candidate under a specific block, and updates the block and candidate entries accordingly.</li>
+<li>Checks the <code>ApprovalEntry</code> for the block.
 <ul>
-<li>Checks the approval state of the candidate under every block it is included by, and updates the block entries accordingly.</li>
-<li>Requires <code>(CandidateEntry, filter)</code>, where filter is used to limit which approval entries are inspected.</li>
-<li>Checks every <code>ApprovalEntry</code> that is not yet <code>approved</code> for whether it is now approved.
-<ul>
-<li>For each <code>ApprovalEntry</code> in the <code>CandidateEntry</code> that is not <code>approved</code> and passes the <code>filter</code></li>
-<li>Load the block entry for the <code>ApprovalEntry</code>.</li>
-<li>If so, <a href="#determine-required-tranches">determine the tranches to inspect</a> of the candidate,</li>
-<li>If <a href="#check-approval">the candidate is approved under the block</a>, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
+<li><a href="#determine-required-tranches">determine the tranches to inspect</a> of the candidate,</li>
+<li><a href="#check-approval">the candidate is approved under the block</a>, set the corresponding bit in the <code>block_entry.approved_bitfield</code>.</li>
 <li>Otherwise, <a href="#schedule-wakeup">schedule a wakeup of the candidate</a></li>
 </ul>
 </li>
+<li>If the approval vote originates locally, set the <code>our_approval_sig</code> in the candidate entry.</li>
 </ul>
 <h4 id="handling-wakeup"><a class="header" href="#handling-wakeup">Handling Wakeup</a></h4>
 <ul>
