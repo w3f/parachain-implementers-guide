@@ -3650,10 +3650,17 @@ struct Knowledge {
   known_messages: HashSet&lt;MessageFingerprint&gt;,
 }
 
+struct PeerKnowledge {
+  /// The knowledge we've sent to the peer.
+  sent: Knowledge,
+  /// The knowledge we've received from the peer.
+  received: Knowledge,
+}
+
 /// Information about blocks in our current view as well as whether peers know of them.
 struct BlockEntry {
   // Peers who we know are aware of this block and thus, the candidates within it. This maps to their knowledge of messages.
-  known_by: HashMap&lt;PeerId, Knowledge&gt;,
+  known_by: HashMap&lt;PeerId, PeerKnowledge&gt;,
   // The number of the block.
   number: BlockNumber,
   // The parent hash of the block.
@@ -3737,7 +3744,7 @@ Ensure a vector is present in <code>pending_known</code> for each hash in the vi
 <li>Compute a fingerprint for the <code>assignment</code> using <code>claimed_candidate_index</code>.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
-<li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
+<li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the knowledge of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the <code>sent</code> knowledge contains the fingerprint, report for providing replicate data and return, otherwise, insert into the <code>received</code> knowledge and return.</li>
 <li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
 add the fingerprint to the peer's knowledge only if it knows about the block and return.
 Note that we must do this after checking for out-of-view and if the peers knows about the block to avoid being spammed.
@@ -3771,7 +3778,7 @@ If we did this check earlier, a peer could provide data out-of-view repeatedly a
 <li>Compute a fingerprint for the corresponding assignment. If the <code>BlockEntry</code>'s knowledge does not contain that fingerprint, then report the source if it is <code>MessageSource::Peer</code> and return. All references to a fingerprint after this refer to the approval's, not the assignment's.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
-<li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the <code>known_messages</code> of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the knowledge contains the fingerprint, report for providing replicate data and return.</li>
+<li>check if <code>peer</code> appears under <code>known_by</code> and whether the fingerprint is in the knowledge of the peer. If the peer does not know the block, report for providing data out-of-view and proceed. If the peer does know the block and the <code>sent</code> knowledge contains the fingerprint, report for providing replicate data and return, otherwise, insert into the <code>received</code> knowledge and return.</li>
 <li>If the message fingerprint appears under the <code>BlockEntry</code>'s <code>Knowledge</code>, give the peer a small positive reputation boost,
 add the fingerprint to the peer's knowledge only if it knows about the block and return.
 Note that we must do this after checking for out-of-view to avoid being spammed. If we did this check earlier, a peer could provide data out-of-view repeatedly and be rewarded for it.</li>
