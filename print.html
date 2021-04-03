@@ -2685,9 +2685,6 @@ struct CollationGenerationConfig {
 <p>We keep track of the Para ID we are collating on as a collator. This starts as <code>None</code>, and is updated with each <code>CollateOn</code> message received. If the <code>ParaId</code> of a collation requested to be distributed does not match the one we expect, we ignore the message.</p>
 <p>As with most other subsystems, we track the active leaves set by following <code>ActiveLeavesUpdate</code> signals.</p>
 <p>For the purposes of actually distributing a collation, we need to be connected to the validators who are interested in collations on that <code>ParaId</code> at this point in time. We assume that there is a discovery API for connecting to a set of validators.</p>
-<blockquote>
-<p>TODO: design &amp; expose the discovery API not just for connecting to such peers but also to determine which of our current peers are validators.</p>
-</blockquote>
 <p>As seen in the <a href="node/collators/../../runtime/scheduler.html">Scheduler Module</a> of the runtime, validator groups are fixed for an entire session and their rotations across cores are predictable. Collators will want to do these things when attempting to distribute collations at a given relay-parent:</p>
 <ul>
 <li>Determine which core the para collated-on is assigned to.</li>
@@ -2698,7 +2695,7 @@ struct CollationGenerationConfig {
 <h3 id="validators-1"><a class="header" href="#validators-1">Validators</a></h3>
 <p>On the validator side of the protocol, validators need to accept incoming connections from collators. They should keep some peer slots open for accepting new speculative connections from collators and should disconnect from collators who are not relevant.</p>
 <p><img src="node/collators/collator_protocol_1.generated.svg" alt="" /></p>
-<p>When peers connect to us, they can <code>Declare</code> that they represent a collator with given public key. Once they've declared that, and we checked their signature, they can begin to send advertisements of collations. The peers should not send us any advertisements for collations that are on a relay-parent outside of our view.</p>
+<p>When peers connect to us, they can <code>Declare</code> that they represent a collator with given public key and intend to collate on a specific para ID. Once they've declared that, and we checked their signature, they can begin to send advertisements of collations. The peers should not send us any advertisements for collations that are on a relay-parent outside of our view or for a para outside of the one they've declared.</p>
 <p>The protocol tracks advertisements received and the source of the advertisement. The advertisement source is the <code>PeerId</code> of the peer who sent the message. We accept one advertisement per collator per source per relay-parent.</p>
 <p>As a validator, we will handle requests from other subsystems to fetch a collation on a specific <code>ParaId</code> and relay-parent. These requests are made with the request response protocol <code>CollationFetchingRequest</code> request. To do so, we need to first check if we have already gathered a collation on that <code>ParaId</code> and relay-parent. If not, we need to select one of the advertisements and issue a request for it. If we've already issued a request, we shouldn't issue another one until the first has returned.</p>
 <p>When acting on an advertisement, we issue a <code>Requests::CollationFetching</code>. If the request times out, we need to note the collator as being unreliable and reduce its priority relative to other collators.</p>
@@ -5895,16 +5892,12 @@ struct CompressedPoV(Vec&lt;u8&gt;);
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollatorProtocolV1Message {
-	/// Declare the intent to advertise collations under a collator ID, attaching a
+	/// Declare the intent to advertise collations under a collator ID and `Para`, attaching a
 	/// signature of the `PeerId` of the node using the given collator ID key.
-	Declare(CollatorId, CollatorSignature),
+	Declare(CollatorId, ParaId, CollatorSignature),
 	/// Advertise a collation to a validator. Can only be sent once the peer has
 	/// declared that they are a collator with given ID.
-	AdvertiseCollation(Hash, ParaId),
-	/// Request the advertised collation at that relay-parent.
-	RequestCollation(RequestId, Hash, ParaId),
-	/// A requested collation.
-	Collation(RequestId, CandidateReceipt, CompressedPoV),
+	AdvertiseCollation(Hash),
 	/// A collation sent to a validator was seconded.
 	CollationSeconded(SignedFullStatement),
 }
