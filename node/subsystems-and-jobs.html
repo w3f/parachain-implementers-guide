@@ -402,7 +402,7 @@ the <code>Provisioner</code> also has other things going on.</p>
     participant CB as CandidateBacking
     participant BD as BitfieldDistribution
     participant RA as RuntimeApi
-    participant PO as Proposer
+    participant PI as ParachainsInherentDataProvider
 
     alt receive provisionable data
         alt
@@ -417,33 +417,24 @@ the <code>Provisioner</code> also has other things going on.</p>
 
         Note over PV: store bitfields and backed candidates
     else receive request for inherent data
-        PO -&gt;&gt; PV: RequestInherentData
+        PI -&gt;&gt; PV: RequestInherentData
         alt we have already constructed the inherent data
-            PV -&gt;&gt; PO: send the inherent data
+            PV -&gt;&gt; PI: send the inherent data
         else we have not yet constructed the inherent data
-            Note over PV,PO: Store the return sender without sending immediately
+            Note over PV,PI: Store the return sender without sending immediately
         end
     else timer times out
         note over PV: Waited 2 seconds
         PV --&gt;&gt; RA: RuntimeApiRequest::AvailabilityCores
         Note over PV: construct and store the inherent data
         loop over stored inherent data requests
-            PV -&gt;&gt; PO: (SignedAvailabilityBitfields, BackedCandidates)
+            PV -&gt;&gt; PI: (SignedAvailabilityBitfields, BackedCandidates)
         end
     end
 </pre>
 <p>In principle, any arbitrary subsystem could send a <code>RequestInherentData</code> to the <code>Provisioner</code>. In practice,
-only the <code>Proposer</code> does so.</p>
-<p>The proposer is an atypical subsystem in that, unlike most of them, it is not primarily driven by
-the <code>Overseer</code>, but instead by the <code>sp_consensus::Environment</code> and <code>sp_consensus::Proposer</code> traits
-from Substrate. It doesn't make much sense to diagram this flow because it's very linear:</p>
-<ul>
-<li>Substrate creates a <code>Proposer</code> from the <code>ProposerFactory</code> once per upcoming block, using the <code>parent_header: Header</code>.</li>
-<li>At some later point, it calls <code>Proposer::propose(self, ...)</code>, consuming the proposer to generate a proposal</li>
-<li><code>Proposer::propose</code> sends a <code>RequestInherentData</code> to the <code>Provisioner</code>. This has a fixed timeout of
-2.5 seconds, meaning that the provisioner has approximately 0.5 seconds to generate and send the data.</li>
-</ul>
-<p>The tuple <code>(SignedAvailabilityBitfields, BackedCandidates, ParentHeader)</code> is injected by the <code>Proposer</code>
+only the <code>ParachainsInherentDataProvider</code> does so.</p>
+<p>The tuple <code>(SignedAvailabilityBitfields, BackedCandidates, ParentHeader)</code> is injected by the <code>ParachainsInherentDataProvider</code>
 into the inherent data. From that point on, control passes from the node to the runtime.</p>
 
                     </main>
