@@ -2905,27 +2905,35 @@ Dispatch a <code>CandidateValidationMessage::Validate(validation function, candi
 <p>Input:</p>
 <ul>
 <li>NetworkBridgeUpdate(update)</li>
+<li>StatementDistributionMessage</li>
 </ul>
 <p>Output:</p>
 <ul>
 <li>NetworkBridge::SendMessage(<code>[PeerId]</code>, message)</li>
+<li>NetworkBridge::SendRequests (StatementFetching)</li>
 <li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
 </ul>
 <h2 id="functionality-4"><a class="header" href="#functionality-4">Functionality</a></h2>
 <p>Implemented as a gossip protocol. Handle updates to our view and peers' views. Neighbor packets are used to inform peers which chain heads we are interested in data for.</p>
-<p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement.</p>
+<p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer in the same backing group, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement. On receiving <code>StatementDistributionMessage::Share</code> we make sure to send messages to our backing group in addition to random other peers, to ensure a fast backing process and getting all statements quickly for distribtution.</p>
 <p>Track equivocating validators and stop accepting information from them. Establish a data-dependency order:</p>
 <ul>
-<li>In order to receive a <code>Seconded</code> message we have the on corresponding chain head in our view</li>
-<li>In order to receive an <code>Invalid</code> or <code>Valid</code> message we must have received the corresponding <code>Seconded</code> message.</li>
+<li>In order to receive a <code>Seconded</code> message we have the corresponding chain head in our view</li>
+<li>In order to receive an <code>Valid</code> message we must have received the corresponding <code>Seconded</code> message.</li>
 </ul>
 <p>And respect this data-dependency order from our peers by respecting their views. This subsystem is responsible for checking message signatures.</p>
 <p>The Statement Distribution subsystem sends statements to peer nodes.</p>
 <h2 id="peer-receipt-state-machine"><a class="header" href="#peer-receipt-state-machine">Peer Receipt State Machine</a></h2>
 <p>There is a very simple state machine which governs which messages we are willing to receive from peers. Not depicted in the state machine: on initial receipt of any <a href="node/backing/../../types/backing.html#signed-statement-type"><code>SignedFullStatement</code></a>, validate that the provided signature does in fact sign the included data. Note that each individual parablock candidate gets its own instance of this state machine; it is perfectly legal to receive a <code>Valid(X)</code> before a <code>Seconded(Y)</code>, as long as a <code>Seconded(X)</code> has been received.</p>
-<p>A: Initial State. Receive <code>SignedFullStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing and PoV Distribution, proceed to B. Receive any other <code>SignedFullStatement</code> variant: drop it.</p>
+<p>A: Initial State. Receive <code>SignedFullStatement(Statement::Second)</code>: extract <code>Statement</code>, forward to Candidate Backing, proceed to B. Receive any other <code>SignedFullStatement</code> variant: drop it.</p>
 <p>B: Receive any <code>SignedFullStatement</code>: check signature and determine whether the statement is new to us. if new, forward to Candidate Backing and circulate to other peers. Receive <code>OverseerMessage::StopWork</code>: proceed to C.</p>
 <p>C: Receive any message for this block: drop it.</p>
+<p>For large statements (see below), we also keep track of the total received large
+statements per peer and have a hard limit on that number for flood protection.
+This is necessary as in the current code we only forward statements once we have
+all the data, therefore flood protection for large statement is a bit more
+subtle. This will become an obsolete problem once <a href="https://github.com/paritytech/polkadot/issues/2979">off chain code
+upgrades</a> are implemented.</p>
 <h2 id="peer-knowledge-tracking"><a class="header" href="#peer-knowledge-tracking">Peer Knowledge Tracking</a></h2>
 <p>The peer receipt state machine implies that for parsimony of network resources, we should model the knowledge of our peers, and help them out. For example, let's consider a case with peers A, B, and C, validators X and Y, and candidate M. A sends us a <code>Statement::Second(M)</code> signed by X. We've double-checked it, and it's valid. While we're checking it, we receive a copy of X's <code>Statement::Second(M)</code> from <code>B</code>, along with a <code>Statement::Valid(M)</code> signed by Y.</p>
 <p>Our response to A is just the <code>Statement::Valid(M)</code> signed by Y. However, we haven't heard anything about this from C. Therefore, we send it everything we have: first a copy of X's <code>Statement::Second</code>, then Y's <code>Statement::Valid</code>.</p>
@@ -2941,6 +2949,29 @@ Dispatch a <code>CandidateValidationMessage::Validate(validation function, candi
 <p>The fix is to track, per-peer, the hashes of up to 4 candidates per validator (per relay-parent) that the peer is aware of. It is 4 because we may send them 2 and they may send us 2 different ones. We track the data that they are aware of as the union of things we have sent them and things they have sent us. If we receive a 1st or 2nd <code>Seconded</code> statement from a peer, we note it in the peer's known candidates even if we do disregard the data locally. And then, upon receipt of any data dependent on that statement, we do not reduce that peer's standing in our eyes, as the data was not undesired.</p>
 <p>There is another caveat to the fix: we don't want to allow the peer to flood us because it has set things up in a way that it knows we will drop all of its traffic.
 We also track how many statements we have received per peer, per candidate, and per chain-head. This is any statement concerning a particular candidate: <code>Seconded</code>, <code>Valid</code>, or <code>Invalid</code>. If we ever receive a statement from a peer which would push any of these counters beyond twice the amount of validators at the chain-head, we begin to lower the peer's standing and eventually disconnect. This bound is a massive overestimate and could be reduced to twice the number of validators in the corresponding validator group. It is worth noting that the goal at the time of writing is to ensure any finite bound on the amount of stored data, as any equivocation results in a large slash.</p>
+<h2 id="large-statements"><a class="header" href="#large-statements">Large statements</a></h2>
+<p>Seconded statements can become quite large on parachain runtime upgrades for
+example. For this reason, there exists a <code>LargeStatement</code> constructor for the
+<code>StatementDistributionMessage</code> wire message, which only contains light metadata
+of a statement. The actual candidate data is not included. This message type is
+used whenever a message is deemed large. The receiver of such a message needs to
+request the actual payload via request/response by means of a
+<code>StatementFetching</code> request.</p>
+<p>This is necessary as distribution of a large payload (mega bytes) via gossip
+would make the network collapse and timely distribution of statements would no
+longer be possible. By using request/response it is ensured that each peer only
+transferes large data once. We only take good care to detect an overloaded
+peer early and immediately move on to a different peer for fetching the data.
+This mechanism should result in a good load distribution and therefore a rather
+optimal distribution path.</p>
+<p>With these optimizations, distribution of payloads in the size of up to 3 to 4
+MB should work with Kusama validator specifications. For scaling up even more,
+runtime upgrades and message passing should be done off chain at some point.</p>
+<p>Flood protection considerations: For making DoS attacks slightly harder on this
+subsystem, nodes will only respond to large statement requests, when they
+previously notified that peer via gossip about that statement. So, it is not
+possible to DoS nodes at scale, by requesting candidate data over and over
+again.</p>
 <h1 id="pov-distribution"><a class="header" href="#pov-distribution">PoV Distribution</a></h1>
 <h1 id="availability-subsystems"><a class="header" href="#availability-subsystems">Availability Subsystems</a></h1>
 <p>The availability subsystems are responsible for ensuring that Proofs of Validity of backed candidates are widely available within the validator set, without requiring every node to retain a full copy. They accomplish this by broadly distributing erasure-coded chunks of the PoV, keeping track of which validator has which chunk by means of signed bitfields. They are also responsible for reassembling a complete PoV when required, e.g. when a fisherman reports a potentially invalid block.</p>
