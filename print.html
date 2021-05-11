@@ -138,13 +138,15 @@
                         </a>
                         
                         
+                        
+
                     </div>
                 </div>
 
                 
                 <div id="search-wrapper" class="hidden">
                     <form id="searchbar-outer" class="searchbar-outer">
-                        <input type="search" name="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
                     </form>
                     <div id="searchresults-outer" class="searchresults-outer hidden">
                         <div id="searchresults-header" class="searchresults-header"></div>
@@ -168,7 +170,7 @@
                         <h1 id="preamble"><a class="header" href="#preamble">Preamble</a></h1>
 <p>This document aims to describe the purpose, functionality, and implementation of the host for Polkadot's <em>parachains</em> functionality - that is, the software which provides security and advancement for constituent parachains. It is not for the implementer of a specific parachain but rather for the implementer of the Parachain Host. In practice, this is for the implementers of Polkadot in general.</p>
 <p>There are a number of other documents describing the research in more detail. All referenced documents will be linked here and should be read alongside this document for the best understanding of the full picture. However, this is the only document which aims to describe key aspects of Polkadot's particular instantiation of much of that research down to low-level technical details and software architecture.</p>
-<h1 id="whence-parachains"><a class="header" href="#whence-parachains">Whence Parachains</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="whence-parachains"><a class="header" href="#whence-parachains">Whence Parachains</a></h1>
 <p>Parachains are the solution to a problem. As with any solution, it cannot be understood without first understanding the problem. So let's start by going over the issues faced by blockchain technology that led to us beginning to explore the design space for something like parachains.</p>
 <h2 id="issue-1-scalability"><a class="header" href="#issue-1-scalability">Issue 1: Scalability</a></h2>
 <p>It became clear a few years ago that the transaction throughput of simple Proof-of-Work (PoW) blockchains such as Bitcoin, Ethereum, and myriad others was simply too low.</p>
@@ -189,7 +191,7 @@
 <p>TODO: expand on leverage</p>
 </blockquote>
 <p>Having recognized these issues, we set out to find a solution to these problems, which could allow developers to create and deploy purpose-built blockchains unified under a common source of security, with the capability of message-passing between them; a <em>heterogeneous sharding solution</em>, which we have come to know as <strong>Parachains</strong>.</p>
-<h1 id="protocol-overview"><a class="header" href="#protocol-overview">Protocol Overview</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="protocol-overview"><a class="header" href="#protocol-overview">Protocol Overview</a></h1>
 <p>This section aims to describe, at a high level, the actors and protocols involved in running parachains in Polkadot. Specifically, we describe how different actors communicate with each other, what data structures they keep both individually and collectively, and the high-level purpose on why they do these things.</p>
 <p>Our top-level goal is to carry a parachain block from authoring to secure inclusion, and define a process which can be carried out repeatedly and in parallel for many different parachains to extend them over time. Understanding of the high-level approach taken here is important to provide context for the proposed architecture further on. The key parts of Polkadot relevant to this are the main Polkadot blockchain, known as the relay-chain, and the actors which provide security and inputs to this blockchain.</p>
 <p>First, it's important to go over the main actors we have involved in this protocol.</p>
@@ -247,7 +249,7 @@
 <p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
 <p><img src="protocol_overview_2.generated.svg" alt="" /></p>
 <p>Those validators that are aware of many competing heads must be aware of the work happening on each one. They may contribute to some or a full extent on both. It is possible that due to network asynchrony two forks may grow in parallel for some time, although in the absence of an adversarial network this is unlikely in the case where there are validators who are aware of both chain heads.</p>
-<h1 id="approval-process"><a class="header" href="#approval-process">Approval Process</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="approval-process"><a class="header" href="#approval-process">Approval Process</a></h1>
 <p>The Approval Process is the mechanism by which the relay-chain ensures that only valid parablocks are finalized and that backing validators are held accountable for managing to get bad blocks included into the relay chain.</p>
 <p>Having a parachain include a bad block into a fork of the relay-chain is not catastrophic as long as the block isn't finalized by the relay-chain's finality gadget, GRANDPA. If the block isn't finalized, that means that the fork of the relay-chain can be reverted in favor of another by means of a dynamic fork-choice rule which leads honest validators to ignore any forks containing that parablock.</p>
 <p>Dealing with a bad parablock proceeds in these stages:</p>
@@ -365,7 +367,7 @@
 <p>We could consider additional gossip messages with which nodes claims &quot;slow availability&quot; and/or &quot;slow candidate&quot; to fine tune the assignments &quot;no show&quot; system, but long enough &quot;no show&quot; delays suffice probably.</p>
 <p>We shall develop more practical experience with UDP once the availability system works using direct UDP connections.  In this, we should discover if reconstruction performs adequately with a complete graphs or<br />
 benefits from topology restrictions.  At this point, an assignment notices could implicitly request pieces from a random 1/3rd, perhaps topology restricted, which saves one gossip round.  If this preliminary fast reconstruction fails, then nodes' request alternative pieces directly.  There is an interesting design space in how this overlaps with &quot;slow availability&quot; claims.</p>
-<h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
 <p>Fast forward to <a href="./disputes-flow.html">more detailed disputes requirments</a>.</p>
 <h2 id="motivation-and-background"><a class="header" href="#motivation-and-background">Motivation and Background</a></h2>
 <p>All parachain blocks that end up in the finalized relay chain should be valid. This does not apply to blocks that are only backed, but not included.</p>
@@ -414,7 +416,7 @@ benefits from topology restrictions.  At this point, an assignment notices could
 <p>Late votes, after the dispute already reached a ⅔ supermajority, must be rewarded (albeit a smaller amount) as well.</p>
 <h2 id="chain-selection--grandpa"><a class="header" href="#chain-selection--grandpa">Chain Selection / Grandpa</a></h2>
 <p>The <a href="protocol-approval.html">Approval Checking</a> protocol prevents finalization of chains that contain parablocks that are not yet approved. With disputes, we take it one step further and do not vote to finalize any chains which contain parablocks that are being disputed or have lost a dispute anywhere.</p>
-<h1 id="disputes-flows"><a class="header" href="#disputes-flows">Disputes Flows</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes-flows"><a class="header" href="#disputes-flows">Disputes Flows</a></h1>
 <p>A component-free description in what-if form with addition state graphs of the dispute.</p>
 <pre class="mermaid">stateDiagram-v2
     [*] --&gt; WaitForBackingVote: negative Vote received
@@ -498,7 +500,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>If a dispute is not resolved within due time, all validators are to be slashed for a small amount.</p>
 <p>If a dispute is not resolved within due time, governance mode shall be entered for manual resolution.</p>
 <p>If a validator unexpectedly restarts, the dispute shall be continued with the state based on votes being cast and being present in persistent storage.</p>
-<h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="architecture-overview"><a class="header" href="#architecture-overview">Architecture Overview</a></h1>
 <p>This section aims to describe, at a high level, the code architecture and subsystems involved in the implementation of an individual Parachain Host. It also illuminates certain subtleties and challenges faced in the design and implementation of those subsystems.</p>
 <p>To recap, Polkadot includes a blockchain known as the relay-chain. A blockchain is a Directed Acyclic Graph (DAG) of state transitions, where every block can be considered to be the head of a linked-list (known as a &quot;chain&quot; or &quot;fork&quot;) with a cumulative state which is determined by applying the state transition of each block in turn. All paths through the DAG terminate at the Genesis Block. In fact, the blockchain is a tree, since each block can have only one parent.</p>
 <p><img src="architecture_overview_0.generated.svg" alt="" /></p>
@@ -530,7 +532,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>Node-side behavior is split up into various subsystems. Subsystems are long-lived workers that perform a particular category of work. Subsystems can communicate with each other, and do so via an <a href="node/overseer.html">Overseer</a> that prevents race conditions.</p>
 <p>Runtime logic is divided up into Modules and APIs. Modules encapsulate particular behavior of the system. Modules consist of storage, routines, and entry-points. Routines are invoked by entry points, by other modules, upon block initialization or closing. Routines can read and alter the storage of the module. Entry-points are the means by which new information is introduced to a module and can limit the origins (user, root, parachain) that they accept being called by. Each block in the blockchain contains a set of Extrinsics. Each extrinsic targets a a specific entry point to trigger and which data should be passed to it. Runtime APIs provide a means for Node-side behavior to extract meaningful information from the state of a single fork.</p>
 <p>These two aspects of the implementation are heavily dependent on each other. The Runtime depends on Node-side behavior to author blocks, and to include Extrinsics which trigger the correct entry points. The Node-side behavior relies on Runtime APIs to extract information necessary to determine which actions to take.</p>
-<h1 id="messaging-overview"><a class="header" href="#messaging-overview">Messaging Overview</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="messaging-overview"><a class="header" href="#messaging-overview">Messaging Overview</a></h1>
 <p>The Polkadot Host has a few mechanisms that are responsible for message passing. They can be generally divided
 on two categories: Horizontal and Vertical. Horizontal Message Passing (HMP) refers to mechanisms
 that are responsible for exchanging messages between parachains. Vertical Message Passing (VMP) is
@@ -588,7 +590,7 @@ at the <a href="https://research.web3.foundation/en/latest/polkadot/XCMP.html">W
 The crucial difference from XCMP though is that all the messages are stored in the relay-chain storage. That makes
 things simple but at the same time that makes HRMP more demanding in terms of resources thus making it more expensive.</p>
 <p>Once XCMP is available we expect to retire HRMP.</p>
-<h1 id="runtime-architecture"><a class="header" href="#runtime-architecture">Runtime Architecture</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="runtime-architecture"><a class="header" href="#runtime-architecture">Runtime Architecture</a></h1>
 <p>It's clear that we want to separate different aspects of the runtime logic into different modules. Modules define their own storage, routines, and entry-points. They also define initialization and finalization logic.</p>
 <p>Due to the (lack of) guarantees provided by a particular blockchain-runtime framework, there is no defined or dependable order in which modules' initialization or finalization logic will run. Supporting this blockchain-runtime framework is important enough to include that same uncertainty in our model of runtime modules in this guide. Furthermore, initialization logic of modules can trigger the entry-points or routines of other modules. This is one architectural pressure against dividing the runtime logic into multiple modules. However, in this case the benefits of splitting things up outweigh the costs, provided that we take certain precautions against initialization and entry-point races.</p>
 <p>We also expect, although it's beyond the scope of this guide, that these runtime modules will exist alongside various other modules. This has two facets to consider. First, even if the modules that we describe here don't invoke each others' entry points or routines during initialization, we still have to protect against those other modules doing that. Second, some of those modules are expected to provide governance capabilities for the chain. Configuration exposed by parachain-host modules is mostly for the benefit of these governance modules, to allow the operators or community of the chain to tweak parameters.</p>
@@ -636,7 +638,7 @@ modules alongside the session change notification. This means that a session cha
 <blockquote>
 <p>TODO Diagram: order of runtime operations (initialization, session change)</p>
 </blockquote>
-<h1 id="initializer-module"><a class="header" href="#initializer-module">Initializer Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="initializer-module"><a class="header" href="#initializer-module">Initializer Module</a></h1>
 <p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described in the overview of the runtime: accepting and forwarding session change notifications.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <pre><pre class="playground"><code class="language-rust">
@@ -672,7 +674,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <h2 id="finalization"><a class="header" href="#finalization">Finalization</a></h2>
 <p>Finalization order is less important in this case than initialization order, so we finalize the modules in the reverse order from initialization.</p>
 <p>Set <code>HasInitialized</code> to false.</p>
-<h1 id="configuration-module"><a class="header" href="#configuration-module">Configuration Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="configuration-module"><a class="header" href="#configuration-module">Configuration Module</a></h1>
 <p>This module is responsible for managing all configuration of the parachain host in-flight. It provides a central point for configuration updates to prevent races between configuration changes and parachain-processing logic. Configuration can only change during the session change routine, and as this module handles the session change notification first it provides an invariant that the configuration does not change throughout the entire session. Both the <a href="runtime/scheduler.html">scheduler</a> and <a href="runtime/inclusion.html">inclusion</a> modules rely on this invariant to ensure proper behavior of the scheduler.</p>
 <p>The configuration that we will be tracking is the <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> struct.</p>
 <h2 id="storage-1"><a class="header" href="#storage-1">Storage</a></h2>
@@ -709,7 +711,7 @@ fn update_configuration(f: impl FnOnce(&amp;mut HostConfiguration)) {
 </span></code></pre></pre>
 <h2 id="entry-points"><a class="header" href="#entry-points">Entry-points</a></h2>
 <p>The Configuration module exposes an entry point for each configuration member. These entry-points accept calls only from governance origins. These entry-points will use the <code>update_configuration</code> routine to update the specific configuration field.</p>
-<h1 id="shared-module"><a class="header" href="#shared-module">Shared Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="shared-module"><a class="header" href="#shared-module">Shared Module</a></h1>
 <p>This module is responsible for managing shared storage and configuration for other modules.</p>
 <p>It is important that other pallets are able to use the Shared Module, so it should not have a
 dependency on any other modules in the Parachains Runtime.</p>
@@ -762,7 +764,7 @@ passed.</li>
 Parachains Runtime system would be safe to apply.</li>
 <li><code>set_session_index(SessionIndex)</code>: For tests. Set the current session index in the Shared Module.</li>
 </ul>
-<h1 id="disputes-module"><a class="header" href="#disputes-module">Disputes Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes-module"><a class="header" href="#disputes-module">Disputes Module</a></h1>
 <p>After a backed candidate is made available, it is included and proceeds into an acceptance period during which validators are randomly selected to do (secondary) approval checks of the parablock. Any reports disputing the validity of the candidate will cause escalation, where even more validators are requested to check the block, and so on, until either the parablock is determined to be invalid or valid. Those on the wrong side of the dispute are slashed and, if the parablock is deemed invalid, the relay chain is rolled back to a point before that block was included.</p>
 <p>However, this isn't the end of the story. We are working in a forkful blockchain environment, which carries three important considerations:</p>
 <ol>
@@ -880,7 +882,7 @@ Frozen: bool,
 </ol>
 </li>
 </ul>
-<h1 id="paras-module"><a class="header" href="#paras-module">Paras Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="paras-module"><a class="header" href="#paras-module">Paras Module</a></h1>
 <p>The Paras module is responsible for storing information on parachains and parathreads. Registered
 parachains and parathreads cannot change except at session boundaries and after at least a full
 session has passed. This is primarily to ensure that the number and meaning of bits required for the
@@ -1083,7 +1085,7 @@ This is the <code>expected_at</code> number, not the <code>activated_at</code> n
 </ul>
 <h2 id="finalization-2"><a class="header" href="#finalization-2">Finalization</a></h2>
 <p>No finalization routine runs for this module.</p>
-<h1 id="scheduler-module"><a class="header" href="#scheduler-module">Scheduler Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="scheduler-module"><a class="header" href="#scheduler-module">Scheduler Module</a></h1>
 <blockquote>
 <p>TODO: this section is still heavily under construction. key questions about availability cores and validator assignment are still open and the flow of the the section may be contradictory or inconsistent</p>
 </blockquote>
@@ -1263,7 +1265,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 </ul>
 </li>
 </ul>
-<h1 id="inclusion-module"><a class="header" href="#inclusion-module">Inclusion Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="inclusion-module"><a class="header" href="#inclusion-module">Inclusion Module</a></h1>
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
 <h2 id="storage-6"><a class="header" href="#storage-6">Storage</a></h2>
 <p>Helper structs:</p>
@@ -1387,7 +1389,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <p><code>collect_disputed(disputed: Vec&lt;CandidateHash&gt;) -&gt; Vec&lt;CoreIndex&gt;</code>: Sweeps through all paras pending availability. If the candidate hash is one of the disputed candidates, then clean up the corresponding storage for that candidate and the commitments. Return a vector of cleaned-up core IDs.</p>
 </li>
 </ul>
-<h1 id="parainherent"><a class="header" href="#parainherent">ParaInherent</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="parainherent"><a class="header" href="#parainherent">ParaInherent</a></h1>
 <p>This module is responsible for providing all data given to the runtime by the block author to the various parachains modules. The entry-point is mandatory, in that it must be invoked exactly once within every block, and it is also &quot;inherent&quot;, in that it is provided with no origin by the block author. The data within it carries its own authentication; i.e. the data takes the form of signed statements by validators. If any of the steps within fails, the entry-point is considered as having failed and the block will be invalid.</p>
 <p>This module does not have the same initialization/finalization concerns as the others, as it only requires that entry points be triggered after all modules have initialized and that finalization happens after entry points are triggered. Both of these are assumptions we have already made about the runtime's order of operations, so this module doesn't need to be initialized or finalized by the <code>Initializer</code>.</p>
 <p>There are a couple of important notes to the operations in this inherent as they relate to disputes.</p>
@@ -1431,7 +1433,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 </ol>
 </li>
 </ul>
-<h1 id="dmp-module"><a class="header" href="#dmp-module">DMP Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="dmp-module"><a class="header" href="#dmp-module">DMP Module</a></h1>
 <p>A module responsible for Downward Message Processing (DMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-8"><a class="header" href="#storage-8">Storage</a></h2>
 <p>Storage layout required for implementation of DMP.</p>
@@ -1487,7 +1489,7 @@ DownwardMessageQueueHeads: map ParaId =&gt; Hash;
 </ol>
 </li>
 </ol>
-<h1 id="ump-module"><a class="header" href="#ump-module">UMP Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="ump-module"><a class="header" href="#ump-module">UMP Module</a></h1>
 <p>A module responsible for Upward Message Passing (UMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-9"><a class="header" href="#storage-9">Storage</a></h2>
 <p>Storage related to UMP</p>
@@ -1585,7 +1587,7 @@ that could take place on the course of handling these upward messages.</p>
 </ul>
 </li>
 </ol>
-<h1 id="hrmp-module"><a class="header" href="#hrmp-module">HRMP Module</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="hrmp-module"><a class="header" href="#hrmp-module">HRMP Module</a></h1>
 <p>A module responsible for Horizontally Relay-routed Message Passing (HRMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-10"><a class="header" href="#storage-10">Storage</a></h2>
 <p>HRMP related structs:</p>
@@ -1928,7 +1930,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 <li>Remove <code>recipient</code> from the set <code>HrmpEgressChannelsIndex</code> for <code>sender</code>.</li>
 <li>Remove <code>sender</code> from the set <code>HrmpIngressChannelsIndex</code> for <code>recipient</code>.</li>
 </ol>
-<h1 id="session-info"><a class="header" href="#session-info">Session Info</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="session-info"><a class="header" href="#session-info">Session Info</a></h1>
 <p>For disputes and approvals, we need access to information about validator sets from prior sessions. We also often want easy access to the same information about the current session's validator set. This module aggregates and stores this information in a rolling window while providing easy APIs for access.</p>
 <h2 id="storage-11"><a class="header" href="#storage-11">Storage</a></h2>
 <p>Helper structs:</p>
@@ -1983,7 +1985,7 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <li><code>earliest_stored_session() -&gt; SessionIndex</code>: Yields the earliest session for which we have information stored.</li>
 <li><code>session_info(session: SessionIndex) -&gt; Option&lt;SessionInfo&gt;</code>: Yields the session info for the given session, if stored.</li>
 </ul>
-<h1 id="runtime-apis"><a class="header" href="#runtime-apis">Runtime APIs</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="runtime-apis"><a class="header" href="#runtime-apis">Runtime APIs</a></h1>
 <p>Runtime APIs are the means by which the node-side code extracts information from the state of the runtime.</p>
 <p>Every block in the relay-chain contains a <em>state root</em> which is the root hash of a state trie encapsulating all storage of runtime modules after execution of the block. This is a cryptographic commitment to a unique state. We use the terminology of accessing the <em>state at</em> a block to refer accessing the state referred to by the state root of that block.</p>
 <p>Although Runtime APIs are often used for simple storage access, they are actually empowered to do arbitrary computation. The implementation of the Runtime APIs lives within the Runtime as Wasm code and exposes extern functions that can be invoked with arguments and have a return value. Runtime APIs have access to a variety of host functions, which are contextual functions provided by the Wasm execution context, that allow it to carry out many different types of behaviors.</p>
@@ -2034,7 +2036,7 @@ enum OccupiedCoreAssumption {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="validators"><a class="header" href="#validators">Validators</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="validators"><a class="header" href="#validators">Validators</a></h1>
 <p>Yields the validator-set at the state of a given block. This validator set is always the one responsible for backing parachains in the child of the provided block.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2042,7 +2044,7 @@ enum OccupiedCoreAssumption {
 </span>fn validators(at: Block) -&gt; Vec&lt;ValidatorId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="validator-groups-1"><a class="header" href="#validator-groups-1">Validator Groups</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="validator-groups-1"><a class="header" href="#validator-groups-1">Validator Groups</a></h1>
 <p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set and this is assumed to be as-of the child of the block whose state is being queried.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2074,7 +2076,7 @@ impl GroupRotationInfo {
 fn validator_groups(at: Block) -&gt; (Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, GroupRotationInfo);
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="availability-cores-1"><a class="header" href="#availability-cores-1">Availability Cores</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability-cores-1"><a class="header" href="#availability-cores-1">Availability Cores</a></h1>
 <p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block. </p>
 <p>See also the <a href="runtime-api/../runtime/scheduler.html">Scheduler Module</a> for a high-level description of what an availability core is and why it exists.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -2134,7 +2136,7 @@ enum CoreState {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="persisted-validation-data"><a class="header" href="#persisted-validation-data">Persisted Validation Data</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="persisted-validation-data"><a class="header" href="#persisted-validation-data">Persisted Validation Data</a></h1>
 <p>Yields the <a href="runtime-api/../types/candidate.html#persistedvalidationdata"><code>PersistedValidationData</code></a> for the given <a href="runtime-api/../types/candidate.html#paraid"><code>ParaId</code></a> along with an assumption that should be used if the para currently occupies a core:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2146,7 +2148,7 @@ enum CoreState {
 fn persisted_validation_data(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;PersistedValidationData&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="session-index"><a class="header" href="#session-index">Session Index</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="session-index"><a class="header" href="#session-index">Session Index</a></h1>
 <p>Get the session index that is expected at the child of a block.</p>
 <p>In the <a href="runtime-api/../runtime/initializer.html"><code>Initializer</code></a> module, session changes are buffered by one block. The session index of the child of any relay block is always predictable by that block's state.</p>
 <p>This session index can be used to derive a <a href="runtime-api/../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
@@ -2157,7 +2159,7 @@ fn persisted_validation_data(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Op
 fn session_index_for_child(at: Block) -&gt; SessionIndex;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="validation-code"><a class="header" href="#validation-code">Validation Code</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="validation-code"><a class="header" href="#validation-code">Validation Code</a></h1>
 <p>Fetch the validation code used by a para, making the given <code>OccupiedCoreAssumption</code>.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2165,7 +2167,7 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 </span>fn validation_code(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;ValidationCode&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="candidate-pending-availability"><a class="header" href="#candidate-pending-availability">Candidate Pending Availability</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-pending-availability"><a class="header" href="#candidate-pending-availability">Candidate Pending Availability</a></h1>
 <p>Get the receipt of a candidate pending availability. This returns <code>Some</code> for any paras assigned to occupied cores in <code>availability_cores</code> and <code>None</code> otherwise.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2173,7 +2175,7 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 </span>fn candidate_pending_availability(at: Block, ParaId) -&gt; Option&lt;CommittedCandidateReceipt&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="candidate-events"><a class="header" href="#candidate-events">Candidate Events</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-events"><a class="header" href="#candidate-events">Candidate Events</a></h1>
 <p>Yields a vector of events concerning candidates that occurred within the given block.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2190,7 +2192,7 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="disputes-info"><a class="header" href="#disputes-info">Disputes Info</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes-info"><a class="header" href="#disputes-info">Disputes Info</a></h1>
 <p>Get information about all disputes known by the chain as well as information about which validators the disputes subsystem will accept disputes from. These disputes may be either live or concluded. The <a href="runtime-api/../types/disputes.html#disputestate"><code>DisputeState</code></a> can be used to determine whether the dispute still accepts votes, as well as which validators' votes may be included.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2215,7 +2217,7 @@ struct DisputesInfo {
 fn disputes_info() -&gt; DisputesInfo;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="candidates-included"><a class="header" href="#candidates-included">Candidates Included</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidates-included"><a class="header" href="#candidates-included">Candidates Included</a></h1>
 <p>This runtime API is for checking which candidates have been included within the chain, locally.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -2224,7 +2226,7 @@ fn disputes_info() -&gt; DisputesInfo;
 fn candidates_included(Vec&lt;(SessionIndex, CandidateHash)&gt;) -&gt; Vec&lt;bool&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="node-architecture"><a class="header" href="#node-architecture">Node Architecture</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="node-architecture"><a class="header" href="#node-architecture">Node Architecture</a></h1>
 <h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
 <ul>
 <li>Modularity: Components of the system should be as self-contained as possible. Communication boundaries between components should be well-defined and mockable. This is key to creating testable, easily reviewable code.</li>
@@ -2251,7 +2253,7 @@ fn candidates_included(Vec&lt;(SessionIndex, CandidateHash)&gt;) -&gt; Vec&lt;bo
 <li>There is an underlying <strong>networking</strong> framework which provides <strong>peer discovery</strong> services which will provide us with peers and will not create &quot;loopback&quot; connections to our own node. The number of peers we will have is assumed to be bounded at 1000.</li>
 <li>There is a <strong>transaction pool</strong> and a <strong>transaction propagation</strong> mechanism which maintains a set of current transactions and distributes to connected peers. Current transactions are those which are not outdated relative to some &quot;best&quot; fork of the chain, which is part of the active heads, and have not been included in the best fork.</li>
 </ul>
-<h1 id="subsystems-and-jobs"><a class="header" href="#subsystems-and-jobs">Subsystems and Jobs</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="subsystems-and-jobs"><a class="header" href="#subsystems-and-jobs">Subsystems and Jobs</a></h1>
 <p>In this section we define the notions of Subsystems and Jobs. These are guidelines for how we will employ an architecture of hierarchical state machines. We'll have a top-level state machine which oversees the next level of state machines which oversee another layer of state machines and so on. The next sections will lay out these guidelines for what we've called subsystems and jobs, since this model applies to many of the tasks that the Node-side behavior needs to encompass, but these are only guidelines and some Subsystems may have deeper hierarchies internally.</p>
 <p>Subsystems are long-lived worker tasks that are in charge of performing some particular kind of work. All subsystems can communicate with each other via a well-defined protocol. Subsystems can't generally communicate directly, but must coordinate communication through an <a href="node/overseer.html">Overseer</a>, which is responsible for relaying messages, handling subsystem failures, and dispatching work signals.</p>
 <p>Most work that happens on the Node-side is related to building on top of a specific relay-chain block, which is contextually known as the &quot;relay parent&quot;. We call it the relay parent to explicitly denote that it is a block in the relay chain and not on a parachain. We refer to the parent because when we are in the process of building a new block, we don't know what that new block is going to be. The parent block is our only stable point of reference, even though it is usually only useful when it is not yet a parent but in fact a leaf of the block-DAG expected to soon become a parent (because validators are authoring on top of it). Furthermore, we are assuming a forkful blockchain-extension protocol, which means that there may be multiple possible children of the relay-parent. Even if the relay parent has multiple children blocks, the parent of those children is the same, and the context in which those children is authored should be the same. The parent block is the best and most stable reference to use for defining the scope of work items and messages, and is typically referred to by its cryptographic hash.</p>
@@ -2524,7 +2526,7 @@ the <code>Provisioner</code> also has other things going on.</p>
 only the <code>ParachainsInherentDataProvider</code> does so.</p>
 <p>The tuple <code>(SignedAvailabilityBitfields, BackedCandidates, ParentHeader)</code> is injected by the <code>ParachainsInherentDataProvider</code>
 into the inherent data. From that point on, control passes from the node to the runtime.</p>
-<h1 id="overseer"><a class="header" href="#overseer">Overseer</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="overseer"><a class="header" href="#overseer">Overseer</a></h1>
 <p>The overseer is responsible for these tasks:</p>
 <ol>
 <li>Setting up, monitoring, and handing failure for overseen subsystems.</li>
@@ -2602,15 +2604,15 @@ into the inherent data. From that point on, control passes from the node to the 
 <p>Furthermore, the protocols by which subsystems communicate with each other should be well-defined irrespective of the implementation of the subsystem. In other words, their interface should be distinct from their implementation. This will prevent subsystems from accessing aspects of each other that are beyond the scope of the communication boundary.</p>
 <h2 id="on-shutdown"><a class="header" href="#on-shutdown">On shutdown</a></h2>
 <p>Send an <code>OverseerSignal::Conclude</code> message to each subsystem and wait some time for them to conclude before hard-exiting.</p>
-<h1 id="grandpa-voting-rule"><a class="header" href="#grandpa-voting-rule">GRANDPA Voting Rule</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="grandpa-voting-rule"><a class="header" href="#grandpa-voting-rule">GRANDPA Voting Rule</a></h1>
 <p><a href="https://w3f-research.readthedocs.io/en/latest/polkadot/finality.html">GRANDPA</a> is the finality engine of Polkadot.</p>
 <p>One broad goal of finality, which applies across many different blockchains, is that there should exist only one finalized block at each height in the finalized chain. Before a block at a given height is finalized, it may compete with other forks.</p>
 <p>GRANDPA's regular voting rule is for each validator to select the longest chain they are aware of. GRANDPA proceeds in rounds, collecting information from all online validators and determines the blocks that a supermajority of validators all have in common with each other.</p>
 <p>For parachains, we extend the security guarantee of finality to be such that no invalid parachain candidate may be included in a finalized block. Candidates may be included in some fork of the relay chain with only a few backing votes behind them. After that point, we run the <a href="node/../protocol-approval.html">Approvals Protocol</a>, which is implemented as the <a href="node/approval/approval-voting.html">Approval Voting</a> subsystem. This system involves validators self-selecting to re-check candidates included in all observed forks of the relay chain as well as an algorithm for observing validators' statements about assignment and approval in order to determine which candidates, and thus blocks, are with high probability valid. The highest approved ancestor of a given block can be determined by querying the Approval Voting subsystem via the <a href="node/../types/overseer-protocol.html#approval-voting"><code>ApprovalVotingMessage::ApprovedAncestor</code></a> message. If the response of <code>ApprovedAncestor</code> is <code>Some</code>, we further constrain the voting rule to avoid unfinalized blocks. The list of block hashes and candidates should be reversed, and passed to the <a href="node/../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a> for a final result.</p>
 <p>Lastly, we refuse to finalize any block including a candidate for which we are aware of an ongoing dispute or of a dispute resolving against the candidate. The exact means of doing this has not been determined yet.</p>
-<h1 id="collators"><a class="header" href="#collators">Collators</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="collators"><a class="header" href="#collators">Collators</a></h1>
 <p>Collators are special nodes which bridge a parachain to the relay chain. They are simultaneously full nodes of the parachain, and at least light clients of the relay chain. Their overall contribution to the system is the generation of Proofs of Validity for parachain candidates.</p>
-<h1 id="collation-generation"><a class="header" href="#collation-generation">Collation Generation</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="collation-generation"><a class="header" href="#collation-generation">Collation Generation</a></h1>
 <p>The collation generation subsystem is executed on collator nodes and produces candidates to be distributed to validators. If configured to produce collations for a para, it produces collations and then feeds them to the <a href="node/collators/collator-protocol.html">Collator Protocol</a> subsystem, which handles the networking.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <code>CollationGenerationMessage</code></p>
@@ -2701,7 +2703,7 @@ struct CollationGenerationConfig {
 </ul>
 </li>
 </ul>
-<h1 id="collator-protocol"><a class="header" href="#collator-protocol">Collator Protocol</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="collator-protocol"><a class="header" href="#collator-protocol">Collator Protocol</a></h1>
 <p>The Collator Protocol implements the network protocol by which collators and validators communicate. It is used by collators to distribute collations to validators and used by validators to accept collations by collators.</p>
 <p>Collator-to-Validator networking is more difficult than Validator-to-Validator networking because the set of possible collators for any given para is unbounded, unlike the validator set. Validator-to-Validator networking protocols can easily be implemented as gossip because the data can be bounded, and validators can authenticate each other by their <code>PeerId</code>s for the purposes of instantiating and accepting connections.</p>
 <p>Since, at least at the level of the para abstraction, the collator-set for any given para is unbounded, validators need to make sure that they are receiving connections from capable and honest collators and that their bandwidth and time are not being wasted by attackers. Communicating across this trust-boundary is the most difficult part of this subsystem.</p>
@@ -2748,7 +2750,7 @@ struct CollationGenerationConfig {
 <p>As collators advertise the availability, we notify the Candidate Selection subsystem with a <a href="node/collators/../../types/overseer-protocol.html#candidate-selection-message"><code>CandidateSelection</code></a><code>::Collation</code> message. Note that this message is lightweight: it only contains the relay parent, para id, and collator id.</p>
 <p>At that point, the Candidate Selection algorithm is free to use an arbitrary algorithm to determine which if any of these messages to follow up on. It is expected to use the <a href="node/collators/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::FetchCollation</code> message to follow up.</p>
 <p>The intent behind this design is to minimize the total number of (large) collations which must be transmitted.</p>
-<h1 id="backing-subsystems"><a class="header" href="#backing-subsystems">Backing Subsystems</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="backing-subsystems"><a class="header" href="#backing-subsystems">Backing Subsystems</a></h1>
 <p>The backing subsystems, when conceived as a black box, receive an arbitrary quantity of parablock candidates and associated proofs of validity from arbitrary untrusted collators. From these, they produce a bounded quantity of backable candidates which relay chain block authors may choose to include in a subsequent block.</p>
 <p>In broad strokes, the flow operates like this:</p>
 <ul>
@@ -2757,7 +2759,7 @@ struct CollationGenerationConfig {
 <li><strong>Statement Distribution</strong> is the networking component which ensures that all validators receive each others' statements.</li>
 <li><strong>PoV Distribution</strong> is the networking component which ensures that validators considering a candidate can get the appropriate PoV.</li>
 </ul>
-<h1 id="candidate-selection"><a class="header" href="#candidate-selection">Candidate Selection</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-selection"><a class="header" href="#candidate-selection">Candidate Selection</a></h1>
 <p>The Candidate Selection Subsystem is run by validators, and is responsible for interfacing with Collators to select a candidate, along with its PoV, to second during the backing process relative to a specific relay parent.</p>
 <p>This subsystem includes networking code for communicating with collators, and tracks which collations specific collators have submitted. This subsystem is responsible for disconnecting and blacklisting collators who are found to have submitted invalid collations. Typically an invalid collation will be discovered by a different subsystem.</p>
 <p>This subsystem is only ever interested in parablocks assigned to the particular parachain which this validator is currently handling.</p>
@@ -2786,7 +2788,7 @@ struct CollationGenerationConfig {
 <li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
 <li>A variation of that scheme would be to randomly choose a number <code>I</code>, and have a fixed acceptance window <code>D</code> for parablock candidates. At the end of the period <code>D</code>, count <code>C</code>: the number of parablock candidates received. Second the one with index <code>I % C</code>. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
 </ul>
-<h1 id="candidate-backing"><a class="header" href="#candidate-backing">Candidate Backing</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-backing"><a class="header" href="#candidate-backing">Candidate Backing</a></h1>
 <p>The Candidate Backing subsystem ensures every parablock considered for relay block inclusion has been seconded by at least one validator, and approved by a quorum. Parablocks for which no validator will assert correctness are discarded. If the block later proves invalid, the initial backers are slashable; this gives polkadot a rational threat model during subsequent stages.</p>
 <p>Its role is to produce backable candidates for inclusion in new relay-chain blocks. It does so by issuing signed <a href="node/backing/../../types/backing.html#statement-type"><code>Statement</code>s</a> and tracking received statements signed by other validators. Once enough statements are received, they can be combined into backing for specific candidates.</p>
 <p>Note that though the candidate backing subsystem attempts to produce as many backable candidates as possible, it does <em>not</em> attempt to choose a single authoritative one. The choice of which actually gets included is ultimately up to the block author, by whatever metrics it may use; those are opaque to this subsystem.</p>
@@ -2898,7 +2900,7 @@ Dispatch a [<code>AvailabilityDistributionMessage</code>][PDM]<code>::FetchPoV{ 
 Dispatch a <code>CandidateValidationMessage::Validate(validation function, candidate, pov, sender)</code> and listen on the receiver for a response.</p>
 <h3 id="distribute-signed-statement"><a class="header" href="#distribute-signed-statement">Distribute Signed Statement</a></h3>
 <p>Dispatch a [<code>StatementDistributionMessage</code>][PDM]<code>::Share(relay_parent, SignedFullStatement)</code>.</p>
-<h1 id="statement-distribution"><a class="header" href="#statement-distribution">Statement Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="statement-distribution"><a class="header" href="#statement-distribution">Statement Distribution</a></h1>
 <p>The Statement Distribution Subsystem is responsible for distributing statements about seconded candidates between validators.</p>
 <h2 id="protocol-4"><a class="header" href="#protocol-4">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
@@ -2972,10 +2974,10 @@ subsystem, nodes will only respond to large statement requests, when they
 previously notified that peer via gossip about that statement. So, it is not
 possible to DoS nodes at scale, by requesting candidate data over and over
 again.</p>
-<h1 id="pov-distribution"><a class="header" href="#pov-distribution">PoV Distribution</a></h1>
-<h1 id="availability-subsystems"><a class="header" href="#availability-subsystems">Availability Subsystems</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="pov-distribution"><a class="header" href="#pov-distribution">PoV Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability-subsystems"><a class="header" href="#availability-subsystems">Availability Subsystems</a></h1>
 <p>The availability subsystems are responsible for ensuring that Proofs of Validity of backed candidates are widely available within the validator set, without requiring every node to retain a full copy. They accomplish this by broadly distributing erasure-coded chunks of the PoV, keeping track of which validator has which chunk by means of signed bitfields. They are also responsible for reassembling a complete PoV when required, e.g. when a fisherman reports a potentially invalid block.</p>
-<h1 id="availability-distribution"><a class="header" href="#availability-distribution">Availability Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability-distribution"><a class="header" href="#availability-distribution">Availability Distribution</a></h1>
 <p>This subsystem is responsible for distribution availability data to peers.
 Availability data are chunks, <code>PoV</code>s and <code>AvailableData</code> (which is <code>PoV</code> +
 <code>PersistedValidationData</code>). It does so via request response protocols.</p>
@@ -3056,7 +3058,7 @@ by looking the requested chunks and <code>PoV</code>s up in the availability sto
 happens in the <code>responder</code> module.</p>
 <p>We rely on the backing subsystem to make available data available locally in the
 <code>Availability Store</code> after it has validated it.</p>
-<h1 id="availability-recovery"><a class="header" href="#availability-recovery">Availability Recovery</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability-recovery"><a class="header" href="#availability-recovery">Availability Recovery</a></h1>
 <p>This subsystem is the inverse of the <a href="node/availability/availability-distribution.html">Availability Distribution</a> subsystem: validators will serve the availability chunks kept in the availability store to nodes who connect to them. And the subsystem will also implement the other side: the logic for nodes to connect to validators, request availability pieces, and reconstruct the <code>AvailableData</code>.</p>
 <p>This version of the availability recovery subsystem is based off of direct connections to validators. In order to recover any given <code>AvailableData</code>, we must recover at least <code>f + 1</code> pieces from validators of the session. Thus, we will connect to and query randomly chosen validators until we have received <code>f + 1</code> pieces.</p>
 <h2 id="protocol-6"><a class="header" href="#protocol-6">Protocol</a></h2>
@@ -3214,7 +3216,7 @@ const N_PARALLEL: usize = 50;
 </ul>
 </li>
 </ul>
-<h1 id="bitfield-distribution"><a class="header" href="#bitfield-distribution">Bitfield Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="bitfield-distribution"><a class="header" href="#bitfield-distribution">Bitfield Distribution</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
 <h2 id="protocol-7"><a class="header" href="#protocol-7">Protocol</a></h2>
 <p><code>PeerSet</code>: <code>Validation</code></p>
@@ -3236,7 +3238,7 @@ Only accept bitfields relevant to our current view and only distribute bitfields
 Accept and distribute only one bitfield per validator.</p>
 <p>When receiving a bitfield either from the network or from a <code>DistributeBitfield</code> message, forward it along to the block authorship (provisioning) subsystem for potential inclusion in a block.</p>
 <p>Peers connecting after a set of valid bitfield gossip messages was received, those messages must be cached and sent upon connection of new peers or re-connecting peers.</p>
-<h1 id="bitfield-signing"><a class="header" href="#bitfield-signing">Bitfield Signing</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="bitfield-signing"><a class="header" href="#bitfield-signing">Bitfield Signing</a></h1>
 <p>Validators vote on the availability of a backed candidate by issuing signed bitfields, where each bit corresponds to a single candidate. These bitfields can be used to compactly determine which backed candidates are available or not based on a 2/3+ quorum.</p>
 <h2 id="protocol-8"><a class="header" href="#protocol-8">Protocol</a></h2>
 <p>Input:</p>
@@ -3258,11 +3260,11 @@ If not running as a validator, do nothing.</p>
 <li>For all chunks we have, set the corresponding bit in the bitfield.</li>
 <li>Sign the bitfield and dispatch a <code>BitfieldDistribution::DistributeBitfield</code> message.</li>
 </ul>
-<h1 id="approval-subsystems"><a class="header" href="#approval-subsystems">Approval Subsystems</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="approval-subsystems"><a class="header" href="#approval-subsystems">Approval Subsystems</a></h1>
 <p>The approval subsystems implement the node-side of the <a href="node/approval/../../protocol-approval.html">Approval Protocol</a>.</p>
 <p>We make a divide between the <a href="node/approval/approval-voting.html">assignment/voting logic</a> and the <a href="node/approval/approval-distribution.html">distribution logic</a> that distributes assignment certifications and approval votes. The logic in the assignment and voting also informs the GRANDPA voting rule on how to vote.</p>
 <p>These subsystems are intended to flag issues and begin <a href="node/approval/../disputes/dispute-participation.html">participating in live disputes</a>. Dispute subsystems also track all observed votes (backing, approval, and dispute-specific) by all validators on all candidates.</p>
-<h1 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h1>
 <p>Reading the <a href="node/approval/../../protocol-approval.html">section on the approval protocol</a> will likely be necessary to understand the aims of this subsystem.</p>
 <p>Approval votes are split into two parts: Assignments and Approvals. Validators first broadcast their assignment to indicate intent to check a candidate. Upon successfully checking, they broadcast an approval vote. If a validator doesn't broadcast their approval vote shortly after issuing an assignment, this is an indication that they are being prevented from recovering or validating the block data and that more validators should self-select to check the candidate. This is known as a &quot;no-show&quot;.</p>
 <p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of DelayTranches, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which DelayTranche those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
@@ -3649,7 +3651,7 @@ struct State {
 <li>Given the slot number of a block, and the current time, this informs about the current tranche.</li>
 <li>Convert <code>time.saturating_sub(slot_number.to_time())</code> to a delay tranches value</li>
 </ul>
-<h1 id="approval-distribution"><a class="header" href="#approval-distribution">Approval Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="approval-distribution"><a class="header" href="#approval-distribution">Approval Distribution</a></h1>
 <p>A subsystem for the distribution of assignments and approvals for approval checks on candidates over the network.</p>
 <p>The <a href="node/approval/approval-voting.html">Approval Voting</a> subsystem is responsible for active participation in a protocol designed to select a sufficient number of validators to check each and every candidate which appears in the relay chain. Statements of participation in this checking process are divided into two kinds:</p>
 <ul>
@@ -3900,7 +3902,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 </li>
 </ol>
 <p>The reason we only send our local assignments and approvals when a certain block depth is reached when unifying with a peer is to avoid DoS attacks. It also helps when a node starts with a large difference between finalized and the highest block.</p>
-<h1 id="disputes-subsystems"><a class="header" href="#disputes-subsystems">Disputes Subsystems</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes-subsystems"><a class="header" href="#disputes-subsystems">Disputes Subsystems</a></h1>
 <p>This section is for the node-side subsystems that lead to participation in disputes. There are five major roles that validator nodes must participate in when it comes to disputes</p>
 <ul>
 <li>Detection. Detect bad parablocks, either during candidate backing or approval checking, and initiate a dispute.</li>
@@ -3928,7 +3930,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <h3 id="dispute-distribution"><a class="header" href="#dispute-distribution">Dispute Distribution</a></h3>
 <p>This is a networking component by which validators notify each other of live disputes and statements on those disputes.</p>
 <p>Validators will in the future distribute votes to each other via the network, but at the moment learn of disputes just from watching the chain.</p>
-<h1 id="dispute-coordinator-1"><a class="header" href="#dispute-coordinator-1">Dispute Coordinator</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="dispute-coordinator-1"><a class="header" href="#dispute-coordinator-1">Dispute Coordinator</a></h1>
 <p>This is the central subsystem of the node-side components which participate in disputes. This subsystem wraps a database which tracks all statements observed by all validators over some window of sessions. Votes older than this session window are pruned.</p>
 <p>This subsystem will be the point which produce dispute votes, eiuther positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger the <a href="node/disputes/dispute-participation.html">dispute participation</a> subsystem to recover and validate the block and call back to this subsystem.</p>
 <h2 id="database-schema-1"><a class="header" href="#database-schema-1">Database Schema</a></h2>
@@ -4053,7 +4055,7 @@ struct ActiveDisputes {
 <li>Flush the <code>state.overlay</code> to the DB, writing all entries within</li>
 <li>Clear <code>state.overlay</code>.</li>
 </ul>
-<h1 id="dispute-participation-2"><a class="header" href="#dispute-participation-2">Dispute Participation</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="dispute-participation-2"><a class="header" href="#dispute-participation-2">Dispute Participation</a></h1>
 <p>This subsystem is responsible for actually participating in disputes: when notified of a dispute, we need to recover the candidate data, validate the candidate, and cast our vote in the dispute.</p>
 <p>Fortunately, most of that work is handled by other subsystems; this subsystem is just a small glue component for tying other subsystems together and issuing statements based on their validity.</p>
 <h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
@@ -4103,11 +4105,11 @@ struct ActiveDisputes {
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
 <p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parameterization.</p>
 <p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::ImportStatements</code></a> with each signed statement.</p>
-<h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
 <p>TODO https://github.com/paritytech/polkadot/issues/2581</p>
-<h1 id="utility-subsystems"><a class="header" href="#utility-subsystems">Utility Subsystems</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="utility-subsystems"><a class="header" href="#utility-subsystems">Utility Subsystems</a></h1>
 <p>The utility subsystems are an assortment which don't have a natural home in another subsystem collection.</p>
-<h1 id="availability-store"><a class="header" href="#availability-store">Availability Store</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability-store"><a class="header" href="#availability-store">Availability Store</a></h1>
 <p>This is a utility subsystem responsible for keeping available certain data and pruning that data.</p>
 <p>The two data types:</p>
 <ul>
@@ -4297,7 +4299,7 @@ to be run very often.</p>
 </ul>
 </li>
 </ul>
-<h1 id="candidate-validation"><a class="header" href="#candidate-validation">Candidate Validation</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-validation"><a class="header" href="#candidate-validation">Candidate Validation</a></h1>
 <p>This subsystem is responsible for handling candidate validation requests. It is a simple request/response server.</p>
 <p>A variety of subsystems want to know if a parachain block candidate is valid. None of them care about the detailed mechanics of how a candidate gets validated, just the results. This subsystem handles those details.</p>
 <h2 id="protocol-14"><a class="header" href="#protocol-14">Protocol</a></h2>
@@ -4329,7 +4331,7 @@ to be run very often.</p>
 </ul>
 <h3 id="checking-validation-outputs"><a class="header" href="#checking-validation-outputs">Checking Validation Outputs</a></h3>
 <p>If we can assume the presence of the relay-chain state (that is, during processing <a href="node/utility/../../types/overseer-protocol.html#validationrequesttype"><code>CandidateValidationMessage</code></a><code>::ValidateFromChainState</code>) we can run all the checks that the relay-chain would run at the inclusion time thus confirming that the candidate will be accepted.</p>
-<h1 id="provisioner"><a class="header" href="#provisioner">Provisioner</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="provisioner"><a class="header" href="#provisioner">Provisioner</a></h1>
 <p>Relay chain block authorship authority is governed by BABE and is beyond the scope of the Overseer and the rest of the subsystems. That said, ultimately the block author needs to select a set of backable parachain candidates and other consensus data, and assemble a block from them. This subsystem is responsible for providing the necessary data to all potential block authors.</p>
 <p>A major feature of the provisioner: this subsystem is responsible for ensuring that parachain block candidates are sufficiently available before sending them to potential block authors.</p>
 <h2 id="provisionable-data"><a class="header" href="#provisionable-data">Provisionable Data</a></h2>
@@ -4450,7 +4452,7 @@ to be run very often.</p>
 <p>Forward the message to the appropriate Block Authorship Provisioning Job, or discard if no appropriate job is currently active.</p>
 <h2 id="block-authorship-provisioning-job"><a class="header" href="#block-authorship-provisioning-job">Block Authorship Provisioning Job</a></h2>
 <p>Maintain the set of channels to block authors. On receiving provisionable data, send a copy over each channel.</p>
-<h1 id="network-bridge"><a class="header" href="#network-bridge">Network Bridge</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="network-bridge"><a class="header" href="#network-bridge">Network Bridge</a></h1>
 <p>One of the main features of the overseer/subsystem duality is to avoid shared ownership of resources and to communicate via message-passing. However, implementing each networking subsystem as its own network protocol brings a fair share of challenges.</p>
 <p>The most notable challenge is coordinating and eliminating race conditions of peer connection and disconnection events. If we have many network protocols that peers are supposed to be connected on, it is difficult to enforce that a peer is indeed connected on all of them or the order in which those protocols receive notifications that peers have connected. This becomes especially difficult when attempting to share peer state across protocols. All of the Parachain-Host's gossip protocols eliminate DoS with a data-dependency on current chain heads. However, it is inefficient and confusing to implement the logic for tracking our current chain heads as well as our peers' on each of those subsystems. Having one subsystem for tracking this shared state and distributing it to the others is an improvement in architecture and efficiency.</p>
 <p>One other piece of shared state to track is peer reputation. When peers are found to have provided value or cost, we adjust their reputation accordingly.</p>
@@ -4549,7 +4551,7 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <ul>
 <li><code>CollatorProtocolV1Message -&gt; CollatorProtocolMessage::NetworkBridgeUpdateV1</code></li>
 </ul>
-<h1 id="gossip-support"><a class="header" href="#gossip-support">Gossip Support</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="gossip-support"><a class="header" href="#gossip-support">Gossip Support</a></h1>
 <p>The Gossip Support Subsystem is responsible for keeping track of session changes
 and issuing a connection request to all validators in the next, current and a few past sessions
 if we are a validator in these sessions.
@@ -4561,20 +4563,20 @@ At the moment we enforce a cap of <code>max(sqrt(peers.len()), 25)</code> messag
 <p>We also flip a coin with the same probability when handling peer view updates in the distribution subsystems.
 Over time the probability of not handling a peer view update converges to zero, so it shouldn't be cause much trouble.
 This should be considered as a temporary measure until we implement a more robust solution for gossiping.</p>
-<h1 id="misbehavior-arbitration"><a class="header" href="#misbehavior-arbitration">Misbehavior Arbitration</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="misbehavior-arbitration"><a class="header" href="#misbehavior-arbitration">Misbehavior Arbitration</a></h1>
 <p>The Misbehavior Arbitration subsystem collects reports of validator misbehavior, and slashes the stake of both misbehaving validator nodes and false accusers.</p>
 <blockquote>
 <p>TODO: It is not yet fully specified; that problem is postponed to a future PR.</p>
 </blockquote>
 <p>One policy question we've decided even so: in the event that MA has to call all validators to check some block about which some validators disagree, the minority voters all get slashed, and the majority voters all get rewarded. Validators which abstain have a minor slash penalty, but probably not in the same order of magnitude as those who vote wrong.</p>
-<h1 id="peer-set-manager"><a class="header" href="#peer-set-manager">Peer Set Manager</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="peer-set-manager"><a class="header" href="#peer-set-manager">Peer Set Manager</a></h1>
 <blockquote>
 <p>TODO</p>
 </blockquote>
 <h2 id="protocol-17"><a class="header" href="#protocol-17">Protocol</a></h2>
 <h2 id="functionality-17"><a class="header" href="#functionality-17">Functionality</a></h2>
 <h2 id="jobs-if-any"><a class="header" href="#jobs-if-any">Jobs, if any</a></h2>
-<h1 id="runtime-api"><a class="header" href="#runtime-api">Runtime API</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="runtime-api"><a class="header" href="#runtime-api">Runtime API</a></h1>
 <p>The Runtime API subsystem is responsible for providing a single point of access to runtime state data via a set of pre-determined queries. This prevents shared ownership of a blockchain client resource by providing</p>
 <h2 id="protocol-18"><a class="header" href="#protocol-18">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></p>
@@ -4588,7 +4590,7 @@ This should be considered as a temporary measure until we implement a more robus
 <blockquote>
 <p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on relay_parents that are not active based on <code>ActiveLeavesUpdate</code> messages. Maybe with some leeway for things that have just been stopped.</p>
 </blockquote>
-<h1 id="chain-api"><a class="header" href="#chain-api">Chain API</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="chain-api"><a class="header" href="#chain-api">Chain API</a></h1>
 <p>The Chain API subsystem is responsible for providing a single point of access to chain state data via a set of pre-determined queries.</p>
 <h2 id="protocol-19"><a class="header" href="#protocol-19">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage</code></a></p>
@@ -4603,7 +4605,7 @@ This should be considered as a temporary measure until we implement a more robus
 <li>Last finalized block number</li>
 <li>Ancestors</li>
 </ul>
-<h1 id="type-definitions"><a class="header" href="#type-definitions">Type Definitions</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="type-definitions"><a class="header" href="#type-definitions">Type Definitions</a></h1>
 <p>This section of the guide provides type definitions of various categories.</p>
 <h2 id="v1-overview"><a class="header" href="#v1-overview">V1 Overview</a></h2>
 <p>Diagrams are rendered in high resolution; open them in a separate tab to see full scale.</p>
@@ -4611,7 +4613,7 @@ This should be considered as a temporary measure until we implement a more robus
 <p><img src="types/data_structures_and_types_0.generated.svg" alt="" /></p>
 <p>These data types are defined in <code>polkadot/parachain/src/primitives.rs</code>:</p>
 <p><img src="types/data_structures_and_types_1.generated.svg" alt="" /></p>
-<h1 id="candidate-types"><a class="header" href="#candidate-types">Candidate Types</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="candidate-types"><a class="header" href="#candidate-types">Candidate Types</a></h1>
 <p>Para candidates are some of the most common types, both within the runtime and on the Node-side.
 Candidates are the fundamental datatype for advancing parachains and parathreads, encapsulating the collator's signature, the context of the parablock, the commitments to the output, and a commitment to the data which proves it valid.</p>
 <p>In a way, this entire guide is about these candidates: how they are scheduled, constructed, backed, included, and challenged.</p>
@@ -4769,7 +4771,7 @@ struct CandidateCommitments {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="backing-types"><a class="header" href="#backing-types">Backing Types</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="backing-types"><a class="header" href="#backing-types">Backing Types</a></h1>
 <p><a href="types/candidate.html">Candidates</a> go through many phases before being considered included in a fork of the relay chain and eventually accepted.</p>
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
 <h2 id="validity-attestation"><a class="header" href="#validity-attestation">Validity Attestation</a></h2>
@@ -4875,7 +4877,7 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 struct BackedCandidates(Vec&lt;BackedCandidate&gt;); // sorted by para-id.
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="availability"><a class="header" href="#availability">Availability</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="availability"><a class="header" href="#availability">Availability</a></h1>
 <p>One of the key roles of validators is to ensure availability of all data necessary to validate
 candidates for the duration of a challenge period. This is done via an erasure-coding of the data to keep available.</p>
 <h2 id="signed-availability-bitfield"><a class="header" href="#signed-availability-bitfield">Signed Availability Bitfield</a></h2>
@@ -4935,7 +4937,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="overseer-protocol"><a class="header" href="#overseer-protocol">Overseer Protocol</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="overseer-protocol"><a class="header" href="#overseer-protocol">Overseer Protocol</a></h1>
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
 <h2 id="overseer-signal"><a class="header" href="#overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
@@ -5637,7 +5639,7 @@ pub enum CandidateValidationMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="runtime"><a class="header" href="#runtime">Runtime</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="runtime"><a class="header" href="#runtime">Runtime</a></h1>
 <p>Types used within the runtime exclusively and pervasively.</p>
 <h2 id="host-configuration"><a class="header" href="#host-configuration">Host Configuration</a></h2>
 <p>The internal-to-runtime configuration of the parachain host. This is expected to be altered only by governance procedures.</p>
@@ -5769,7 +5771,7 @@ pub enum CandidateValidationMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="chain"><a class="header" href="#chain">Chain</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="chain"><a class="header" href="#chain">Chain</a></h1>
 <p>Types pertaining to the relay-chain - events, structures, etc.</p>
 <h2 id="block-import-event"><a class="header" href="#block-import-event">Block Import Event</a></h2>
 <pre><pre class="playground"><code class="language-rust">
@@ -5800,7 +5802,7 @@ struct BlockFinalizationEvent {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="message-types"><a class="header" href="#message-types">Message types</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="message-types"><a class="header" href="#message-types">Message types</a></h1>
 <p>Types of messages that are passed between parachains and the relay chain: UMP, DMP, XCMP.</p>
 <p>There is also HRMP (Horizontally Relay-routed Message Passing) which provides the same functionality
 although with smaller scalability potential.</p>
@@ -5858,7 +5860,7 @@ struct InboundHrmpMessage {
 	pub data: Vec&lt;u8&gt;,
 }
 </code></pre>
-<h1 id="network-types"><a class="header" href="#network-types">Network Types</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="network-types"><a class="header" href="#network-types">Network Types</a></h1>
 <p>These types are those that are actually sent over the network to subsystems.</p>
 <h2 id="universal-types"><a class="header" href="#universal-types">Universal Types</a></h2>
 <pre><pre class="playground"><code class="language-rust">
@@ -6020,7 +6022,7 @@ enum ObservedRole {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="approval-types"><a class="header" href="#approval-types">Approval Types</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="approval-types"><a class="header" href="#approval-types">Approval Types</a></h1>
 <h2 id="assignmentid"><a class="header" href="#assignmentid">AssignmentId</a></h2>
 <p>The public key of a keypair used by a validator for determining assignments to approve included parachain candidates.</p>
 <h2 id="assignmentcert"><a class="header" href="#assignmentcert">AssignmentCert</a></h2>
@@ -6119,7 +6121,7 @@ struct AssignmentCert {
 </span>type DelayTranche = u32;
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h1>
 <h2 id="disputestatementset"><a class="header" href="#disputestatementset">DisputeStatementSet</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6196,7 +6198,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <p>Here you can find definitions of a bunch of jargon, usually specific to the Polkadot project.</p>
 <ul>
 <li>BABE: (Blind Assignment for Blockchain Extension). The algorithm validators use to safely extend the Relay Chain. See <a href="https://wiki.polkadot.network/docs/en/learn-consensus">the Polkadot wiki</a> for more information.</li>
@@ -6238,7 +6240,7 @@ exactly one downward message queue.</li>
 <li>XCMP (Cross-Chain Message Passing) A type of horizontal message passing (i.e. between parachains) that allows secure message passing directly between parachains and has minimal resource requirements from the relay chain, thus highly scalable.</li>
 </ul>
 <p>Also of use is the <a href="https://substrate.dev/docs/en/knowledgebase/getting-started/glossary">Substrate Glossary</a>.</p>
-<h1 id="further-reading"><a class="header" href="#further-reading">Further Reading</a></h1>
+<div id="chapter_begin" style="break-before: page; page-break-before: always;"></div><h1 id="further-reading"><a class="header" href="#further-reading">Further Reading</a></h1>
 <ul>
 <li>Polkadot Wiki on Consensus: <a href="https://wiki.polkadot.network/docs/en/learn-consensus">https://wiki.polkadot.network/docs/en/learn-consensus</a></li>
 <li>Polkadot Spec: <a href="https://github.com/w3f/polkadot-spec">https://github.com/w3f/polkadot-spec</a></li>
