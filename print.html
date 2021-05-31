@@ -2549,6 +2549,7 @@ into the inherent data. From that point on, control passes from the node to the 
 
 </code></pre>
 <p>The overseer determines work to do based on block import events and block finalization events. It does this by keeping track of the set of relay-parents for which work is currently being done. This is known as the &quot;active leaves&quot; set. It determines an initial set of active leaves on startup based on the data on-disk, and uses events about blockchain import to update the active leaves. Updates lead to <a href="node/../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code> being sent according to new relay-parents, as well as relay-parents to stop considering. Block import events inform the overseer of leaves that no longer need to be built on, now that they have children, and inform us to begin building on those children. Block finalization events inform us when we can stop focusing on blocks that appear to have been orphaned.</p>
+<p>The overseer is also responsible for tracking the freshness of active leaves. Leaves are fresh when they're encountered for the first time, and stale when they're encountered for subsequent times. This can occur after chain reversions or when the fork-choice rule abandons some chain. This distinction is used to manage <strong>Reversion Safety</strong>. Consensus messages are often localized to a specific relay-parent, and it is often a misbehavior to equivocate or sign two conflicting messages. When reverting the chain, we may begin work on a leaf that subsystems have already signed messages for. Subsystems which need to account for reversion safety should avoid performing work on stale leaves.</p>
 <p>The overseer's logic can be described with these functions:</p>
 <h2 id="on-startup"><a class="header" href="#on-startup">On Startup</a></h2>
 <ul>
@@ -2560,6 +2561,7 @@ into the inherent data. From that point on, control passes from the node to the 
 <h2 id="on-block-import-event"><a class="header" href="#on-block-import-event">On Block Import Event</a></h2>
 <ul>
 <li>Apply the block import event to the active leaves. A new block should lead to its addition to the active leaves set and its parent being deactivated.</li>
+<li>Mark any stale leaves as stale. The overseer should track all leaves it activates to determine whether leaves are fresh or stale.</li>
 <li>Send an <code>OverseerSignal::ActiveLeavesUpdate</code> message to all subsystems containing all activated and deactivated leaves.</li>
 <li>Ensure all <code>ActiveLeavesUpdate</code> messages are flushed before resuming activity as a message router.</li>
 </ul>
@@ -2812,7 +2814,7 @@ struct CollationGenerationConfig {
 <ul>
 <li>If the signal is an <a href="node/backing/../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code>:
 <ul>
-<li>spawn a Candidate Backing Job for each <code>activated</code> head, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
+<li>spawn a Candidate Backing Job for each <code>activated</code> head referring to a fresh leaf, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
 <li>cease the Candidate Backing Job for each <code>deactivated</code> head, if any.</li>
 </ul>
 </li>
@@ -3249,7 +3251,7 @@ Accept and distribute only one bitfield per validator.</p>
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
 <h2 id="functionality-8"><a class="header" href="#functionality-8">Functionality</a></h2>
-<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
+<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head referring to a fresh leaf. Stop the job for each <code>deactivated</code> head.</p>
 <h2 id="bitfield-signing-job"><a class="header" href="#bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>
@@ -3428,7 +3430,7 @@ struct State {
 <h4 id="overseersignalactiveleavesupdate"><a class="header" href="#overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
-<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem.</li>
+<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. Stale leaves in the update can be ignored.</li>
 <li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps.</li>
 <li>We use the RuntimeApiSubsystem to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
 <ul>
@@ -4965,8 +4967,18 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>struct ActiveLeavesUpdate {
-    activated: [(Hash, Number)], // in practice, these should probably be a SmallVec
+</span>enum LeafStatus {
+    // A leaf is fresh when it's the first time the leaf has been encountered.
+    // Most leaves should be fresh.
+    Fresh,
+    // A leaf is stale when it's encountered for a subsequent time. This will
+    // happen when the chain is reverted or the fork-choice rule abandons some
+    // chain.
+    Stale,
+}
+
+struct ActiveLeavesUpdate {
+    activated: [(Hash, Number, LeafStatus)], // in practice, these should probably be a SmallVec
     deactivated: [Hash],
 }
 <span class="boring">}

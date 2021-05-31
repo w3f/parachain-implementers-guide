@@ -193,8 +193,18 @@
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>struct ActiveLeavesUpdate {
-    activated: [(Hash, Number)], // in practice, these should probably be a SmallVec
+</span>enum LeafStatus {
+    // A leaf is fresh when it's the first time the leaf has been encountered.
+    // Most leaves should be fresh.
+    Fresh,
+    // A leaf is stale when it's encountered for a subsequent time. This will
+    // happen when the chain is reverted or the fork-choice rule abandons some
+    // chain.
+    Stale,
+}
+
+struct ActiveLeavesUpdate {
+    activated: [(Hash, Number, LeafStatus)], // in practice, these should probably be a SmallVec
     deactivated: [Hash],
 }
 <span class="boring">}

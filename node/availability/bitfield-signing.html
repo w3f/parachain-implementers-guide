@@ -176,7 +176,7 @@
 <li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
-<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head. Stop the job for each <code>deactivated</code> head.</p>
+<p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head referring to a fresh leaf. Stop the job for each <code>deactivated</code> head.</p>
 <h2 id="bitfield-signing-job"><a class="header" href="#bitfield-signing-job">Bitfield Signing Job</a></h2>
 <p>Localized to a specific relay-parent <code>r</code>
 If not running as a validator, do nothing.</p>

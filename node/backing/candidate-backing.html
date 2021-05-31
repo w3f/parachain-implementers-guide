@@ -189,7 +189,7 @@
 <ul>
 <li>If the signal is an <a href="../../types/overseer-protocol.html#overseer-signal"><code>OverseerSignal</code></a><code>::ActiveLeavesUpdate</code>:
 <ul>
-<li>spawn a Candidate Backing Job for each <code>activated</code> head, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
+<li>spawn a Candidate Backing Job for each <code>activated</code> head referring to a fresh leaf, storing a bidirectional channel with the Candidate Backing Job in the set of handles.</li>
 <li>cease the Candidate Backing Job for each <code>deactivated</code> head, if any.</li>
 </ul>
 </li>
