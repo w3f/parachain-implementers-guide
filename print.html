@@ -998,7 +998,7 @@ UpcomingParasGenesis: map ParaId =&gt; Option&lt;ParaGenesisArgs&gt;;
 /// The number of references on the validation code in `CodeByHash` storage.
 CodeByHashRefs: map Hash =&gt; u32;
 /// Validation code stored by its hash.
-CoeByHash: map Hash =&gt; Option&lt;ValidationCode&gt;
+CodeByHash: map Hash =&gt; Option&lt;ValidationCode&gt;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="session-change-4"><a class="header" href="#session-change-4">Session Change</a></h2>
@@ -2142,6 +2142,13 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn validation_code(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;ValidationCode&gt;;
+<span class="boring">}
+</span></code></pre></pre>
+<p>Fetch the validation code (past, present or future) by its hash.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn validation_code_by_hash(at: Block, Hash) -&gt; Option&lt;ValidationCode&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="candidate-pending-availability"><a class="header" href="#candidate-pending-availability">Candidate Pending Availability</a></h1>
@@ -3512,7 +3519,7 @@ struct State {
 <li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, backing_group, block_hash, candidate_index)</code></li>
 <li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
 <li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, Some(backing_group), response_sender)</code></li>
-<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::HistoricalValidationCode(</code>descriptor.para_id<code>, </code>descriptor.relay_parent<code>)</code> against the state of <code>block_hash</code>.</li>
+<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::ValidationCodeByHash(</code>descriptor.validation_code_hash<code>)</code> against the state of <code>block_hash</code>.</li>
 <li>Spawn a background task with a clone of <code>background_tx</code>
 <ul>
 <li>Wait for the available data</li>
@@ -4026,15 +4033,6 @@ struct ActiveDisputes {
 <li><a href="node/disputes/../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
 </ul>
 <h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
-<p>In-memory state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
-</span><span class="boring">fn main() {
-</span>struct State {
-    recent_block_hash: Hash
-}
-<span class="boring">}
-</span></code></pre></pre>
 <h3 id="on-overseersignalactiveleavesupdate-1"><a class="header" href="#on-overseersignalactiveleavesupdate-1">On <code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
 <p>Do nothing.</p>
 <h3 id="on-overseersignalblockfinalized-1"><a class="header" href="#on-overseersignalblockfinalized-1">On <code>OverseerSignal::BlockFinalized</code></a></h3>
@@ -4042,18 +4040,15 @@ struct ActiveDisputes {
 <h3 id="on-overseersignalconclude-1"><a class="header" href="#on-overseersignalconclude-1">On <code>OverseerSignal::Conclude</code></a></h3>
 <p>Conclude.</p>
 <h3 id="on-disputeparticipationmessageparticipate"><a class="header" href="#on-disputeparticipationmessageparticipate">On <code>DisputeParticipationMessage::Participate</code></a></h3>
-<blockquote>
-<p>TODO: this validation code fetching procedure is not helpful for disputed blocks that are in chains we do not know. After https://github.com/paritytech/polkadot/issues/2457 we should use the <code>ValidationCodeByHash</code> runtime API using the code hash in the candidate receipt.</p>
-</blockquote>
 <ul>
 <li>Decompose into parts: <code>{ candidate_hash, candidate_receipt, session, voted_indices }</code></li>
 <li>Issue an <a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage::RecoverAvailableData</code></a></li>
 <li>If the result is <code>Unavailable</code>, return.</li>
 <li>If the result is <code>Invalid</code>, <a href="node/disputes/dispute-participation.html#cast-votes">cast invalid votes</a> and return.</li>
 <li>Fetch the block number of <code>candidate_receipt.descriptor.relay_parent</code> using a <a href="node/disputes/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockNumber</code></a>.</li>
-<li>If the data is recovered, dispatch a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::HistoricalValidationCode</code></a> with the parameters <code>(candidate_receipt.descriptor.para_id, relay_parent_number)</code>.</li>
+<li>If the data is recovered, dispatch a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::ValidationCodeByHash</code></a> with the parameters <code>(candidate_receipt.descriptor.validation_code_hash)</code>.</li>
 <li>Dispatch a <a href="node/disputes/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage::StoreAvailableData</code></a> with the data.</li>
-<li>If the code is not fetched from the chain, return. This should be impossible with correct relay chain configuration after the TODO above is addressed and is unlikely before then, at least if chain synchronization is working correctly.</li>
+<li>If the code is not fetched from the chain, return. This should be impossible with correct relay chain configuration, at least if chain synchronization is working correctly.</li>
 <li>Dispatch a <a href="node/disputes/../../types/overseer-protocol.html#candidate-validation-message"><code>CandidateValidationMessage::ValidateFromExhaustive</code></a> with the available data and the validation code.</li>
 <li>If the validation result is <code>Invalid</code>, <a href="node/disputes/dispute-participation.html#cast-votes">cast invalid votes</a> and return.</li>
 <li>If the validation fails, <a href="node/disputes/dispute-participation.html#cast-votes">cast invalid votes</a> and return.</li>
@@ -4061,8 +4056,7 @@ struct ActiveDisputes {
 </ul>
 <h3 id="cast-votes"><a class="header" href="#cast-votes">Cast Votes</a></h3>
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
-<p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parameterization.</p>
-<p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::ImportStatements</code></a> with each signed statement.</p>
+<p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parametrization.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
 <p>TODO https://github.com/paritytech/polkadot/issues/2581</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="utility-subsystems"><a class="header" href="#utility-subsystems">Utility Subsystems</a></h1>
@@ -5511,9 +5505,9 @@ enum ProvisionerMessage {
     SessionIndexForChild(ResponseChannel&lt;SessionIndex&gt;),
     /// Get the validation code for a specific para, using the given occupied core assumption.
     ValidationCode(ParaId, OccupiedCoreAssumption, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
-    /// Fetch the historical validation code used by a para for candidates executed in
-    /// the context of a given block height in the current chain.
-    HistoricalValidationCode(ParaId, BlockNumber, ResponseChannel&lt;Option&lt;ValidationCode&gt;&gt;),
+    /// Get validation code by its hash, either past, current or future code can be returned,
+    /// as long as state is still available.
+    ValidationCodeByHash(ValidationCodeHash, RuntimeApiSender&lt;Option&lt;ValidationCode&gt;&gt;),
     /// Get a committed candidate receipt for all candidates pending availability.
     CandidatePendingAvailability(ParaId, ResponseChannel&lt;Option&lt;CommittedCandidateReceipt&gt;&gt;),
     /// Get all events concerning candidates in the last block.
