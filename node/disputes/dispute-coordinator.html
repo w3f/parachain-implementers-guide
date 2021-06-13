@@ -157,7 +157,7 @@
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>(SessionIndex, &quot;candidate-votes&quot;, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
+</span>(&quot;candidate-votes&quot;, SessionIndex, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
 &quot;active-disputes&quot; -&gt; ActiveDisputes
 &quot;earliest-session&quot; -&gt; Option&lt;SessionIndex&gt;
 <span class="boring">}
@@ -197,8 +197,6 @@ struct ActiveDisputes {
 </span><span class="boring">fn main() {
 </span>struct State {
     keystore: KeyStore,
-    // An in-memory overlay used as a write-cache.
-    overlay: Map&lt;(SessionIndex, CandidateReceipt), CandidateVotes&gt;,
     highest_session: SessionIndex,
 }
 <span class="boring">}
@@ -210,7 +208,7 @@ struct ActiveDisputes {
 <li>If the session index is higher than <code>state.highest_session</code>:
 <ul>
 <li>update <code>state.highest_session</code></li>
-<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the overlay and from the <code>&quot;active-disputes&quot;</code> in the DB.</li>
+<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;active-disputes&quot;</code> in the DB.</li>
 <li>Use <code>iter_with_prefix</code> to remove everything from <code>&quot;earliest-session&quot;</code> up to <code>state.highest_session - DISPUTE_WINDOW</code> from the DB under <code>&quot;candidate-votes&quot;</code>.</li>
 <li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
 </ul>
@@ -218,18 +216,18 @@ struct ActiveDisputes {
 <li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the ChainApi subsystem to blacklist the chain.</li>
 </ul>
 <h3 id="on-overseersignalconclude"><a class="header" href="#on-overseersignalconclude">On <code>OverseerSignal::Conclude</code></a></h3>
-<p>Flush the overlay to DB and conclude.</p>
+<p>Exit gracefully.</p>
 <h3 id="on-overseersignalblockfinalized"><a class="header" href="#on-overseersignalblockfinalized">On <code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Do nothing.</p>
 <h3 id="on-disputecoordinatormessageimportstatement"><a class="header" href="#on-disputecoordinatormessageimportstatement">On <code>DisputeCoordinatorMessage::ImportStatement</code></a></h3>
 <ul>
 <li>Deconstruct into parts <code>{ candidate_hash, candidate_receipt, session, statements }</code>.</li>
 <li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>, return.</li>
-<li>If there is an entry in the <code>state.overlay</code>, load that. Otherwise, load from underlying DB by querying `(session, &quot;candidate-votes&quot;, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
+<li>Load from underlying DB by querying `(&quot;candidate-votes&quot;, session, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
 <li>If candidate votes is empty and the statements only contain dispute-specific votes, return.</li>
 <li>Otherwise, if there is already an entry from the validator in the respective <code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>, return.</li>
 <li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>. </li>
-<li>Write the <code>CandidateVotes</code> to the <code>state.overlay</code>.</li>
+<li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
 <li>If the both <code>valid</code> and <code>invalid</code> lists now have non-zero length where previously one or both had zero length, the candidate is now freshly disputed.</li>
 <li>If freshly disputed, load <code>&quot;active-disputes&quot;</code> and add the candidate hash and session index. Also issue a <a href="../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.</li>
 <li>If the dispute now has supermajority votes in the &quot;valid&quot; direction, according to the <code>SessionInfo</code> of the dispute candidate's session, remove from <code>&quot;active-disputes&quot;</code>.</li>
@@ -242,8 +240,7 @@ struct ActiveDisputes {
 </ul>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
-<li>Load from the <code>state.overlay</code>, and return the data if <code>Some</code>. </li>
-<li>Otherwise, load <code>&quot;candidate-votes&quot;</code> and return the data within or <code>None</code> if missing.</li>
+<li>Load <code>&quot;candidate-votes&quot;</code> and return the data within or <code>None</code> if missing.</li>
 </ul>
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
@@ -262,11 +259,6 @@ struct ActiveDisputes {
 </ol>
 </li>
 <li>For the highest index <code>i</code> reached in the <code>block_descriptions</code>, send <code>(base_number + i + 1, block_hash)</code> on the channel, unless <code>i</code> is 0, in which case <code>None</code> should be sent. The <code>block_hash</code> is determined by inspecting <code>block_descriptions[i]</code>.</li>
-</ul>
-<h3 id="periodically"><a class="header" href="#periodically">Periodically</a></h3>
-<ul>
-<li>Flush the <code>state.overlay</code> to the DB, writing all entries within</li>
-<li>Clear <code>state.overlay</code>.</li>
 </ul>
 
                     </main>
