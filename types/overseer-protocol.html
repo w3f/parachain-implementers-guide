@@ -577,8 +577,8 @@ enum BitfieldSigningMessage { }
         candidate_receipt: CandidateReceipt,
         /// The session the candidate appears in.
         session: SessionIndex,
-        /// The indices of validators who have already voted on this candidate.
-        voted_indices: Vec&lt;ValidatorIndex&gt;,
+        /// The number of validators in the session.
+        n_validators: u32,
     }
 }
 <span class="boring">}

@@ -4025,8 +4025,17 @@ struct ActiveDisputes {
 <li><a href="node/disputes/../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
 </ul>
 <h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
+<p>In-memory state:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct State {
+    recent_block_hash: Option&lt;(BlockNumber, Hash)&gt;
+}
+<span class="boring">}
+</span></code></pre></pre>
 <h3 id="on-overseersignalactiveleavesupdate-1"><a class="header" href="#on-overseersignalactiveleavesupdate-1">On <code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
-<p>Do nothing.</p>
+<p>Update <code>recent_block</code> in in-memory state according to the highest observed active leaf.</p>
 <h3 id="on-overseersignalblockfinalized-1"><a class="header" href="#on-overseersignalblockfinalized-1">On <code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Do nothing.</p>
 <h3 id="on-overseersignalconclude-1"><a class="header" href="#on-overseersignalconclude-1">On <code>OverseerSignal::Conclude</code></a></h3>
@@ -4037,8 +4046,7 @@ struct ActiveDisputes {
 <li>Issue an <a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage::RecoverAvailableData</code></a></li>
 <li>If the result is <code>Unavailable</code>, return.</li>
 <li>If the result is <code>Invalid</code>, <a href="node/disputes/dispute-participation.html#cast-votes">cast invalid votes</a> and return.</li>
-<li>Fetch the block number of <code>candidate_receipt.descriptor.relay_parent</code> using a <a href="node/disputes/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockNumber</code></a>.</li>
-<li>If the data is recovered, dispatch a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::ValidationCodeByHash</code></a> with the parameters <code>(candidate_receipt.descriptor.validation_code_hash)</code>.</li>
+<li>If the data is recovered, dispatch a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::ValidationCodeByHash</code></a> with the parameters <code>(candidate_receipt.descriptor.validation_code_hash)</code> at <code>state.recent_block.hash</code>.</li>
 <li>Dispatch a <a href="node/disputes/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage::StoreAvailableData</code></a> with the data.</li>
 <li>If the code is not fetched from the chain, return. This should be impossible with correct relay chain configuration, at least if chain synchronization is working correctly.</li>
 <li>Dispatch a <a href="node/disputes/../../types/overseer-protocol.html#candidate-validation-message"><code>CandidateValidationMessage::ValidateFromExhaustive</code></a> with the available data and the validation code.</li>
@@ -5317,8 +5325,8 @@ enum BitfieldSigningMessage { }
         candidate_receipt: CandidateReceipt,
         /// The session the candidate appears in.
         session: SessionIndex,
-        /// The indices of validators who have already voted on this candidate.
-        voted_indices: Vec&lt;ValidatorIndex&gt;,
+        /// The number of validators in the session.
+        n_validators: u32,
     }
 }
 <span class="boring">}
