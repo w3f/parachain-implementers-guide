@@ -159,11 +159,10 @@
 <p>Input: <a href="../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
+<li><a href="../../types/overseer-protocol.html#approval-distribution-message"><code>ApprovalDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
+<li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
@@ -191,7 +190,7 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <p>Each network event is associated with a particular peer-set.</p>
 <h3 id="overseer-signal-activeleavesupdate"><a class="header" href="#overseer-signal-activeleavesupdate">Overseer Signal: ActiveLeavesUpdate</a></h3>
 <p>The <code>activated</code> and <code>deactivated</code> lists determine the evolution of our local view over time. A <code>ProtocolMessage::ViewUpdate</code> is issued to each connected peer on each peer-set, and a <code>NetworkBridgeEvent::OurViewChange</code> is issued to each event handler for each protocol.</p>
-<p>We only send view updates if the node has indicated that it has finished major blockchain synchronization. </p>
+<p>We only send view updates if the node has indicated that it has finished major blockchain synchronization.</p>
 <p>If we are connected to the same peer on both peer-sets, we will send the peer two view updates as a result.</p>
 <h3 id="overseer-signal-blockfinalized"><a class="header" href="#overseer-signal-blockfinalized">Overseer Signal: BlockFinalized</a></h3>
 <p>We update our view's <code>finalized_number</code> to the provided one and delay <code>ProtocolMessage::ViewUpdate</code> and <code>NetworkBridgeEvent::OurViewChange</code> till the next <code>ActiveLeavesUpdate</code>.</p>
@@ -229,14 +228,18 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <li>Send all <code>(ValidatorId, PeerId)</code> pairs on the response channel.</li>
 <li>Feed all Peer IDs to peer set manager the underlying network provides.</li>
 </ul>
+<h3 id="newgossiptopology"><a class="header" href="#newgossiptopology">NewGossipTopology</a></h3>
+<ul>
+<li>Map all <code>AuthorityDiscoveryId</code>s to <code>PeerId</code>s and issue a corresponding <code>NetworkBridgeUpdateV1</code>
+to all validation subsystems.</li>
+</ul>
 <h2 id="event-handlers"><a class="header" href="#event-handlers">Event Handlers</a></h2>
 <p>Network bridge event handlers are the intended recipients of particular network protocol messages. These are each a variant of a message to be sent via the overseer.</p>
 <h3 id="validation-v1"><a class="header" href="#validation-v1">Validation V1</a></h3>
 <ul>
-<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>PoVDistributionV1Message -&gt; PoVDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>AvailabilityDistributionV1Message -&gt; AvailabilityDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>ApprovalDistributionV1Message -&gt; ApprovalDistributionMessage::NetworkBridgeUpdateV1</code></li>
 <li><code>BitfieldDistributionV1Message -&gt; BitfieldDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdateV1</code></li>
 </ul>
 <h3 id="collation-v1"><a class="header" href="#collation-v1">Collation V1</a></h3>
 <ul>

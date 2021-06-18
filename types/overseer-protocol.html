@@ -187,7 +187,35 @@ struct ActiveLeavesUpdate {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h2>
+<h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
+<p>A message type tying together all message types that are used across Subsystems.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum AllMessages {
+    CandidateValidation(CandidateValidationMessage),
+    CandidateBacking(CandidateBackingMessage),
+    ChainApi(ChainApiMessage),
+    CollatorProtocol(CollatorProtocolMessage),
+    StatementDistribution(StatementDistributionMessage),
+    AvailabilityDistribution(AvailabilityDistributionMessage),
+    AvailabilityRecovery(AvailabilityRecoveryMessage),
+    BitfieldDistribution(BitfieldDistributionMessage),
+    BitfieldSigning(BitfieldSigningMessage),
+    Provisioner(ProvisionerMessage),
+    RuntimeApi(RuntimeApiMessage),
+    AvailabilityStore(AvailabilityStoreMessage),
+    NetworkBridge(NetworkBridgeMessage),
+    CollationGeneration(CollationGenerationMessage),
+    ApprovalVoting(ApprovalVotingMessage),
+    ApprovalDistribution(ApprovalDistributionMessage),
+    GossipSupport(GossipSupportMessage),
+    DisputeCoordinator(DisputeCoordinatorMessage),
+    DisputeParticipation(DisputeParticipationMessage),
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="approval-voting-message"><a class="header" href="#approval-voting-message">Approval Voting Message</a></h2>
 <p>Messages received by the approval voting subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -269,8 +297,8 @@ enum ApprovalVotingMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="approval-distribution"><a class="header" href="#approval-distribution">Approval Distribution</a></h2>
-<p>Messages received by the approval Distribution subsystem.</p>
+<h2 id="approval-distribution-message"><a class="header" href="#approval-distribution-message">Approval Distribution Message</a></h2>
+<p>Messages received by the approval distribution subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -308,10 +336,6 @@ enum ApprovalDistributionMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
-<blockquote>
-<p>TODO (now)</p>
-</blockquote>
 <h2 id="availability-distribution-message"><a class="header" href="#availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
 <p>This is a network protocol that receives messages of type <a href="network.html#availability-distribution-v1"><code>AvailabilityDistributionV1Message</code></a>.</p>
@@ -476,7 +500,7 @@ enum BitfieldSigningMessage { }
     /// Request the best leaf containing the given block in its ancestry. Return `None` if
     /// there is no such leaf.
     BestLeafContaining(Hash, ResponseChannel&lt;Option&lt;Hash&gt;&gt;),
-    
+
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -634,6 +658,13 @@ enum NetworkBridgeMessage {
         /// authority discovery has failed to resolve.
         failed: oneshot::Sender&lt;usize&gt;,
     },
+    /// Inform the distribution subsystems about the new
+    /// gossip network topology formed.
+    NewGossipTopology {
+        /// Ids of our neighbors in the new gossip topology.
+        /// We're not necessarily connected to all of them, but we should.
+        our_neighbors: HashSet&lt;AuthorityDiscoveryId&gt;,
+    }
 }
 <span class="boring">}
 </span></code></pre></pre>

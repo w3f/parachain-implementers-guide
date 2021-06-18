@@ -4462,11 +4462,10 @@ to be run very often.</p>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="node/utility/../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
+<li><a href="node/utility/../../types/overseer-protocol.html#approval-distribution-message"><code>ApprovalDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="node/utility/../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="node/utility/../../types/overseer-protocol.html#pov-distribution-message"><code>PoVDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="node/utility/../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="node/utility/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
+<li><a href="node/utility/../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 </ul>
 <h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
@@ -4494,7 +4493,7 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <p>Each network event is associated with a particular peer-set.</p>
 <h3 id="overseer-signal-activeleavesupdate"><a class="header" href="#overseer-signal-activeleavesupdate">Overseer Signal: ActiveLeavesUpdate</a></h3>
 <p>The <code>activated</code> and <code>deactivated</code> lists determine the evolution of our local view over time. A <code>ProtocolMessage::ViewUpdate</code> is issued to each connected peer on each peer-set, and a <code>NetworkBridgeEvent::OurViewChange</code> is issued to each event handler for each protocol.</p>
-<p>We only send view updates if the node has indicated that it has finished major blockchain synchronization. </p>
+<p>We only send view updates if the node has indicated that it has finished major blockchain synchronization.</p>
 <p>If we are connected to the same peer on both peer-sets, we will send the peer two view updates as a result.</p>
 <h3 id="overseer-signal-blockfinalized"><a class="header" href="#overseer-signal-blockfinalized">Overseer Signal: BlockFinalized</a></h3>
 <p>We update our view's <code>finalized_number</code> to the provided one and delay <code>ProtocolMessage::ViewUpdate</code> and <code>NetworkBridgeEvent::OurViewChange</code> till the next <code>ActiveLeavesUpdate</code>.</p>
@@ -4532,14 +4531,18 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <li>Send all <code>(ValidatorId, PeerId)</code> pairs on the response channel.</li>
 <li>Feed all Peer IDs to peer set manager the underlying network provides.</li>
 </ul>
+<h3 id="newgossiptopology"><a class="header" href="#newgossiptopology">NewGossipTopology</a></h3>
+<ul>
+<li>Map all <code>AuthorityDiscoveryId</code>s to <code>PeerId</code>s and issue a corresponding <code>NetworkBridgeUpdateV1</code>
+to all validation subsystems.</li>
+</ul>
 <h2 id="event-handlers"><a class="header" href="#event-handlers">Event Handlers</a></h2>
 <p>Network bridge event handlers are the intended recipients of particular network protocol messages. These are each a variant of a message to be sent via the overseer.</p>
 <h3 id="validation-v1"><a class="header" href="#validation-v1">Validation V1</a></h3>
 <ul>
-<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>PoVDistributionV1Message -&gt; PoVDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>AvailabilityDistributionV1Message -&gt; AvailabilityDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>ApprovalDistributionV1Message -&gt; ApprovalDistributionMessage::NetworkBridgeUpdateV1</code></li>
 <li><code>BitfieldDistributionV1Message -&gt; BitfieldDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdateV1</code></li>
 </ul>
 <h3 id="collation-v1"><a class="header" href="#collation-v1">Collation V1</a></h3>
 <ul>
@@ -4547,16 +4550,19 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="gossip-support"><a class="header" href="#gossip-support">Gossip Support</a></h1>
 <p>The Gossip Support Subsystem is responsible for keeping track of session changes
-and issuing a connection request to all validators in the next, current and a few past sessions
-if we are a validator in these sessions.
-The request will add all validators to a reserved PeerSet, meaning we will not reject a connection request
-from any validator in that set.</p>
-<p>Gossiping subsystems will be notified when a new peer connects or disconnects by network bridge.
-It is their responsibility to limit the amount of outgoing gossip messages.
-At the moment we enforce a cap of <code>max(sqrt(peers.len()), 25)</code> message recipients at a time in each gossiping subsystem.</p>
-<p>We also flip a coin with the same probability when handling peer view updates in the distribution subsystems.
-Over time the probability of not handling a peer view update converges to zero, so it shouldn't be cause much trouble.
-This should be considered as a temporary measure until we implement a more robust solution for gossiping.</p>
+and issuing a connection request to all validators in the next, current and
+a few past sessions if we are a validator in these sessions.
+The request will add all validators to a reserved PeerSet, meaning we will not
+reject a connection request from any validator in that set.</p>
+<p>In addition to that, it creates a gossip overlay topology per session which
+limits the amount of messages sent and received to be an order of sqrt of the
+validators. Our neighbors in this graph will be forwarded to the network bridge
+with the <code>NetworkBridgeMessage::NewGossipTopology</code> message.</p>
+<p>See https://github.com/paritytech/polkadot/issues/3239 for more details.</p>
+<p>The gossip topology is used by parachain distribution subsystems,
+such as Bitfield Distrubution, (small) Statement Distributuion and
+Approval Distibution to limit the amount of peers we send messages to
+and handle view updates.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="misbehavior-arbitration"><a class="header" href="#misbehavior-arbitration">Misbehavior Arbitration</a></h1>
 <p>The Misbehavior Arbitration subsystem collects reports of validator misbehavior, and slashes the stake of both misbehaving validator nodes and false accusers.</p>
 <blockquote>
@@ -4999,7 +5005,35 @@ struct ActiveLeavesUpdate {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="approval-voting-1"><a class="header" href="#approval-voting-1">Approval Voting</a></h2>
+<h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
+<p>A message type tying together all message types that are used across Subsystems.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum AllMessages {
+    CandidateValidation(CandidateValidationMessage),
+    CandidateBacking(CandidateBackingMessage),
+    ChainApi(ChainApiMessage),
+    CollatorProtocol(CollatorProtocolMessage),
+    StatementDistribution(StatementDistributionMessage),
+    AvailabilityDistribution(AvailabilityDistributionMessage),
+    AvailabilityRecovery(AvailabilityRecoveryMessage),
+    BitfieldDistribution(BitfieldDistributionMessage),
+    BitfieldSigning(BitfieldSigningMessage),
+    Provisioner(ProvisionerMessage),
+    RuntimeApi(RuntimeApiMessage),
+    AvailabilityStore(AvailabilityStoreMessage),
+    NetworkBridge(NetworkBridgeMessage),
+    CollationGeneration(CollationGenerationMessage),
+    ApprovalVoting(ApprovalVotingMessage),
+    ApprovalDistribution(ApprovalDistributionMessage),
+    GossipSupport(GossipSupportMessage),
+    DisputeCoordinator(DisputeCoordinatorMessage),
+    DisputeParticipation(DisputeParticipationMessage),
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="approval-voting-message"><a class="header" href="#approval-voting-message">Approval Voting Message</a></h2>
 <p>Messages received by the approval voting subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -5081,8 +5115,8 @@ enum ApprovalVotingMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="approval-distribution-1"><a class="header" href="#approval-distribution-1">Approval Distribution</a></h2>
-<p>Messages received by the approval Distribution subsystem.</p>
+<h2 id="approval-distribution-message"><a class="header" href="#approval-distribution-message">Approval Distribution Message</a></h2>
+<p>Messages received by the approval distribution subsystem.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -5120,10 +5154,6 @@ enum ApprovalDistributionMessage {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
-<blockquote>
-<p>TODO (now)</p>
-</blockquote>
 <h2 id="availability-distribution-message"><a class="header" href="#availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
 <p>This is a network protocol that receives messages of type <a href="types/network.html#availability-distribution-v1"><code>AvailabilityDistributionV1Message</code></a>.</p>
@@ -5288,7 +5318,7 @@ enum BitfieldSigningMessage { }
     /// Request the best leaf containing the given block in its ancestry. Return `None` if
     /// there is no such leaf.
     BestLeafContaining(Hash, ResponseChannel&lt;Option&lt;Hash&gt;&gt;),
-    
+
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -5446,6 +5476,13 @@ enum NetworkBridgeMessage {
         /// authority discovery has failed to resolve.
         failed: oneshot::Sender&lt;usize&gt;,
     },
+    /// Inform the distribution subsystems about the new
+    /// gossip network topology formed.
+    NewGossipTopology {
+        /// Ids of our neighbors in the new gossip topology.
+        /// We're not necessarily connected to all of them, but we should.
+        our_neighbors: HashSet&lt;AuthorityDiscoveryId&gt;,
+    }
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -6068,6 +6105,14 @@ enum ObservedRole {
 	PeerConnected(PeerId, ObservedRole),
 	/// A peer with given ID is now disconnected.
 	PeerDisconnected(PeerId),
+	/// Our neighbors in the new gossip topology.
+	/// We're not necessarily connected to all of them.
+	///
+	/// This message is issued only on the validation peer set.
+	///
+	/// Note, that the distribution subsystems need to handle the last
+	/// view update of the newly added gossip peers manually.
+	NewGossipTopology(HashSet&lt;PeerId&gt;),
 	/// We received a message from the given peer.
 	PeerMessage(PeerId, M),
 	/// The given peer has updated its description of its view.
