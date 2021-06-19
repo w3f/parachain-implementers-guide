@@ -465,6 +465,11 @@ enum BitfieldSigningMessage { }
     /// Request the block header by hash.
     /// Returns `None` if a block with the given hash is not present in the db.
     BlockHeader(Hash, ResponseChannel&lt;Result&lt;Option&lt;BlockHeader&gt;, Error&gt;&gt;),
+    /// Get the cumulative weight of the given block, by hash.
+    /// If the block or weight is unknown, this returns `None`.
+    /// 
+    /// Weight is used for comparing blocks in a fork-choice rule.
+    BlockWeight(Hash, ResponseChannel&lt;Result&lt;Option&lt;Weight&gt;, Error&gt;&gt;),
     /// Get the finalized block hash by number.
     /// Returns `None` if a block with the given number is not present in the db.
     /// Note: the caller must ensure the block is finalized.

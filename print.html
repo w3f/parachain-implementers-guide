@@ -4601,13 +4601,14 @@ and handle view updates.</p>
 <ul>
 <li>Block hash to number</li>
 <li>Block hash to header</li>
+<li>Block weight</li>
 <li>Finalized block number to hash</li>
 <li>Last finalized block number</li>
 <li>Ancestors</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chain-selection-subsystem"><a class="header" href="#chain-selection-subsystem">Chain Selection Subsystem</a></h1>
 <p>This subsystem implements the necessary metadata for the implementation of the <a href="node/utility/../../protocol-chain-selection.html">chain selection</a> portion of the protocol.</p>
-<p>The subsystem wraps a database component which maintains a view of the unfinalized chain and records the properties of each block: whether the block is <strong>viable</strong>, whether it is <strong>stagnant</strong>, and whether it is <strong>reverted</strong>. It should also maintain an updated set of active leaves in accordance with this view, which should be cheap to query.</p>
+<p>The subsystem wraps a database component which maintains a view of the unfinalized chain and records the properties of each block: whether the block is <strong>viable</strong>, whether it is <strong>stagnant</strong>, and whether it is <strong>reverted</strong>. It should also maintain an updated set of active leaves in accordance with this view, which should be cheap to query. Leaves are ordered descending first by weight and then by block number.</p>
 <p>This subsystem needs to update its information on the unfinalized chain:</p>
 <ul>
 <li>On every leaf-activated signal</li>
@@ -4617,7 +4618,7 @@ and handle view updates.</p>
 </ul>
 <p>Simple implementations of these updates do O(n_unfinalized_blocks) disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
 <h3 id="overseersignalactiveleavesupdate-1"><a class="header" href="#overseersignalactiveleavesupdate-1"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
-<p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly</p>
+<p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly. The weights of imported blocks can be determined by the <a href="node/utility/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockWeight</code></a>.</p>
 <h3 id="overseersignalblockfinalized-2"><a class="header" href="#overseersignalblockfinalized-2"><code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Delete data for all orphaned chains and update all metadata descending from the new finalized block accordingly, along with the set of viable leaves. Note that finalizing a <strong>reverted</strong> or <strong>stagnant</strong> block means that the descendants of those blocks may lose that status because the definitions of those properties don't include the finalized chain. Update the set of viable leaves accordingly.</p>
 <h3 id="chainselectionmessageapproved"><a class="header" href="#chainselectionmessageapproved"><code>ChainSelectionMessage::Approved</code></a></h3>
@@ -5283,6 +5284,11 @@ enum BitfieldSigningMessage { }
     /// Request the block header by hash.
     /// Returns `None` if a block with the given hash is not present in the db.
     BlockHeader(Hash, ResponseChannel&lt;Result&lt;Option&lt;BlockHeader&gt;, Error&gt;&gt;),
+    /// Get the cumulative weight of the given block, by hash.
+    /// If the block or weight is unknown, this returns `None`.
+    /// 
+    /// Weight is used for comparing blocks in a fork-choice rule.
+    BlockWeight(Hash, ResponseChannel&lt;Result&lt;Option&lt;Weight&gt;, Error&gt;&gt;),
     /// Get the finalized block hash by number.
     /// Returns `None` if a block with the given number is not present in the db.
     /// Note: the caller must ensure the block is finalized.

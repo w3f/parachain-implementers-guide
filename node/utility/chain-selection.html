@@ -145,7 +145,7 @@
                     <main>
                         <h1 id="chain-selection-subsystem"><a class="header" href="#chain-selection-subsystem">Chain Selection Subsystem</a></h1>
 <p>This subsystem implements the necessary metadata for the implementation of the <a href="../../protocol-chain-selection.html">chain selection</a> portion of the protocol.</p>
-<p>The subsystem wraps a database component which maintains a view of the unfinalized chain and records the properties of each block: whether the block is <strong>viable</strong>, whether it is <strong>stagnant</strong>, and whether it is <strong>reverted</strong>. It should also maintain an updated set of active leaves in accordance with this view, which should be cheap to query.</p>
+<p>The subsystem wraps a database component which maintains a view of the unfinalized chain and records the properties of each block: whether the block is <strong>viable</strong>, whether it is <strong>stagnant</strong>, and whether it is <strong>reverted</strong>. It should also maintain an updated set of active leaves in accordance with this view, which should be cheap to query. Leaves are ordered descending first by weight and then by block number.</p>
 <p>This subsystem needs to update its information on the unfinalized chain:</p>
 <ul>
 <li>On every leaf-activated signal</li>
@@ -155,7 +155,7 @@
 </ul>
 <p>Simple implementations of these updates do O(n_unfinalized_blocks) disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
 <h3 id="overseersignalactiveleavesupdate"><a class="header" href="#overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
-<p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly</p>
+<p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly. The weights of imported blocks can be determined by the <a href="../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockWeight</code></a>.</p>
 <h3 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Delete data for all orphaned chains and update all metadata descending from the new finalized block accordingly, along with the set of viable leaves. Note that finalizing a <strong>reverted</strong> or <strong>stagnant</strong> block means that the descendants of those blocks may lose that status because the definitions of those properties don't include the finalized chain. Update the set of viable leaves accordingly.</p>
 <h3 id="chainselectionmessageapproved"><a class="header" href="#chainselectionmessageapproved"><code>ChainSelectionMessage::Approved</code></a></h3>
