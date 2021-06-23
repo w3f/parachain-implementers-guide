@@ -150,9 +150,9 @@
 <p>We have two primary components for ensuring that nothing invalid ends up in the finalized relay chain:</p>
 <ul>
 <li>Approval Checking, as described <a href="./protocol-approval.html">here</a> and implemented according to the <a href="node/approval/approval-voting.html">Approval Voting</a> subsystem. This protocol can be shown to prevent invalid parachain blocks from making their way into the finalized relay chain as long as the amount of attempts are limited.</li>
-<li>Disputes, this protocol, which ensures that each attempt to include something bad is caught, and the offending validators are punished.</li>
+<li>Disputes, this protocol, which ensures that each attempt to include something bad is caught, and the offending validators are punished.
+Disputes differ from backing and approval process (and can not be part of those) in that a dispute is independent of a particular fork, while both backing and approval operate on particular forks. This distinction is important! Approval voting stops, if an alternative fork which might not contain the currently approved candidate gets finalized. This is totally fine from the perspective of approval voting as its sole purpose is to make sure invalid blocks won't get finalized. For disputes on the other hand we have different requirements: Even though the &quot;danger&quot; is past and the adversaries were not able to get their invalid block approved, we still want them to get slashed for the attempt. Otherwise they just have been able to get a free try, but this is something we need to avoid in our security model, as it is based on the assumption that the probability of getting an invalid block finalized is very low and an attacker would get bankrupt before it could have tried often enough.</li>
 </ul>
-<p>Disputes and their resolution are the formal process to resolve these situations.</p>
 <p>Every dispute stems from a disagreement among two or more validators. If a bad actor creates a bad block, but the bad actor never distributes it to honest validators, then nobody will dispute it. Of course, such a situation is not even an attack on the network, so we don't need to worry about defending against it.</p>
 <p>From most to least important, here are the attack scenarios we are interested in identifying and deterring:</p>
 <ul>
@@ -173,13 +173,13 @@
 <ul>
 <li>Circulate all statements about the candidate that we are aware of - backing statements, approval checking statements, and dispute statements.</li>
 <li>If we have already issued any type of statement about the candidate, go no further.</li>
-<li>Download the <a href="types/availability.html"><code>AvailableData</code></a>. If possible, this should first be attempted from other dispute participants or backing validators, and then <a href="node/availability/availability-recovery.html">(via erasure-coding)</a> from all validators. </li>
+<li>Download the <a href="types/availability.html"><code>AvailableData</code></a>. If possible, this should first be attempted from other dispute participants or backing validators, and then <a href="node/availability/availability-recovery.html">(via erasure-coding)</a> from all validators.</li>
 <li>Extract the Validation Code from any recent relay chain block. Code is guaranteed to be kept available on-chain, so we don't need to download any particular fork of the chain.</li>
 <li>Execute the block under the validation code, using the <code>AvailableData</code>, and check that all outputs are correct, including the <code>erasure-root</code> of the <a href="types/candidate.html"><code>CandidateReceipt</code></a>.</li>
 <li>Issue a dispute participation statement to the effect of the validity of the candidate block.</li>
 </ul>
-<p>Disputes <em>conclude</em> after ⅔ supermajority is reached in either direction. </p>
-<p>The on-chain component of disputes can be initiated by providing any two conflicting votes and it also waits for a ⅔ supermajority on either side. The on-chain component also tracks which parablocks have already been disputed so the same parablock may only be disputed once on any particular branch of the relay chain. Lastly, it also tracks which blocks have been included on the current branch of the relay chain. When a dispute is initiated for a para, inclusion is halted for the para until the dispute concludes. </p>
+<p>Disputes <em>conclude</em> after ⅔ supermajority is reached in either direction.</p>
+<p>The on-chain component of disputes can be initiated by providing any two conflicting votes and it also waits for a ⅔ supermajority on either side. The on-chain component also tracks which parablocks have already been disputed so the same parablock may only be disputed once on any particular branch of the relay chain. Lastly, it also tracks which blocks have been included on the current branch of the relay chain. When a dispute is initiated for a para, inclusion is halted for the para until the dispute concludes.</p>
 <p>The author of a relay chain block should initiate the on-chain component of disputes for all disputes which the chain is not aware of, and provide all statements to the on-chain component as well. This should all be done via <em>inherents</em>.</p>
 <p>Validators can learn about dispute statements in two ways:</p>
 <ul>

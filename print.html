@@ -351,9 +351,9 @@ benefits from topology restrictions.  At this point, an assignment notices could
 <p>We have two primary components for ensuring that nothing invalid ends up in the finalized relay chain:</p>
 <ul>
 <li>Approval Checking, as described <a href="./protocol-approval.html">here</a> and implemented according to the <a href="node/approval/approval-voting.html">Approval Voting</a> subsystem. This protocol can be shown to prevent invalid parachain blocks from making their way into the finalized relay chain as long as the amount of attempts are limited.</li>
-<li>Disputes, this protocol, which ensures that each attempt to include something bad is caught, and the offending validators are punished.</li>
+<li>Disputes, this protocol, which ensures that each attempt to include something bad is caught, and the offending validators are punished.
+Disputes differ from backing and approval process (and can not be part of those) in that a dispute is independent of a particular fork, while both backing and approval operate on particular forks. This distinction is important! Approval voting stops, if an alternative fork which might not contain the currently approved candidate gets finalized. This is totally fine from the perspective of approval voting as its sole purpose is to make sure invalid blocks won't get finalized. For disputes on the other hand we have different requirements: Even though the &quot;danger&quot; is past and the adversaries were not able to get their invalid block approved, we still want them to get slashed for the attempt. Otherwise they just have been able to get a free try, but this is something we need to avoid in our security model, as it is based on the assumption that the probability of getting an invalid block finalized is very low and an attacker would get bankrupt before it could have tried often enough.</li>
 </ul>
-<p>Disputes and their resolution are the formal process to resolve these situations.</p>
 <p>Every dispute stems from a disagreement among two or more validators. If a bad actor creates a bad block, but the bad actor never distributes it to honest validators, then nobody will dispute it. Of course, such a situation is not even an attack on the network, so we don't need to worry about defending against it.</p>
 <p>From most to least important, here are the attack scenarios we are interested in identifying and deterring:</p>
 <ul>
@@ -374,13 +374,13 @@ benefits from topology restrictions.  At this point, an assignment notices could
 <ul>
 <li>Circulate all statements about the candidate that we are aware of - backing statements, approval checking statements, and dispute statements.</li>
 <li>If we have already issued any type of statement about the candidate, go no further.</li>
-<li>Download the <a href="types/availability.html"><code>AvailableData</code></a>. If possible, this should first be attempted from other dispute participants or backing validators, and then <a href="node/availability/availability-recovery.html">(via erasure-coding)</a> from all validators. </li>
+<li>Download the <a href="types/availability.html"><code>AvailableData</code></a>. If possible, this should first be attempted from other dispute participants or backing validators, and then <a href="node/availability/availability-recovery.html">(via erasure-coding)</a> from all validators.</li>
 <li>Extract the Validation Code from any recent relay chain block. Code is guaranteed to be kept available on-chain, so we don't need to download any particular fork of the chain.</li>
 <li>Execute the block under the validation code, using the <code>AvailableData</code>, and check that all outputs are correct, including the <code>erasure-root</code> of the <a href="types/candidate.html"><code>CandidateReceipt</code></a>.</li>
 <li>Issue a dispute participation statement to the effect of the validity of the candidate block.</li>
 </ul>
-<p>Disputes <em>conclude</em> after ⅔ supermajority is reached in either direction. </p>
-<p>The on-chain component of disputes can be initiated by providing any two conflicting votes and it also waits for a ⅔ supermajority on either side. The on-chain component also tracks which parablocks have already been disputed so the same parablock may only be disputed once on any particular branch of the relay chain. Lastly, it also tracks which blocks have been included on the current branch of the relay chain. When a dispute is initiated for a para, inclusion is halted for the para until the dispute concludes. </p>
+<p>Disputes <em>conclude</em> after ⅔ supermajority is reached in either direction.</p>
+<p>The on-chain component of disputes can be initiated by providing any two conflicting votes and it also waits for a ⅔ supermajority on either side. The on-chain component also tracks which parablocks have already been disputed so the same parablock may only be disputed once on any particular branch of the relay chain. Lastly, it also tracks which blocks have been included on the current branch of the relay chain. When a dispute is initiated for a para, inclusion is halted for the para until the dispute concludes.</p>
 <p>The author of a relay chain block should initiate the on-chain component of disputes for all disputes which the chain is not aware of, and provide all statements to the on-chain component as well. This should all be done via <em>inherents</em>.</p>
 <p>Validators can learn about dispute statements in two ways:</p>
 <ul>
@@ -3939,7 +3939,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <p>Validators will in the future distribute votes to each other via the network, but at the moment learn of disputes just from watching the chain.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-coordinator-1"><a class="header" href="#dispute-coordinator-1">Dispute Coordinator</a></h1>
 <p>This is the central subsystem of the node-side components which participate in disputes. This subsystem wraps a database which tracks all statements observed by all validators over some window of sessions. Votes older than this session window are pruned.</p>
-<p>This subsystem will be the point which produce dispute votes, eiuther positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger the <a href="node/disputes/dispute-participation.html">dispute participation</a> subsystem to recover and validate the block and call back to this subsystem.</p>
+<p>This subsystem will be the point which produce dispute votes, either positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger the <a href="node/disputes/dispute-participation.html">dispute participation</a> subsystem to recover and validate the block and call back to this subsystem.</p>
 <h2 id="database-schema-1"><a class="header" href="#database-schema-1">Database Schema</a></h2>
 <p>We use an underlying Key-Value database where we assume we have the following operations available:</p>
 <ul>
@@ -4020,7 +4020,7 @@ struct ActiveDisputes {
 <li>Load from underlying DB by querying `(&quot;candidate-votes&quot;, session, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
 <li>If candidate votes is empty and the statements only contain dispute-specific votes, return.</li>
 <li>Otherwise, if there is already an entry from the validator in the respective <code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>, return.</li>
-<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>. </li>
+<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
 <li>If the both <code>valid</code> and <code>invalid</code> lists now have non-zero length where previously one or both had zero length, the candidate is now freshly disputed.</li>
 <li>If freshly disputed, load <code>&quot;active-disputes&quot;</code> and add the candidate hash and session index. Also issue a <a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.</li>
@@ -4039,8 +4039,11 @@ struct ActiveDisputes {
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
 <li>Deconstruct into parts <code>{ session_index, candidate_hash, candidate_receipt, is_valid }</code>.</li>
-<li>Construct a <a href="node/disputes/../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the parameterization of this routine. </li>
+<li>Construct a <a href="node/disputes/../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the parameterization of this routine.</li>
 <li>Sign the statement with each key in the <code>SessionInfo</code>'s list of parachain validation keys which is present in the keystore, except those whose indices appear in <code>voted_indices</code>. This will typically just be one key, but this does provide some future-proofing for situations where the same node may run on behalf multiple validators. At the time of writing, this is not a use-case we support as other subsystems do not invariably provide this guarantee.</li>
+<li>Write statement to DB.</li>
+<li>Send a <code>DisputeDistributionMessage::SendDispute</code> message to get the vote
+distributed to other validators.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagedetermineundisputedchain"><a class="header" href="#on-disputecoordinatormessagedetermineundisputedchain">On <code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a></h3>
 <ul>
@@ -4100,7 +4103,307 @@ struct ActiveDisputes {
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
 <p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parametrization.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
-<p>TODO https://github.com/paritytech/polkadot/issues/2581</p>
+<p>Dispute distribution is responsible for ensuring all concerned validators will be aware of a dispute and have the relevant votes.</p>
+<h2 id="design-goals-1"><a class="header" href="#design-goals-1">Design Goals</a></h2>
+<p>This design should result in a protocol that is:</p>
+<ul>
+<li>resilient to nodes being temporarily unavailable</li>
+<li>make sure nodes are aware of a dispute quickly</li>
+<li>relatively efficient, should not cause too much stress on the network</li>
+<li>be resilient when it comes to spam</li>
+<li>be simple and boring: We want disputes to work when they happen</li>
+</ul>
+<h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
+<h3 id="input"><a class="header" href="#input">Input</a></h3>
+<p>[<code>DisputeDistributionMessage</code>][DisputeDistributionMessage]</p>
+<h3 id="output"><a class="header" href="#output">Output</a></h3>
+<ul>
+<li><a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeCoordinatorMessage::ActiveDisputes</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeCoordinatorMessage::ImportStatements</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+</ul>
+<h3 id="wire-format"><a class="header" href="#wire-format">Wire format</a></h3>
+<h4 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h4>
+<p>Protocol: &quot;/polkadot/send_dispute/1&quot;</p>
+<p>Request:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct DisputeRequest {
+  // Either initiating invalid vote or our own (if we voted invalid).
+  invalid_vote: InvalidVote,
+  // Some invalid vote (can be from backing/approval) or our own if we voted
+  // valid.
+  valid_vote: ValidVote,
+}
+
+struct InvalidVote {
+  subject: VoteSubject,
+  kind: InvalidDisputeStatementKind,
+}
+
+struct ValidVote {
+  subject: VoteSubject,
+  kind: ValidDisputeStatementKind,
+}
+
+struct VoteSubject {
+  /// The candidate being disputed.
+  candidate_hash: CandidateHash,
+  /// The voting validator.
+  validator_index: ValidatorIndex,
+  /// The session the candidate appears in.
+  candidate_session: SessionIndex,
+  /// The validator signature, that can be verified when constructing a
+  /// `SignedDisputeStatement`.
+  validator_signature: ValidatorSignature,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>Response:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum DisputeResponse {
+  Confirmed
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h4 id="vote-recovery"><a class="header" href="#vote-recovery">Vote Recovery</a></h4>
+<p>Protocol: &quot;/polkadot/req_votes/1&quot;</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct IHaveVotesRequest {
+  candidate_hash: CandidateHash,
+  session: SessionIndex,
+  valid_votes: Bitfield,
+  invalid_votes: Bitfield,
+}
+
+<span class="boring">}
+</span></code></pre></pre>
+<p>Response:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct VotesResponse {
+  /// All votes we have, but the requester was missing.
+  missing: Vec&lt;(DisputeStatement, ValidatorIndex, ValidatorSignature)&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="functionality-12"><a class="header" href="#functionality-12">Functionality</a></h2>
+<p>Distributing disputes needs to be a reliable protocol. We would like to make as
+sure as possible that our vote got properly delivered to all concerned
+validators. For this to work, this subsystem won't be gossip based, but instead
+will use a request/response protocol for application level confirmations. The
+request will be the payload (the actual votes/statements), the response will
+be the confirmation. See [above][#wire-format].</p>
+<h3 id="starting-a-dispute"><a class="header" href="#starting-a-dispute">Starting a Dispute</a></h3>
+<p>A dispute is initiated once a node sends the first <code>DisputeRequest</code> wire message,
+which must contain an &quot;invalid&quot; vote and a &quot;valid&quot; vote.</p>
+<p>The dispute distribution subsystem can get instructed to send that message out to
+all concerned validators by means of a <code>DisputeDistributionMessage::SendDispute</code>
+message. That message must contain an invalid vote from the local node and some
+valid one, e.g. a backing statement.</p>
+<p>We include a valid vote as well, so any node regardless of whether it is synced
+with the chain or not or has seen backing/approval vote can see that there are
+conflicting votes available, hence we have a valid dispute. Nodes will still
+need to check whether the disputing votes are somewhat current and not some
+stale ones.</p>
+<h3 id="participating-in-a-dispute"><a class="header" href="#participating-in-a-dispute">Participating in a Dispute</a></h3>
+<p>Upon receiving a <code>DisputeRequest</code> message, a dispute distribution will trigger the
+import of the received votes via the dispute coordinator
+(<code>DisputeCoordinatorMessage::ImportStatements</code>). The dispute coordinator will
+take care of participating in that dispute if necessary. Once it is done, the
+coordinator will send a <code>DisputeDistributionMessage::SendDispute</code> message to dispute
+distribution. From here, everything is the same as for starting a dispute,
+except that if the local node deemed the candidate valid, the <code>SendDispute</code>
+message will contain a valid vote signed by our node and will contain the
+initially received <code>Invalid</code> vote.</p>
+<p>Note, that we rely on the coordinator to check availability for spam protection
+(see below).
+In case the current node is only a potential block producer and does not
+actually need to recover availability (as it is not going to participate in the
+dispute), there is a potential optimization available: The coordinator could
+first just check whether we have our piece and only if we don't, try to recover
+availability. Our node having a piece would be proof enough of the
+data to be available and thus the dispute to not be spam.</p>
+<h3 id="sending-of-messages"><a class="header" href="#sending-of-messages">Sending of messages</a></h3>
+<p>Starting and participating in a dispute are pretty similar from the perspective
+of disptute distribution. Once we receive a <code>SendDispute</code> message we try to make
+sure to get the data out. We keep track of all the parachain validators that
+should see the message, which are all the parachain validators of the session
+where the dispute happened as they will want to participate in the dispute.  In
+addition we also need to get the votes out to all authorities of the current
+session (which might be the same or not and may change during the dispute).
+Those authorities will not participate in the dispute, but need to see the
+statements so they can include them in blocks.</p>
+<p>We keep track of connected parachain validators and authorities and will issue
+warnings in the logs if connected nodes are less than two thirds of the
+corresponding sets. We also only consider a message transmitted, once we
+received a confirmation message. If not, we will keep retrying getting that
+message out as long as the dispute is deemed alive. To determine whether a
+dispute is still alive we will issue a
+<code>DisputeCoordinatorMessage::ActiveDisputes</code> message before each retry run. Once
+a dispute is no longer live, we will clean up the state accordingly.</p>
+<h3 id="reception--spam-considerations"><a class="header" href="#reception--spam-considerations">Reception &amp; Spam Considerations</a></h3>
+<p>Because we are not forwarding foreign statements, spam is not so much of an
+issue as in other subsystems. Rate limiting should be implemented at the
+substrate level, see
+<a href="https://github.com/paritytech/substrate/issues/7750">#7750</a>. Still we should
+make sure that it is not possible via spamming to prevent a dispute concluding
+or worse from getting noticed.</p>
+<p>Considered attack vectors:</p>
+<ol>
+<li>Invalid disputes (candidate does not exist) could make us
+run out of resources. E.g. if we recorded every statement, we could run out
+of disk space eventually.</li>
+<li>An attacker can just flood us with notifications on any notification
+protocol, assuming flood protection is not effective enough, our unbounded
+buffers can fill up and we will run out of memory eventually.</li>
+<li>Attackers could spam us at a high rate with invalid disputes. Our incoming
+queue of requests could get monopolized by those malicious requests and we
+won't be able to import any valid disputes and we could run out of resources,
+if we tried to process them all in parallel.</li>
+</ol>
+<p>For tackling 1, we make sure to not occupy resources before we don't know a
+candidate is available. So we will not record statements to disk until we
+recovered availability for the candidate or know by some other means that the
+dispute is legit.</p>
+<p>For 2, we will pick up on any dispute on restart, so assuming that any realistic
+memory filling attack will take some time, we should be able to participate in a
+dispute under such attacks.</p>
+<p>For 3, full monopolization of the incoming queue should not be possible assuming
+substrate handles incoming requests in a somewhat fair way. Still we want some
+defense mechanisms, at the very least we need to make sure to not exhaust
+resources.</p>
+<p>The dispute coordinator will notify us
+via <code>DisputeDistributionMessage::ReportCandidateUnavailable</code> about unavailable
+candidates and we can disconnect from such peers/decrease their reputation
+drastically. This alone should get us quite far with regards to queue
+monopolization, as availability recovery is expected to fail relatively quickly
+for unavailable data.</p>
+<p>Still if those spam messages come at a very high rate, we might still run out of
+resources if we immediately call <code>DisputeCoordinatorMessage::ImportStatements</code>
+on each one of them. Secondly with our assumption of 1/3 dishonest validators,
+getting rid of all of them will take some time, depending on reputation timeouts
+some of them might even be able to reconnect eventually.</p>
+<p>To mitigate those issues we will process dispute messages with a maximum
+parallelism <code>N</code>. We initiate import processes for up to <code>N</code> candidates in
+parallel. Once we reached <code>N</code> parallel requests we will start back pressuring on
+the incoming requests. This saves us from resource exhaustion.</p>
+<p>To reduce impact of malicious nodes further, we can keep track from which nodes the
+currently importing statements came from and will drop requests from nodes that
+already have imports in flight.</p>
+<p>Honest nodes are not expected to send dispute statements at a high rate, but
+even if they did:</p>
+<ul>
+<li>we will import at least the first one and if it is valid it will trigger a
+dispute, preventing finality.</li>
+<li>Chances are good that the first sent candidate from a peer is indeed the
+oldest one (if they differ in age at all).</li>
+<li>for the dropped request any honest node will retry sending.</li>
+<li>there will be other nodes notifying us about that dispute as well.</li>
+<li>honest votes have a speed advantage on average. Apart from the very first
+dispute statement for a candidate, which might cause the availability recovery
+process, imports of honest votes will be super fast, while for spam imports
+they will always take some time as we have to wait for availability to fail.</li>
+</ul>
+<p>So this general rate limit, that we drop requests from same peers if they come
+faster than we can import the statements should not cause any problems for
+honest nodes and is in their favour.</p>
+<p>Size of <code>N</code>: The larger <code>N</code> the better we can handle distributed flood attacks
+(see previous paragraph), but we also get potentially more availability recovery
+processes happening at the same time, which slows down the individual processes.
+And we rather want to have one finish quickly than lots slowly at the same time.
+On the other hand, valid disputes are expected to be rare, so if we ever exhaust
+<code>N</code> it is very likely that this is caused by spam and spam recoveries don't cost
+too much bandwidth due to empty responses.</p>
+<p>Considering that an attacker would need to attack many nodes in parallel to have
+any effect, an <code>N</code> of 10 seems to be a good compromise. For honest requests, most
+of those imports will likely concern the same candidate, and for dishonest ones
+we get to disconnect from up to ten colluding adversaries at a time.</p>
+<p>For the size of the channel for incoming requests: Due to dropping of repeated
+requests from same nodes we can make the channel relatively large without fear
+of lots of spam requests sitting there wasting our time, even after we already
+blocked a peer. For valid disputes, incoming requests can become bursty. On the
+other hand we will also be very quick in processing them. A channel size of 100
+requests seems plenty and should be able to handle bursts adequately.</p>
+<h3 id="node-startup"><a class="header" href="#node-startup">Node Startup</a></h3>
+<p>On startup we need to check with the dispute coordinator for any ongoing
+disputes and assume we have not yet sent our statement for those. In case we
+find an explicit statement from ourselves via
+<code>DisputeCoordinatorMessage::QueryCandidateVotes</code> we will pretend to just have
+received a <code>SendDispute</code> message for that candidate.</p>
+<h2 id="backing-and-approval-votes"><a class="header" href="#backing-and-approval-votes">Backing and Approval Votes</a></h2>
+<p>Backing and approval votes get imported when they arrive/are created via the
+distpute coordinator by corresponding subsystems.</p>
+<p>We assume that under normal operation each node will be aware of backing and
+approval votes and optimize for that case. Nevertheless we want disputes to
+conclude fast and reliable, therefore if a node is not aware of backing/approval
+votes it can request the missing votes from the node that informed it about the
+dispute (see <a href="node/disputes/dispute-distribution.html#Resiliency%5D">Resiliency</a></p>
+<h2 id="resiliency"><a class="header" href="#resiliency">Resiliency</a></h2>
+<p>The above protocol should be sufficient for most cases, but there are certain
+cases we also want to have covered:</p>
+<ul>
+<li>Non validator nodes might be interested in ongoing voting, even before it is
+recorded on chain.</li>
+<li>Nodes might have missed votes, especially backing or approval votes.
+Recovering them from chain is difficult and expensive, due to runtime upgrades
+and untyped extrinsics.</li>
+</ul>
+<p>To cover those cases, we introduce a second request/response protocol, which can
+be handled on a lower priority basis as the one above. It consists of the
+request/response messages as described in the [protocol
+section][#vote-recovery].</p>
+<p>Nodes may send those requests to validators, if they feel they are missing
+votes. E.g. after some timeout, if no majority was reached yet in their point of
+view or if they are not aware of any backing/approval votes for a received
+disputed candidate.</p>
+<p>The receiver of a <code>IHaveVotesRequest</code> message will do the following:</p>
+<ol>
+<li>See if the sender is missing votes we are aware of - if so, respond with
+those votes.</li>
+<li>Check whether the sender knows about any votes, we don't know about and if so
+send a <code>IHaveVotesRequest</code> request back, with our knowledge.</li>
+<li>Record the peer's knowledge.</li>
+</ol>
+<p>When to send <code>IHaveVotesRequest</code> messages:</p>
+<ol>
+<li>Whenever we are asked to do so via
+<code>DisputeDistributionMessage::FetchMissingVotes</code>.</li>
+<li>Approximately once per block to some random validator as long as the dispute
+is active.</li>
+</ol>
+<p>Spam considerations: Nodes want to accept those messages once per validator and
+per slot. They are free to drop more frequent requests or requests for stale
+data. Requests coming from non validator nodes, can be handled on a best effort
+basis.</p>
+<h2 id="considerations"><a class="header" href="#considerations">Considerations</a></h2>
+<p>Dispute distribution is critical. We should keep track of available validator
+connections and issue warnings if we are not connected to a majority of
+validators. We should also keep track of failed sending attempts and log
+warnings accordingly. As disputes are rare and TCP is a reliable protocol,
+probably each failed attempt should trigger a warning in logs and also logged
+into some Prometheus metric.</p>
+<h2 id="disputes-for-non-available-candidates"><a class="header" href="#disputes-for-non-available-candidates">Disputes for non available candidates</a></h2>
+<p>If deemed necessary we can later on also support disputes for non available
+candidates, but disputes for those cases have totally different requirements.</p>
+<p>First of all such disputes are not time critical. We just want to have
+some offender slashed at some point, but we have no risk of finalizing any bad
+data.</p>
+<p>Second, as we won't have availability for such data, the node that initiated the
+dispute will be responsible for providing the disputed data initially. Then
+nodes which did the check already are also providers of the data, hence
+distributing load and making prevention of the dispute from concluding harder
+and harder over time. Assuming an attacker can not DoS a node forever, the
+dispute will succeed eventually, which is all that matters. And again, even if
+an attacker managed to prevent such a dispute from happening somehow, there is
+no real harm done: There was no serious attack to begin with.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="utility-subsystems"><a class="header" href="#utility-subsystems">Utility Subsystems</a></h1>
 <p>The utility subsystems are an assortment which don't have a natural home in another subsystem collection.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="availability-store"><a class="header" href="#availability-store">Availability Store</a></h1>
@@ -4157,13 +4460,13 @@ enum State {
 </span></code></pre></pre>
 <p>We maintain the invariant that if a candidate has a meta entry, its available data exists on disk if <code>data_available</code> is true. All chunks mentioned in the meta entry are available.</p>
 <p>Additionally, there is exactly one <code>prune_by_time</code> entry which holds the candidate hash unless the state is <code>Unfinalized</code>. There may be zero, one, or many &quot;unfinalized&quot; keys with the given candidate, and this will correspond to the <code>state</code> of the meta entry.</p>
-<h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
+<h2 id="protocol-13"><a class="header" href="#protocol-13">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></p>
 <p>Output:</p>
 <ul>
 <li><a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 </ul>
-<h2 id="functionality-12"><a class="header" href="#functionality-12">Functionality</a></h2>
+<h2 id="functionality-13"><a class="header" href="#functionality-13">Functionality</a></h2>
 <p>For each head in the <code>activated</code> list:</p>
 <ul>
 <li>Note any new candidates backed in the block. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
@@ -4296,10 +4599,10 @@ to be run very often.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="candidate-validation"><a class="header" href="#candidate-validation">Candidate Validation</a></h1>
 <p>This subsystem is responsible for handling candidate validation requests. It is a simple request/response server.</p>
 <p>A variety of subsystems want to know if a parachain block candidate is valid. None of them care about the detailed mechanics of how a candidate gets validated, just the results. This subsystem handles those details.</p>
-<h2 id="protocol-13"><a class="header" href="#protocol-13">Protocol</a></h2>
+<h2 id="protocol-14"><a class="header" href="#protocol-14">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#validation-request-type"><code>CandidateValidationMessage</code></a></p>
 <p>Output: Validation result via the provided response side-channel.</p>
-<h2 id="functionality-13"><a class="header" href="#functionality-13">Functionality</a></h2>
+<h2 id="functionality-14"><a class="header" href="#functionality-14">Functionality</a></h2>
 <p>This subsystem answers two types of requests: one which draws out validation data from the state, and another which accepts all validation data exhaustively. The goal of both request types is to validate a candidate. There are three possible outputs of validation: either the candidate is valid, the candidate is invalid, or an internal error occurred. Whatever the end result is, it will be returned on the response channel to the requestor.</p>
 <p>Parachain candidates are validated against their validation function: A piece of Wasm code that is describes the state-transition of the parachain. Validation function execution is not metered. This means that an execution which is an infinite loop or simply takes too long must be forcibly exited by some other means. For this reason, we recommend dispatching candidate validation to be done on subprocesses which can be killed if they time-out.</p>
 <p>Upon receiving a validation request, the first thing the candidate validation subsystem should do is make sure it has all the necessary parameters to the validation function. These are:</p>
@@ -4343,7 +4646,7 @@ to be run very often.</p>
 <blockquote>
 <p>TODO: The provisioner is responsible for selecting remote disputes to replay. Let's figure out the details.</p>
 </blockquote>
-<h2 id="protocol-14"><a class="header" href="#protocol-14">Protocol</a></h2>
+<h2 id="protocol-15"><a class="header" href="#protocol-15">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a>. Backed candidates come from the <a href="node/utility/../backing/candidate-backing.html">Candidate Backing subsystem</a>, signed bitfields come from the <a href="node/utility/../availability/bitfield-distribution.html">Bitfield Distribution subsystem</a>, and misbehavior reports and disputes come from the <a href="node/utility/misbehavior-arbitration.html">Misbehavior Arbitration subsystem</a>.</p>
 <p>At initialization, this subsystem has no outputs.</p>
 <p>Block authors request the inherent data they should use for constructing the inherent in the block which contains parachain execution information.</p>
@@ -4422,7 +4725,7 @@ to be run very often.</p>
 </ul>
 <h3 id="notes"><a class="header" href="#notes">Notes</a></h3>
 <p>See also: <a href="node/utility/../../runtime/scheduler.html#availability-cores">Scheduler Module: Availability Cores</a>.</p>
-<h2 id="functionality-14"><a class="header" href="#functionality-14">Functionality</a></h2>
+<h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
 <p>The subsystem should maintain a set of handles to Block Authorship Provisioning Jobs that are currently live.</p>
 <h3 id="on-overseer-signal-1"><a class="header" href="#on-overseer-signal-1">On Overseer Signal</a></h3>
 <ul>
@@ -4458,7 +4761,7 @@ to be run very often.</p>
 <li>The network provides peer-set management utilities for discovering the peer-IDs of validators and a means of dialing peers with given IDs.</li>
 </ul>
 <p>The network bridge makes use of the peer-set feature, but is not generic over peer-set. Instead, it exposes two peer-sets that event producers can attach to: <code>Validation</code> and <code>Collation</code>. More information can be found on the documentation of the <a href="node/utility/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a>.</p>
-<h2 id="protocol-15"><a class="header" href="#protocol-15">Protocol</a></h2>
+<h2 id="protocol-16"><a class="header" href="#protocol-16">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></p>
 <p>Output:</p>
 <ul>
@@ -4467,7 +4770,7 @@ to be run very often.</p>
 <li><a href="node/utility/../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 <li><a href="node/utility/../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
 </ul>
-<h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
+<h2 id="functionality-16"><a class="header" href="#functionality-16">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -4573,15 +4876,15 @@ and handle view updates.</p>
 <blockquote>
 <p>TODO</p>
 </blockquote>
-<h2 id="protocol-16"><a class="header" href="#protocol-16">Protocol</a></h2>
-<h2 id="functionality-16"><a class="header" href="#functionality-16">Functionality</a></h2>
+<h2 id="protocol-17"><a class="header" href="#protocol-17">Protocol</a></h2>
+<h2 id="functionality-17"><a class="header" href="#functionality-17">Functionality</a></h2>
 <h2 id="jobs-if-any"><a class="header" href="#jobs-if-any">Jobs, if any</a></h2>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="runtime-api"><a class="header" href="#runtime-api">Runtime API</a></h1>
 <p>The Runtime API subsystem is responsible for providing a single point of access to runtime state data via a set of pre-determined queries. This prevents shared ownership of a blockchain client resource by providing</p>
-<h2 id="protocol-17"><a class="header" href="#protocol-17">Protocol</a></h2>
+<h2 id="protocol-18"><a class="header" href="#protocol-18">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></p>
 <p>Output: None</p>
-<h2 id="functionality-17"><a class="header" href="#functionality-17">Functionality</a></h2>
+<h2 id="functionality-18"><a class="header" href="#functionality-18">Functionality</a></h2>
 <p>On receipt of <code>RuntimeApiMessage::Request(relay_parent, request)</code>, answer the request using the post-state of the relay_parent provided and provide the response to the side-channel embedded within the request.</p>
 <blockquote>
 <p>TODO Do some caching. The underlying rocksdb already has a cache of trie nodes so duplicate requests are unlikely to hit disk. Not required for functionality.</p>
@@ -4592,10 +4895,10 @@ and handle view updates.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chain-api"><a class="header" href="#chain-api">Chain API</a></h1>
 <p>The Chain API subsystem is responsible for providing a single point of access to chain state data via a set of pre-determined queries.</p>
-<h2 id="protocol-18"><a class="header" href="#protocol-18">Protocol</a></h2>
+<h2 id="protocol-19"><a class="header" href="#protocol-19">Protocol</a></h2>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage</code></a></p>
 <p>Output: None</p>
-<h2 id="functionality-18"><a class="header" href="#functionality-18">Functionality</a></h2>
+<h2 id="functionality-19"><a class="header" href="#functionality-19">Functionality</a></h2>
 <p>On receipt of <code>ChainApiMessage</code>, answer the request and provide the response to the side-channel embedded within the request.</p>
 <p>Currently, the following requests are supported:</p>
 <ul>
@@ -5391,6 +5694,13 @@ enum BitfieldSigningMessage { }
         /// - The validator index (within the session of the candidate) of the validator casting the vote.
         /// - The signature of the validator casting the vote.
         statements: Vec&lt;(DisputeStatement, ValidatorIndex, ValidatorSignature)&gt;,
+
+        /// Inform the requester once we finished importing.
+        ///
+        /// This is, we either discarded the votes, just record them because we
+        /// casted our vote already or recovered availability for the candidate
+        /// successfully.
+        pending_confirmation: oneshot::Sender&lt;()&gt;,
     },
     /// Fetch a list of all active disputes that the co-ordinator is aware of.
     ActiveDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
@@ -5431,6 +5741,36 @@ enum BitfieldSigningMessage { }
         /// The number of validators in the session.
         n_validators: u32,
     }
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="dispute-distribution-message"><a class="header" href="#dispute-distribution-message">Dispute Distribution Message</a></h2>
+<p>Messages received by the <a href="types/../node/disputes/dispute-distribution.html">Dispute Distribution
+subsystem</a>. This subsystem is
+responsible of distributing explicit dispute statements.</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum DisputeDistributionMessage {
+
+  /// Tell dispute distribution to distribute an explicit dispute statement to
+  /// validators.
+  SendDispute((ValidVote, InvalidVote)),
+
+  /// Ask DisputeDistribution to get votes we don't know about.
+  /// Fetched votes will be reported via `DisputeCoordinatorMessage::ImportStatements`
+  FetchMissingVotes {
+    candidate_hash: CandidateHash,
+    session: SessionIndex,
+    known_valid_votes: Bitfield,
+    known_invalid_votes: Bitfield,
+    /// Optional validator to query from. `ValidatorIndex` as in the above
+    /// referenced session.
+    from_validator: Option&lt;ValidatorIndex&gt;,
+  }
+  /// Tell the subsystem that a candidate is not available. Dispute distribution
+  /// can punish peers distributing votes on unavailable hashes.
+  ReportCandidateUnavailable(CandidateHash),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -6228,7 +6568,7 @@ struct AssignmentCert {
 </span>type DelayTranche = u32;
 <span class="boring">}
 </span></code></pre></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="disputes-2"><a class="header" href="#disputes-2">Disputes</a></h1>
 <h2 id="disputestatementset"><a class="header" href="#disputestatementset">DisputeStatementSet</a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]

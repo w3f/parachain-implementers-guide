@@ -145,7 +145,7 @@
                     <main>
                         <h1 id="dispute-coordinator"><a class="header" href="#dispute-coordinator">Dispute Coordinator</a></h1>
 <p>This is the central subsystem of the node-side components which participate in disputes. This subsystem wraps a database which tracks all statements observed by all validators over some window of sessions. Votes older than this session window are pruned.</p>
-<p>This subsystem will be the point which produce dispute votes, eiuther positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger the <a href="dispute-participation.html">dispute participation</a> subsystem to recover and validate the block and call back to this subsystem.</p>
+<p>This subsystem will be the point which produce dispute votes, either positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger the <a href="dispute-participation.html">dispute participation</a> subsystem to recover and validate the block and call back to this subsystem.</p>
 <h2 id="database-schema"><a class="header" href="#database-schema">Database Schema</a></h2>
 <p>We use an underlying Key-Value database where we assume we have the following operations available:</p>
 <ul>
@@ -226,7 +226,7 @@ struct ActiveDisputes {
 <li>Load from underlying DB by querying `(&quot;candidate-votes&quot;, session, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
 <li>If candidate votes is empty and the statements only contain dispute-specific votes, return.</li>
 <li>Otherwise, if there is already an entry from the validator in the respective <code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>, return.</li>
-<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>. </li>
+<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
 <li>If the both <code>valid</code> and <code>invalid</code> lists now have non-zero length where previously one or both had zero length, the candidate is now freshly disputed.</li>
 <li>If freshly disputed, load <code>&quot;active-disputes&quot;</code> and add the candidate hash and session index. Also issue a <a href="../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.</li>
@@ -245,8 +245,11 @@ struct ActiveDisputes {
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
 <li>Deconstruct into parts <code>{ session_index, candidate_hash, candidate_receipt, is_valid }</code>.</li>
-<li>Construct a <a href="../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the parameterization of this routine. </li>
+<li>Construct a <a href="../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the parameterization of this routine.</li>
 <li>Sign the statement with each key in the <code>SessionInfo</code>'s list of parachain validation keys which is present in the keystore, except those whose indices appear in <code>voted_indices</code>. This will typically just be one key, but this does provide some future-proofing for situations where the same node may run on behalf multiple validators. At the time of writing, this is not a use-case we support as other subsystems do not invariably provide this guarantee.</li>
+<li>Write statement to DB.</li>
+<li>Send a <code>DisputeDistributionMessage::SendDispute</code> message to get the vote
+distributed to other validators.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagedetermineundisputedchain"><a class="header" href="#on-disputecoordinatormessagedetermineundisputedchain">On <code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a></h3>
 <ul>
