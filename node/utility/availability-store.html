@@ -206,10 +206,10 @@ enum State {
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>For each head in the <code>activated</code> list:</p>
 <ul>
-<li>Note any new candidates backed in the block. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
-<li>Note any new candidate included in the block. Update the <code>CandidateMeta</code> for each, performing a transition from <code>Unavailable</code> to <code>Unfinalized</code> if necessary. That includes removing the <code>&quot;prune_by_time&quot;</code> entry. Add the block hash and number to the state, if unfinalized. Add an <code>&quot;unfinalized&quot;</code> entry for the block and candidate.</li>
+<li>Load all ancestors of the head back to the finalized block so we don't miss anything if import notifications are missed. If a <code>StoreChunk</code> message is received for a candidate which has no entry, then we will prematurely lose the data.</li>
+<li>Note any new candidates backed in the head. Update the <code>CandidateMeta</code> for each. If the <code>CandidateMeta</code> does not exist, create it as <code>Unavailable</code> with the current timestamp. Register a <code>&quot;prune_by_time&quot;</code> entry based on the current timestamp + 1 hour.</li>
+<li>Note any new candidate included in the head. Update the <code>CandidateMeta</code> for each, performing a transition from <code>Unavailable</code> to <code>Unfinalized</code> if necessary. That includes removing the <code>&quot;prune_by_time&quot;</code> entry. Add the head hash and number to the state, if unfinalized. Add an <code>&quot;unfinalized&quot;</code> entry for the block and candidate.</li>
 <li>The <code>CandidateEvent</code> runtime API can be used for this purpose.</li>
-<li>TODO: load all ancestors of the head back to the finalized block so we don't miss anything if import notifications are missed. If a <code>StoreChunk</code> message is received for a candidate which has no entry, then we will prematurely lose the data.</li>
 </ul>
 <p>On <code>OverseerSignal::BlockFinalized(finalized)</code> events:</p>
 <ul>
