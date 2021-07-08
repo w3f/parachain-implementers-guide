@@ -468,7 +468,7 @@ enum BitfieldSigningMessage { }
     BlockHeader(Hash, ResponseChannel&lt;Result&lt;Option&lt;BlockHeader&gt;, Error&gt;&gt;),
     /// Get the cumulative weight of the given block, by hash.
     /// If the block or weight is unknown, this returns `None`.
-    /// 
+    ///
     /// Weight is used for comparing blocks in a fork-choice rule.
     BlockWeight(Hash, ResponseChannel&lt;Result&lt;Option&lt;Weight&gt;, Error&gt;&gt;),
     /// Get the finalized block hash by number.
@@ -578,7 +578,7 @@ enum BitfieldSigningMessage { }
         /// This is, we either discarded the votes, just record them because we
         /// casted our vote already or recovered availability for the candidate
         /// successfully.
-        pending_confirmation: oneshot::Sender&lt;()&gt;,
+        pending_confirmation: oneshot::Sender&lt;ImportStatementsResult&gt;
     },
     /// Fetch a list of all active disputes that the co-ordinator is aware of.
     ActiveDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
@@ -599,6 +599,14 @@ enum BitfieldSigningMessage { }
         rx: ResponseSender&lt;Option&lt;(BlockNumber, BlockHash)&gt;&gt;,
     }
 }
+
+/// Result of `ImportStatements`.
+pub enum ImportStatementsResult {
+	/// Import was invalid (candidate was not available)  and the sending peer should get banned.
+	InvalidImport,
+	/// Import was valid and can be confirmed to peer.
+	ValidImport
+}
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="dispute-participation-message"><a class="header" href="#dispute-participation-message">Dispute Participation Message</a></h2>
@@ -618,6 +626,9 @@ enum BitfieldSigningMessage { }
         session: SessionIndex,
         /// The number of validators in the session.
         n_validators: u32,
+        /// Give immediate feedback on whether the candidate was available or
+        /// not.
+        report_availability: oneshot::Sender&lt;bool&gt;,
     }
 }
 <span class="boring">}
@@ -646,9 +657,6 @@ responsible of distributing explicit dispute statements.</p>
     /// referenced session.
     from_validator: Option&lt;ValidatorIndex&gt;,
   }
-  /// Tell the subsystem that a candidate is not available. Dispute distribution
-  /// can punish peers distributing votes on unavailable hashes.
-  ReportCandidateUnavailable(CandidateHash),
 }
 <span class="boring">}
 </span></code></pre></pre>

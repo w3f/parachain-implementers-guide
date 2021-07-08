@@ -201,6 +201,11 @@ struct ActiveDisputes {
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h3 id="on-startup"><a class="header" href="#on-startup">On startup</a></h3>
+<p>Check DB for recorded votes for non concluded disputes we have not yet
+recorded a local statement for.
+For all of those send <code>DisputeParticipationMessage::Participate</code> message to
+dispute participation subsystem.</p>
 <h3 id="on-overseersignalactiveleavesupdate"><a class="header" href="#on-overseersignalactiveleavesupdate">On <code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
 <p>For each leaf in the leaves update:</p>
 <ul>
@@ -220,20 +225,43 @@ struct ActiveDisputes {
 <h3 id="on-overseersignalblockfinalized"><a class="header" href="#on-overseersignalblockfinalized">On <code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Do nothing.</p>
 <h3 id="on-disputecoordinatormessageimportstatement"><a class="header" href="#on-disputecoordinatormessageimportstatement">On <code>DisputeCoordinatorMessage::ImportStatement</code></a></h3>
-<ul>
+<ol>
 <li>Deconstruct into parts <code>{ candidate_hash, candidate_receipt, session, statements }</code>.</li>
-<li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>, return.</li>
-<li>Load from underlying DB by querying `(&quot;candidate-votes&quot;, session, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
-<li>If candidate votes is empty and the statements only contain dispute-specific votes, return.</li>
-<li>Otherwise, if there is already an entry from the validator in the respective <code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>, return.</li>
-<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
+<li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>,
+respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
+<li>Load from underlying DB by querying <code>(&quot;candidate-votes&quot;, session, candidate_hash)</code>.  If that does not exist, create fresh with the given
+candidate receipt.</li>
+<li>If candidate votes is empty and the statements only contain dispute-specific
+votes, respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
+<li>Otherwise, if there is already an entry from the validator in the respective
+<code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>,  respond with
+<code>ImportStatementsResult::ValidImport</code> and return.</li>
+<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the
+<code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
+<li>If the both <code>valid</code> and <code>invalid</code> lists now became non-zero length where
+previously one or both had zero length, the candidate is now freshly
+disputed.</li>
+<li>If the candidate is not freshly disputed as determined by 7, continue with
+<ol start="10">
+<li>If it is freshly disputed now, load <code>&quot;active-disputes&quot;</code> and add the
+candidate hash and session index. Then, if we have local statements with
+regards to that candidate,  also continue with 10. Otherwise proceed with 9.</li>
+</ol>
+</li>
+<li>Issue a
+<a href="../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.
+Wait for response on the <code>report_availability</code> oneshot. If available, continue
+with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and return.</li>
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
-<li>If the both <code>valid</code> and <code>invalid</code> lists now have non-zero length where previously one or both had zero length, the candidate is now freshly disputed.</li>
-<li>If freshly disputed, load <code>&quot;active-disputes&quot;</code> and add the candidate hash and session index. Also issue a <a href="../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.</li>
-<li>If the dispute now has supermajority votes in the &quot;valid&quot; direction, according to the <code>SessionInfo</code> of the dispute candidate's session, remove from <code>&quot;active-disputes&quot;</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there is no need to do anything explicitly. The actual rollback will be handled during the active leaves update by observing digests from the runtime.</li>
+<li>Send back <code>ImportStatementsResult::ValidImport</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;valid&quot; direction,
+according to the <code>SessionInfo</code> of the dispute candidate's session, remove
+from <code>&quot;active-disputes&quot;</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there
+is no need to do anything explicitly. The actual rollback will be handled
+during the active leaves update by observing digests from the runtime.</li>
 <li>Write <code>&quot;active-disputes&quot;</code></li>
-</ul>
+</ol>
 <h3 id="on-disputecoordinatormessageactivedisputes"><a class="header" href="#on-disputecoordinatormessageactivedisputes">On <code>DisputeCoordinatorMessage::ActiveDisputes</code></a></h3>
 <ul>
 <li>Load <code>&quot;active-disputes&quot;</code> and return the data contained within.</li>

@@ -153,6 +153,7 @@
 <li><a href="../../types/overseer-protocol.html#runtime-api-message">RuntimeApiMessage</a></li>
 <li><a href="../../types/overseer-protocol.html#candidate-validation-message">CandidateValidationMessage</a></li>
 <li><a href="../../types/overseer-protocol.html#availability-recovery-message">AvailabilityRecoveryMessage</a></li>
+<li><a href="../../types/overseer-protocol.html#availability-store-message">AvailabilityStoreMessage</a></li>
 <li><a href="../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
@@ -175,6 +176,8 @@
 <ul>
 <li>Decompose into parts: <code>{ candidate_hash, candidate_receipt, session, voted_indices }</code></li>
 <li>Issue an <a href="../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage::RecoverAvailableData</code></a></li>
+<li>Report back availability result to the <code>AvailabilityRecoveryMessage</code> sender
+via the <code>report_availability</code> oneshot.</li>
 <li>If the result is <code>Unavailable</code>, return.</li>
 <li>If the result is <code>Invalid</code>, <a href="#cast-votes">cast invalid votes</a> and return.</li>
 <li>If the data is recovered, dispatch a <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::ValidationCodeByHash</code></a> with the parameters <code>(candidate_receipt.descriptor.validation_code_hash)</code> at <code>state.recent_block.hash</code>.</li>

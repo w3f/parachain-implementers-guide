@@ -3995,6 +3995,11 @@ struct ActiveDisputes {
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h3 id="on-startup-2"><a class="header" href="#on-startup-2">On startup</a></h3>
+<p>Check DB for recorded votes for non concluded disputes we have not yet
+recorded a local statement for.
+For all of those send <code>DisputeParticipationMessage::Participate</code> message to
+dispute participation subsystem.</p>
 <h3 id="on-overseersignalactiveleavesupdate"><a class="header" href="#on-overseersignalactiveleavesupdate">On <code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
 <p>For each leaf in the leaves update:</p>
 <ul>
@@ -4014,20 +4019,43 @@ struct ActiveDisputes {
 <h3 id="on-overseersignalblockfinalized"><a class="header" href="#on-overseersignalblockfinalized">On <code>OverseerSignal::BlockFinalized</code></a></h3>
 <p>Do nothing.</p>
 <h3 id="on-disputecoordinatormessageimportstatement"><a class="header" href="#on-disputecoordinatormessageimportstatement">On <code>DisputeCoordinatorMessage::ImportStatement</code></a></h3>
-<ul>
+<ol>
 <li>Deconstruct into parts <code>{ candidate_hash, candidate_receipt, session, statements }</code>.</li>
-<li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>, return.</li>
-<li>Load from underlying DB by querying `(&quot;candidate-votes&quot;, session, candidate_hash). If that does not exist, create fresh with the given candidate receipt.</li>
-<li>If candidate votes is empty and the statements only contain dispute-specific votes, return.</li>
-<li>Otherwise, if there is already an entry from the validator in the respective <code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>, return.</li>
-<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the <code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
+<li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>,
+respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
+<li>Load from underlying DB by querying <code>(&quot;candidate-votes&quot;, session, candidate_hash)</code>.  If that does not exist, create fresh with the given
+candidate receipt.</li>
+<li>If candidate votes is empty and the statements only contain dispute-specific
+votes, respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
+<li>Otherwise, if there is already an entry from the validator in the respective
+<code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>,  respond with
+<code>ImportStatementsResult::ValidImport</code> and return.</li>
+<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the
+<code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
+<li>If the both <code>valid</code> and <code>invalid</code> lists now became non-zero length where
+previously one or both had zero length, the candidate is now freshly
+disputed.</li>
+<li>If the candidate is not freshly disputed as determined by 7, continue with
+<ol start="10">
+<li>If it is freshly disputed now, load <code>&quot;active-disputes&quot;</code> and add the
+candidate hash and session index. Then, if we have local statements with
+regards to that candidate,  also continue with 10. Otherwise proceed with 9.</li>
+</ol>
+</li>
+<li>Issue a
+<a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.
+Wait for response on the <code>report_availability</code> oneshot. If available, continue
+with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and return.</li>
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
-<li>If the both <code>valid</code> and <code>invalid</code> lists now have non-zero length where previously one or both had zero length, the candidate is now freshly disputed.</li>
-<li>If freshly disputed, load <code>&quot;active-disputes&quot;</code> and add the candidate hash and session index. Also issue a <a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage::Participate</code></a>.</li>
-<li>If the dispute now has supermajority votes in the &quot;valid&quot; direction, according to the <code>SessionInfo</code> of the dispute candidate's session, remove from <code>&quot;active-disputes&quot;</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there is no need to do anything explicitly. The actual rollback will be handled during the active leaves update by observing digests from the runtime.</li>
+<li>Send back <code>ImportStatementsResult::ValidImport</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;valid&quot; direction,
+according to the <code>SessionInfo</code> of the dispute candidate's session, remove
+from <code>&quot;active-disputes&quot;</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there
+is no need to do anything explicitly. The actual rollback will be handled
+during the active leaves update by observing digests from the runtime.</li>
 <li>Write <code>&quot;active-disputes&quot;</code></li>
-</ul>
+</ol>
 <h3 id="on-disputecoordinatormessageactivedisputes"><a class="header" href="#on-disputecoordinatormessageactivedisputes">On <code>DisputeCoordinatorMessage::ActiveDisputes</code></a></h3>
 <ul>
 <li>Load <code>&quot;active-disputes&quot;</code> and return the data contained within.</li>
@@ -4067,6 +4095,7 @@ distributed to other validators.</li>
 <li><a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message">RuntimeApiMessage</a></li>
 <li><a href="node/disputes/../../types/overseer-protocol.html#candidate-validation-message">CandidateValidationMessage</a></li>
 <li><a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message">AvailabilityRecoveryMessage</a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#availability-store-message">AvailabilityStoreMessage</a></li>
 <li><a href="node/disputes/../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
 </ul>
 <h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
@@ -4089,6 +4118,8 @@ distributed to other validators.</li>
 <ul>
 <li>Decompose into parts: <code>{ candidate_hash, candidate_receipt, session, voted_indices }</code></li>
 <li>Issue an <a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage::RecoverAvailableData</code></a></li>
+<li>Report back availability result to the <code>AvailabilityRecoveryMessage</code> sender
+via the <code>report_availability</code> oneshot.</li>
 <li>If the result is <code>Unavailable</code>, return.</li>
 <li>If the result is <code>Invalid</code>, <a href="node/disputes/dispute-participation.html#cast-votes">cast invalid votes</a> and return.</li>
 <li>If the data is recovered, dispatch a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::ValidationCodeByHash</code></a> with the parameters <code>(candidate_receipt.descriptor.validation_code_hash)</code> at <code>state.recent_block.hash</code>.</li>
@@ -4103,7 +4134,8 @@ distributed to other validators.</li>
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
 <p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parametrization.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
-<p>Dispute distribution is responsible for ensuring all concerned validators will be aware of a dispute and have the relevant votes.</p>
+<p>Dispute distribution is responsible for ensuring all concerned validators will
+be aware of a dispute and have the relevant votes.</p>
 <h2 id="design-goals-1"><a class="header" href="#design-goals-1">Design Goals</a></h2>
 <p>This design should result in a protocol that is:</p>
 <ul>
@@ -4115,7 +4147,7 @@ distributed to other validators.</li>
 </ul>
 <h2 id="protocol-12"><a class="header" href="#protocol-12">Protocol</a></h2>
 <h3 id="input"><a class="header" href="#input">Input</a></h3>
-<p>[<code>DisputeDistributionMessage</code>][DisputeDistributionMessage]</p>
+<p><a href="node/disputes/../../types/overseer-protocol.html#dispute-distribution-message"><code>DisputeDistributionMessage</code></a></p>
 <h3 id="output"><a class="header" href="#output">Output</a></h3>
 <ul>
 <li><a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeCoordinatorMessage::ActiveDisputes</code></a></li>
@@ -4131,33 +4163,43 @@ distributed to other validators.</li>
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct DisputeRequest {
-  // Either initiating invalid vote or our own (if we voted invalid).
-  invalid_vote: InvalidVote,
-  // Some invalid vote (can be from backing/approval) or our own if we voted
-  // valid.
-  valid_vote: ValidVote,
-}
-
-struct InvalidVote {
-  subject: VoteSubject,
-  kind: InvalidDisputeStatementKind,
-}
-
-struct ValidVote {
-  subject: VoteSubject,
-  kind: ValidDisputeStatementKind,
-}
-
-struct VoteSubject {
   /// The candidate being disputed.
-  candidate_hash: CandidateHash,
-  /// The voting validator.
-  validator_index: ValidatorIndex,
+  pub candidate_receipt: CandidateReceipt,
+
   /// The session the candidate appears in.
-  candidate_session: SessionIndex,
+  pub session_index: SessionIndex,
+
+  /// The invalid vote data that makes up this dispute.
+  pub invalid_vote: InvalidDisputeVote,
+
+  /// The valid vote that makes this dispute request valid.
+  pub valid_vote: ValidDisputeVote,
+}
+
+/// Any invalid vote (currently only explicit).
+pub struct InvalidDisputeVote {
+  /// The voting validator index.
+  pub validator_index: ValidatorIndex,
+
   /// The validator signature, that can be verified when constructing a
   /// `SignedDisputeStatement`.
-  validator_signature: ValidatorSignature,
+  pub signature: ValidatorSignature,
+
+  /// Kind of dispute statement.
+  pub kind: InvalidDisputeStatementKind,
+}
+
+/// Any valid vote (backing, approval, explicit).
+pub struct ValidDisputeVote {
+  /// The voting validator index.
+  pub validator_index: ValidatorIndex,
+
+  /// The validator signature, that can be verified when constructing a
+  /// `SignedDisputeStatement`.
+  pub signature: ValidatorSignature,
+
+  /// Kind of dispute statement.
+  pub kind: ValidDisputeStatementKind,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -4224,16 +4266,10 @@ except that if the local node deemed the candidate valid, the <code>SendDispute<
 message will contain a valid vote signed by our node and will contain the
 initially received <code>Invalid</code> vote.</p>
 <p>Note, that we rely on the coordinator to check availability for spam protection
-(see below).
-In case the current node is only a potential block producer and does not
-actually need to recover availability (as it is not going to participate in the
-dispute), there is a potential optimization available: The coordinator could
-first just check whether we have our piece and only if we don't, try to recover
-availability. Our node having a piece would be proof enough of the
-data to be available and thus the dispute to not be spam.</p>
+(see below).</p>
 <h3 id="sending-of-messages"><a class="header" href="#sending-of-messages">Sending of messages</a></h3>
 <p>Starting and participating in a dispute are pretty similar from the perspective
-of disptute distribution. Once we receive a <code>SendDispute</code> message we try to make
+of dispute distribution. Once we receive a <code>SendDispute</code> message we try to make
 sure to get the data out. We keep track of all the parachain validators that
 should see the message, which are all the parachain validators of the session
 where the dispute happened as they will want to participate in the dispute.  In
@@ -4250,8 +4286,8 @@ dispute is still alive we will issue a
 <code>DisputeCoordinatorMessage::ActiveDisputes</code> message before each retry run. Once
 a dispute is no longer live, we will clean up the state accordingly.</p>
 <h3 id="reception--spam-considerations"><a class="header" href="#reception--spam-considerations">Reception &amp; Spam Considerations</a></h3>
-<p>Because we are not forwarding foreign statements, spam is not so much of an
-issue as in other subsystems. Rate limiting should be implemented at the
+<p>Because we are not forwarding foreign statements, spam is less of an issue in
+comparison to gossip based systems. Rate limiting should be implemented at the
 substrate level, see
 <a href="https://github.com/paritytech/substrate/issues/7750">#7750</a>. Still we should
 make sure that it is not possible via spamming to prevent a dispute concluding
@@ -4264,6 +4300,8 @@ of disk space eventually.</li>
 <li>An attacker can just flood us with notifications on any notification
 protocol, assuming flood protection is not effective enough, our unbounded
 buffers can fill up and we will run out of memory eventually.</li>
+<li>An attacker could participate in a valid dispute, but send its votes multiple
+times.</li>
 <li>Attackers could spam us at a high rate with invalid disputes. Our incoming
 queue of requests could get monopolized by those malicious requests and we
 won't be able to import any valid disputes and we could run out of resources,
@@ -4276,14 +4314,15 @@ dispute is legit.</p>
 <p>For 2, we will pick up on any dispute on restart, so assuming that any realistic
 memory filling attack will take some time, we should be able to participate in a
 dispute under such attacks.</p>
-<p>For 3, full monopolization of the incoming queue should not be possible assuming
+<p>Importing/discarding redundant votes should be pretty quick, so measures with
+regards to 4 should suffice to prevent 3, from doing any real harm.</p>
+<p>For 4, full monopolization of the incoming queue should not be possible assuming
 substrate handles incoming requests in a somewhat fair way. Still we want some
 defense mechanisms, at the very least we need to make sure to not exhaust
 resources.</p>
-<p>The dispute coordinator will notify us
-via <code>DisputeDistributionMessage::ReportCandidateUnavailable</code> about unavailable
-candidates and we can disconnect from such peers/decrease their reputation
-drastically. This alone should get us quite far with regards to queue
+<p>The dispute coordinator will notify us on import about unavailable candidates or
+otherwise invalid imports and we can disconnect from such peers/decrease their
+reputation drastically. This alone should get us quite far with regards to queue
 monopolization, as availability recovery is expected to fail relatively quickly
 for unavailable data.</p>
 <p>Still if those spam messages come at a very high rate, we might still run out of
@@ -4340,7 +4379,7 @@ find an explicit statement from ourselves via
 received a <code>SendDispute</code> message for that candidate.</p>
 <h2 id="backing-and-approval-votes"><a class="header" href="#backing-and-approval-votes">Backing and Approval Votes</a></h2>
 <p>Backing and approval votes get imported when they arrive/are created via the
-distpute coordinator by corresponding subsystems.</p>
+dispute coordinator by corresponding subsystems.</p>
 <p>We assume that under normal operation each node will be aware of backing and
 approval votes and optimize for that case. Nevertheless we want disputes to
 conclude fast and reliable, therefore if a node is not aware of backing/approval
@@ -5590,7 +5629,7 @@ enum BitfieldSigningMessage { }
     BlockHeader(Hash, ResponseChannel&lt;Result&lt;Option&lt;BlockHeader&gt;, Error&gt;&gt;),
     /// Get the cumulative weight of the given block, by hash.
     /// If the block or weight is unknown, this returns `None`.
-    /// 
+    ///
     /// Weight is used for comparing blocks in a fork-choice rule.
     BlockWeight(Hash, ResponseChannel&lt;Result&lt;Option&lt;Weight&gt;, Error&gt;&gt;),
     /// Get the finalized block hash by number.
@@ -5700,7 +5739,7 @@ enum BitfieldSigningMessage { }
         /// This is, we either discarded the votes, just record them because we
         /// casted our vote already or recovered availability for the candidate
         /// successfully.
-        pending_confirmation: oneshot::Sender&lt;()&gt;,
+        pending_confirmation: oneshot::Sender&lt;ImportStatementsResult&gt;
     },
     /// Fetch a list of all active disputes that the co-ordinator is aware of.
     ActiveDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
@@ -5721,6 +5760,14 @@ enum BitfieldSigningMessage { }
         rx: ResponseSender&lt;Option&lt;(BlockNumber, BlockHash)&gt;&gt;,
     }
 }
+
+/// Result of `ImportStatements`.
+pub enum ImportStatementsResult {
+	/// Import was invalid (candidate was not available)  and the sending peer should get banned.
+	InvalidImport,
+	/// Import was valid and can be confirmed to peer.
+	ValidImport
+}
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="dispute-participation-message"><a class="header" href="#dispute-participation-message">Dispute Participation Message</a></h2>
@@ -5740,6 +5787,9 @@ enum BitfieldSigningMessage { }
         session: SessionIndex,
         /// The number of validators in the session.
         n_validators: u32,
+        /// Give immediate feedback on whether the candidate was available or
+        /// not.
+        report_availability: oneshot::Sender&lt;bool&gt;,
     }
 }
 <span class="boring">}
@@ -5768,9 +5818,6 @@ responsible of distributing explicit dispute statements.</p>
     /// referenced session.
     from_validator: Option&lt;ValidatorIndex&gt;,
   }
-  /// Tell the subsystem that a candidate is not available. Dispute distribution
-  /// can punish peers distributing votes on unavailable hashes.
-  ReportCandidateUnavailable(CandidateHash),
 }
 <span class="boring">}
 </span></code></pre></pre>
