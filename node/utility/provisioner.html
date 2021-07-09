@@ -202,27 +202,10 @@
 <p>The end result of this process is a vector of <code>BackedCandidate</code>s, sorted in order of their core index. Furthermore, this process should select at maximum one candidate which upgrades the runtime validation code.</p>
 <h3 id="dispute-statement-selection"><a class="header" href="#dispute-statement-selection">Dispute Statement Selection</a></h3>
 <p>This is the point at which the block author provides further votes to active disputes or initiates new disputes in the runtime state.</p>
-<p>We must take care not to overwhelm the &quot;spam slots&quot; of the chain. That is, to avoid too many votes from the same validators being placed into the chain, which would trigger the anti-spam protection functionality of the <a href="../../runtime/disputes.html">disputes module</a>.</p>
+<p>The block-authoring logic of the runtime has an extra step between handling the inherent-data and producing the actual inherent call, which we assume performs the work of filtering out disputes which are not relevant to the on-chain state.</p>
 <p>To select disputes:</p>
 <ul>
-<li>Make a <code>DisputesInfo</code> runtime API call and decompose into <code>{ spam_slots, disputes }</code>. Bind <code>disputes</code> to <code>onchain_disputes</code>.</li>
-<li>Issue a <code>DisputeCoordinatorMessage::ActiveDisputes</code> message and wait for the response. Assign the value to <code>offchain_disputes</code>.</li>
-<li>Make a <code>CandidatesIncluded</code> runtime API call for each dispute in <code>offchain_disputes</code> and tag each offchain dispute as local if the result for it is <code>true</code>.</li>
-<li>Initialize <code>NewSpamSlots: Map&lt;(SessionIndex, ValidatorIndex), u32&gt;</code> as an empty map.</li>
-<li>For each dispute in <code>offchain_disputes</code>:
-<ol>
-<li>Make a <code>RuntimeApiRequest::SessionInfo</code> against the parent hash for the session of the dispute. If <code>None</code>, continue - this chain is in the past relative to the session the dispute belongs to and we can import it when it reaches that session.</li>
-<li>Load the spam slots from <code>spam_slots</code> for the given session. If it isn't present, treat as though all zeros.</li>
-<li>construct a <code>DisputeStatementSet</code> of all offchain votes we are aware of that the onchain doesn't already have a <code>valid</code> or <code>invalid</code> bit set for, respectively.</li>
-<li>If the <code>onchain_disputes</code> contains an entry for the dispute, load that. Otherwise, treat as empty.</li>
-<li>If the offchain dispute is local or the <code>DisputeStatementSet</code> and the onchain dispute together have at least <code>byzantine_threshold + 1</code> validators in it, continue to the next offchain dispute.</li>
-<li>Otherwise</li>
-<li>Filter out all votes from the <code>DisputeStatementSet</code> where the amount of spam slots occupied on-chain by the validator, plus the <code>NewSpamSlots</code> value, plus 1, is greater than <code>spam_slots.max_spam_slots</code>.</li>
-<li>After filtering, if either the <code>valid</code> or <code>invalid</code> lists in the combination of the <code>DisputeStatementSet</code> and the onchain dispute is empty, skip this dispute.</li>
-<li>Add 1 to the <code>NewSpamSlots</code> value for each validator in the <code>DisputeStatementSet</code>.</li>
-</ol>
-</li>
-<li>Construct a <code>MultiDisputeStatementSet</code> for each <code>DisputeStatement</code> and return that.</li>
+<li>Issue a <code>DisputeCoordinatorMessage::RecentDisputes</code> message and wait for the response. This is a set of all disputes in recent sessions which we are aware of.</li>
 </ul>
 <h3 id="determining-bitfield-availability"><a class="header" href="#determining-bitfield-availability">Determining Bitfield Availability</a></h3>
 <p>An occupied core has a <code>CoreAvailability</code> bitfield. We also have a list of <code>SignedAvailabilityBitfield</code>s. We need to determine from these whether or not a core at a particular index has become available.</p>

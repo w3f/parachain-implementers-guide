@@ -580,7 +580,11 @@ enum BitfieldSigningMessage { }
         /// successfully.
         pending_confirmation: oneshot::Sender&lt;ImportStatementsResult&gt;
     },
+    /// Fetch a list of all recent disputes that the co-ordinator is aware of.
+    /// These are disputes which have occured any time in recent sessions, which may have already concluded.
+    RecentDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
     /// Fetch a list of all active disputes that the co-ordinator is aware of.
+    /// These disputes are either unconcluded or recently concluded.
     ActiveDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
     /// Get candidate votes for a candidate.
     QueryCandidateVotes(SessionIndex, CandidateHash, ResponseChannel&lt;Option&lt;CandidateVotes&gt;&gt;),

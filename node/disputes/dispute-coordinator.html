@@ -158,7 +158,7 @@
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;candidate-votes&quot;, SessionIndex, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
-&quot;active-disputes&quot; -&gt; ActiveDisputes
+&quot;recent-disputes&quot; -&gt; RecentDisputes
 &quot;earliest-session&quot; -&gt; Option&lt;SessionIndex&gt;
 <span class="boring">}
 </span></code></pre></pre>
@@ -176,9 +176,21 @@ This draws on the <a href="../../types/disputes.html">dispute statement types</a
     invalid: Vec&lt;(InvalidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
 }
 
-struct ActiveDisputes {
+// The status of the dispute.
+enum DisputeStatus {
+  // Dispute is still active.
+  Active,
+  // Dispute concluded positive (2/3 supermajority) along with what
+  // timestamp it concluded at.
+  ConcludedPositive(Timestamp),
+  // Dispute concluded negative (2/3 supermajority, takes precedence over
+  // positive in the case of many double-votes).
+  ConcludedNegative(Timestamp),
+}
+
+struct RecentDisputes {
     // sorted by session index and then by candidate hash.
-    disputed: Vec&lt;(SessionIndex, CandidateHash)&gt;,
+    disputed: Vec&lt;(SessionIndex, CandidateHash, DisputeStatus)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -213,7 +225,7 @@ dispute participation subsystem.</p>
 <li>If the session index is higher than <code>state.highest_session</code>:
 <ul>
 <li>update <code>state.highest_session</code></li>
-<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;active-disputes&quot;</code> in the DB.</li>
+<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;recent-disputes&quot;</code> in the DB.</li>
 <li>Use <code>iter_with_prefix</code> to remove everything from <code>&quot;earliest-session&quot;</code> up to <code>state.highest_session - DISPUTE_WINDOW</code> from the DB under <code>&quot;candidate-votes&quot;</code>.</li>
 <li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
 </ul>
@@ -243,7 +255,7 @@ previously one or both had zero length, the candidate is now freshly
 disputed.</li>
 <li>If the candidate is not freshly disputed as determined by 7, continue with
 <ol start="10">
-<li>If it is freshly disputed now, load <code>&quot;active-disputes&quot;</code> and add the
+<li>If it is freshly disputed now, load <code>&quot;recent-disputes&quot;</code> and add the
 candidate hash and session index. Then, if we have local statements with
 regards to that candidate,  also continue with 10. Otherwise proceed with 9.</li>
 </ol>
@@ -255,16 +267,20 @@ with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
 <li>Send back <code>ImportStatementsResult::ValidImport</code>.</li>
 <li>If the dispute now has supermajority votes in the &quot;valid&quot; direction,
-according to the <code>SessionInfo</code> of the dispute candidate's session, remove
-from <code>&quot;active-disputes&quot;</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there
-is no need to do anything explicitly. The actual rollback will be handled
-during the active leaves update by observing digests from the runtime.</li>
-<li>Write <code>&quot;active-disputes&quot;</code></li>
+according to the <code>SessionInfo</code> of the dispute candidate's session, the
+<code>DisputeStatus</code> should be set to <code>ConcludedPositive(now)</code> unless it was
+already <code>ConcludedNegative</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, 
+the <code>DisputeStatus</code> should be set to <code>ConcludedNegative(now)</code>. If it
+was <code>ConcludedPositive</code> before, the timestamp <code>now</code> should be copied
+from the previous status. It will be pruned after some time and all chains
+containing the disputed block will be reverted by the runtime and
+chain-selection subsystem.</li>
+<li>Write <code>&quot;recent-disputes&quot;</code></li>
 </ol>
 <h3 id="on-disputecoordinatormessageactivedisputes"><a class="header" href="#on-disputecoordinatormessageactivedisputes">On <code>DisputeCoordinatorMessage::ActiveDisputes</code></a></h3>
 <ul>
-<li>Load <code>&quot;active-disputes&quot;</code> and return the data contained within.</li>
+<li>Load <code>&quot;recent-disputes&quot;</code> and filter out any disputes which have been concluded for over 5 minutes. Return the filtered data</li>
 </ul>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
@@ -281,12 +297,12 @@ distributed to other validators.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagedetermineundisputedchain"><a class="header" href="#on-disputecoordinatormessagedetermineundisputedchain">On <code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a></h3>
 <ul>
-<li>Load <code>&quot;active-disputes&quot;</code>.</li>
+<li>Load <code>&quot;recent-disputes&quot;</code>.</li>
 <li>Deconstruct into parts <code>{ base_number, block_descriptions, rx }</code></li>
 <li>Starting from the beginning of <code>block_descriptions</code>:
 <ol>
-<li>Check the <code>ActiveDisputes</code> for a dispute of each candidate in the block description.</li>
-<li>If there is a dispute, exit the loop.</li>
+<li>Check the <code>RecentDisputes</code> for a dispute of each candidate in the block description.</li>
+<li>If there is a dispute which is active or concluded negative, exit the loop.</li>
 </ol>
 </li>
 <li>For the highest index <code>i</code> reached in the <code>block_descriptions</code>, send <code>(base_number + i + 1, block_hash)</code> on the channel, unless <code>i</code> is 0, in which case <code>None</code> should be sent. The <code>block_hash</code> is determined by inspecting <code>block_descriptions[i]</code>.</li>

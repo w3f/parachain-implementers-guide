@@ -3952,7 +3952,7 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;candidate-votes&quot;, SessionIndex, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
-&quot;active-disputes&quot; -&gt; ActiveDisputes
+&quot;recent-disputes&quot; -&gt; RecentDisputes
 &quot;earliest-session&quot; -&gt; Option&lt;SessionIndex&gt;
 <span class="boring">}
 </span></code></pre></pre>
@@ -3970,9 +3970,21 @@ This draws on the <a href="node/disputes/../../types/disputes.html">dispute stat
     invalid: Vec&lt;(InvalidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
 }
 
-struct ActiveDisputes {
+// The status of the dispute.
+enum DisputeStatus {
+  // Dispute is still active.
+  Active,
+  // Dispute concluded positive (2/3 supermajority) along with what
+  // timestamp it concluded at.
+  ConcludedPositive(Timestamp),
+  // Dispute concluded negative (2/3 supermajority, takes precedence over
+  // positive in the case of many double-votes).
+  ConcludedNegative(Timestamp),
+}
+
+struct RecentDisputes {
     // sorted by session index and then by candidate hash.
-    disputed: Vec&lt;(SessionIndex, CandidateHash)&gt;,
+    disputed: Vec&lt;(SessionIndex, CandidateHash, DisputeStatus)&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -4007,7 +4019,7 @@ dispute participation subsystem.</p>
 <li>If the session index is higher than <code>state.highest_session</code>:
 <ul>
 <li>update <code>state.highest_session</code></li>
-<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;active-disputes&quot;</code> in the DB.</li>
+<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;recent-disputes&quot;</code> in the DB.</li>
 <li>Use <code>iter_with_prefix</code> to remove everything from <code>&quot;earliest-session&quot;</code> up to <code>state.highest_session - DISPUTE_WINDOW</code> from the DB under <code>&quot;candidate-votes&quot;</code>.</li>
 <li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
 </ul>
@@ -4037,7 +4049,7 @@ previously one or both had zero length, the candidate is now freshly
 disputed.</li>
 <li>If the candidate is not freshly disputed as determined by 7, continue with
 <ol start="10">
-<li>If it is freshly disputed now, load <code>&quot;active-disputes&quot;</code> and add the
+<li>If it is freshly disputed now, load <code>&quot;recent-disputes&quot;</code> and add the
 candidate hash and session index. Then, if we have local statements with
 regards to that candidate,  also continue with 10. Otherwise proceed with 9.</li>
 </ol>
@@ -4049,16 +4061,20 @@ with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and
 <li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
 <li>Send back <code>ImportStatementsResult::ValidImport</code>.</li>
 <li>If the dispute now has supermajority votes in the &quot;valid&quot; direction,
-according to the <code>SessionInfo</code> of the dispute candidate's session, remove
-from <code>&quot;active-disputes&quot;</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, there
-is no need to do anything explicitly. The actual rollback will be handled
-during the active leaves update by observing digests from the runtime.</li>
-<li>Write <code>&quot;active-disputes&quot;</code></li>
+according to the <code>SessionInfo</code> of the dispute candidate's session, the
+<code>DisputeStatus</code> should be set to <code>ConcludedPositive(now)</code> unless it was
+already <code>ConcludedNegative</code>.</li>
+<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, 
+the <code>DisputeStatus</code> should be set to <code>ConcludedNegative(now)</code>. If it
+was <code>ConcludedPositive</code> before, the timestamp <code>now</code> should be copied
+from the previous status. It will be pruned after some time and all chains
+containing the disputed block will be reverted by the runtime and
+chain-selection subsystem.</li>
+<li>Write <code>&quot;recent-disputes&quot;</code></li>
 </ol>
 <h3 id="on-disputecoordinatormessageactivedisputes"><a class="header" href="#on-disputecoordinatormessageactivedisputes">On <code>DisputeCoordinatorMessage::ActiveDisputes</code></a></h3>
 <ul>
-<li>Load <code>&quot;active-disputes&quot;</code> and return the data contained within.</li>
+<li>Load <code>&quot;recent-disputes&quot;</code> and filter out any disputes which have been concluded for over 5 minutes. Return the filtered data</li>
 </ul>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
@@ -4075,12 +4091,12 @@ distributed to other validators.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagedetermineundisputedchain"><a class="header" href="#on-disputecoordinatormessagedetermineundisputedchain">On <code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a></h3>
 <ul>
-<li>Load <code>&quot;active-disputes&quot;</code>.</li>
+<li>Load <code>&quot;recent-disputes&quot;</code>.</li>
 <li>Deconstruct into parts <code>{ base_number, block_descriptions, rx }</code></li>
 <li>Starting from the beginning of <code>block_descriptions</code>:
 <ol>
-<li>Check the <code>ActiveDisputes</code> for a dispute of each candidate in the block description.</li>
-<li>If there is a dispute, exit the loop.</li>
+<li>Check the <code>RecentDisputes</code> for a dispute of each candidate in the block description.</li>
+<li>If there is a dispute which is active or concluded negative, exit the loop.</li>
 </ol>
 </li>
 <li>For the highest index <code>i</code> reached in the <code>block_descriptions</code>, send <code>(base_number + i + 1, block_hash)</code> on the channel, unless <code>i</code> is 0, in which case <code>None</code> should be sent. The <code>block_hash</code> is determined by inspecting <code>block_descriptions[i]</code>.</li>
@@ -4726,27 +4742,10 @@ to be run very often.</p>
 <p>The end result of this process is a vector of <code>BackedCandidate</code>s, sorted in order of their core index. Furthermore, this process should select at maximum one candidate which upgrades the runtime validation code.</p>
 <h3 id="dispute-statement-selection"><a class="header" href="#dispute-statement-selection">Dispute Statement Selection</a></h3>
 <p>This is the point at which the block author provides further votes to active disputes or initiates new disputes in the runtime state.</p>
-<p>We must take care not to overwhelm the &quot;spam slots&quot; of the chain. That is, to avoid too many votes from the same validators being placed into the chain, which would trigger the anti-spam protection functionality of the <a href="node/utility/../../runtime/disputes.html">disputes module</a>.</p>
+<p>The block-authoring logic of the runtime has an extra step between handling the inherent-data and producing the actual inherent call, which we assume performs the work of filtering out disputes which are not relevant to the on-chain state.</p>
 <p>To select disputes:</p>
 <ul>
-<li>Make a <code>DisputesInfo</code> runtime API call and decompose into <code>{ spam_slots, disputes }</code>. Bind <code>disputes</code> to <code>onchain_disputes</code>.</li>
-<li>Issue a <code>DisputeCoordinatorMessage::ActiveDisputes</code> message and wait for the response. Assign the value to <code>offchain_disputes</code>.</li>
-<li>Make a <code>CandidatesIncluded</code> runtime API call for each dispute in <code>offchain_disputes</code> and tag each offchain dispute as local if the result for it is <code>true</code>.</li>
-<li>Initialize <code>NewSpamSlots: Map&lt;(SessionIndex, ValidatorIndex), u32&gt;</code> as an empty map.</li>
-<li>For each dispute in <code>offchain_disputes</code>:
-<ol>
-<li>Make a <code>RuntimeApiRequest::SessionInfo</code> against the parent hash for the session of the dispute. If <code>None</code>, continue - this chain is in the past relative to the session the dispute belongs to and we can import it when it reaches that session.</li>
-<li>Load the spam slots from <code>spam_slots</code> for the given session. If it isn't present, treat as though all zeros.</li>
-<li>construct a <code>DisputeStatementSet</code> of all offchain votes we are aware of that the onchain doesn't already have a <code>valid</code> or <code>invalid</code> bit set for, respectively.</li>
-<li>If the <code>onchain_disputes</code> contains an entry for the dispute, load that. Otherwise, treat as empty.</li>
-<li>If the offchain dispute is local or the <code>DisputeStatementSet</code> and the onchain dispute together have at least <code>byzantine_threshold + 1</code> validators in it, continue to the next offchain dispute.</li>
-<li>Otherwise</li>
-<li>Filter out all votes from the <code>DisputeStatementSet</code> where the amount of spam slots occupied on-chain by the validator, plus the <code>NewSpamSlots</code> value, plus 1, is greater than <code>spam_slots.max_spam_slots</code>.</li>
-<li>After filtering, if either the <code>valid</code> or <code>invalid</code> lists in the combination of the <code>DisputeStatementSet</code> and the onchain dispute is empty, skip this dispute.</li>
-<li>Add 1 to the <code>NewSpamSlots</code> value for each validator in the <code>DisputeStatementSet</code>.</li>
-</ol>
-</li>
-<li>Construct a <code>MultiDisputeStatementSet</code> for each <code>DisputeStatement</code> and return that.</li>
+<li>Issue a <code>DisputeCoordinatorMessage::RecentDisputes</code> message and wait for the response. This is a set of all disputes in recent sessions which we are aware of.</li>
 </ul>
 <h3 id="determining-bitfield-availability"><a class="header" href="#determining-bitfield-availability">Determining Bitfield Availability</a></h3>
 <p>An occupied core has a <code>CoreAvailability</code> bitfield. We also have a list of <code>SignedAvailabilityBitfield</code>s. We need to determine from these whether or not a core at a particular index has become available.</p>
@@ -5741,7 +5740,11 @@ enum BitfieldSigningMessage { }
         /// successfully.
         pending_confirmation: oneshot::Sender&lt;ImportStatementsResult&gt;
     },
+    /// Fetch a list of all recent disputes that the co-ordinator is aware of.
+    /// These are disputes which have occured any time in recent sessions, which may have already concluded.
+    RecentDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
     /// Fetch a list of all active disputes that the co-ordinator is aware of.
+    /// These disputes are either unconcluded or recently concluded.
     ActiveDisputes(ResponseChannel&lt;Vec&lt;(SessionIndex, CandidateHash)&gt;&gt;),
     /// Get candidate votes for a candidate.
     QueryCandidateVotes(SessionIndex, CandidateHash, ResponseChannel&lt;Option&lt;CandidateVotes&gt;&gt;),
