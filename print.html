@@ -4064,7 +4064,7 @@ with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and
 according to the <code>SessionInfo</code> of the dispute candidate's session, the
 <code>DisputeStatus</code> should be set to <code>ConcludedPositive(now)</code> unless it was
 already <code>ConcludedNegative</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction, 
+<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction,
 the <code>DisputeStatus</code> should be set to <code>ConcludedNegative(now)</code>. If it
 was <code>ConcludedPositive</code> before, the timestamp <code>now</code> should be copied
 from the previous status. It will be pruned after some time and all chains
@@ -4078,7 +4078,8 @@ chain-selection subsystem.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
-<li>Load <code>&quot;candidate-votes&quot;</code> and return the data within or <code>None</code> if missing.</li>
+<li>Load <code>&quot;candidate-votes&quot;</code> for every <code>(SessionIndex, CandidateHash)</code> in the query and return data within each <code>CandidateVote</code>.
+If a particular <code>candidate-vote</code> is missing, that particular request is ommitted from the response.</li>
 </ul>
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
