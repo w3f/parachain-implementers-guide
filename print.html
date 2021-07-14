@@ -198,7 +198,7 @@
 <li>The candidate's PoV is not considered as available within a timeout and is discarded from the relay chain.</li>
 </ul>
 <p>This process can be divided further down. Steps 2 &amp; 3 relate to the work of the collator in collating and distributing the candidate to validators via the Collation Distribution Subsystem. Steps 3 &amp; 4 relate to the work of the validators in the Candidate Backing Subsystem and the block author (itself a validator) to include the block into the relay chain. Steps 6, 7, and 8 correspond to the logic of the relay-chain state-machine (otherwise known as the Runtime) used to fully incorporate the block into the chain. Step 7 requires further work on the validators' parts to participate in the Availability Distribution Subsystem and include that information into the relay chain for step 8 to be fully realized.</p>
-<p>This brings us to the second part of the process. Once a parablock is considered available and part of the parachain, it is still &quot;pending approval&quot;. At this stage in the pipeline, the parablock has been backed by a majority of validators in the group assigned to that parachain, and its data has been guaranteed available by the set of validators as a whole. Once it's considered available, the host will even begin to accept children of that block. At this point, we can consider the parablock as having been tentatively included in the parachain, although more confirmations are desired. However, the validators in the parachain-group (known as the &quot;Parachain Validators&quot; for that parachain) are sampled from a validator set which contains some proportion of byzantine, or arbitrarily malicious members. This implies that the Parachain Validators for some parachain may be majority-dishonest, which means that (secondary) approval checks must be done on the block before it can be considered approved. This is necessary only because the Parachain Validators for a given parachain are sampled from an overall validator set which is assumed to be up to &lt;1/3 dishonest - meaning that there is a chance to randomly sample Parachain Validators for a parachain that are majority or fully dishonest and can back a candidate wrongly. The Approval Process allows us to detect such misbehavior after-the-fact without allocating more Parachain Validators and reducing the throughput of the system. A parablock's failure to pass the approval process will invalidate the block as well as all of its descendents. However, only the validators who backed the block in question will be slashed, not the validators who backed the descendents.</p>
+<p>This brings us to the second part of the process. Once a parablock is considered available and part of the parachain, it is still &quot;pending approval&quot;. At this stage in the pipeline, the parablock has been backed by a majority of validators in the group assigned to that parachain, and its data has been guaranteed available by the set of validators as a whole. Once it's considered available, the host will even begin to accept children of that block. At this point, we can consider the parablock as having been tentatively included in the parachain, although more confirmations are desired. However, the validators in the parachain-group (known as the &quot;Parachain Validators&quot; for that parachain) are sampled from a validator set which contains some proportion of byzantine, or arbitrarily malicious members. This implies that the Parachain Validators for some parachain may be majority-dishonest, which means that (secondary) approval checks must be done on the block before it can be considered approved. This is necessary only because the Parachain Validators for a given parachain are sampled from an overall validator set which is assumed to be up to &lt;1/3 dishonest - meaning that there is a chance to randomly sample Parachain Validators for a parachain that are majority or fully dishonest and can back a candidate wrongly. The Approval Process allows us to detect such misbehavior after-the-fact without allocating more Parachain Validators and reducing the throughput of the system. A parablock's failure to pass the approval process will invalidate the block as well as all of its descendants. However, only the validators who backed the block in question will be slashed, not the validators who backed the descendants.</p>
 <p>The Approval Process, at a glance, looks like this:</p>
 <ol>
 <li>Parablocks that have been included by the Inclusion Pipeline are pending approval for a time-window known as the secondary checking window.</li>
@@ -223,7 +223,7 @@
 <p>The diagram above shows the happy path of a block from (1) Candidate to the (7) Approved state.</p>
 <p>It is also important to take note of the fact that the relay-chain is extended by BABE, which is a forkful algorithm. That means that different block authors can be chosen at the same time, and may not be building on the same block parent. Furthermore, the set of validators is not fixed, nor is the set of parachains. And even with the same set of validators and parachains, the validators' assignments to parachains is flexible. This means that the architecture proposed in the next chapters must deal with the variability and multiplicity of the network state.</p>
 <p><img src="protocol_overview_1.generated.svg" alt="" /></p>
-<p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called C'. Assume that afterwards, some validators become aware of both C and C', while others remain only aware of one.</p>
+<p>In this example, group 1 has received block C while the others have not due to network asynchrony. Now, a validator from group 2 may be able to build another block on top of B, called <code>C'</code>. Assume that afterwards, some validators become aware of both C and <code>C'</code>, while others remain only aware of one.</p>
 <p><img src="protocol_overview_2.generated.svg" alt="" /></p>
 <p>Those validators that are aware of many competing heads must be aware of the work happening on each one. They may contribute to some or a full extent on both. It is possible that due to network asynchrony two forks may grow in parallel for some time, although in the absence of an adversarial network this is unlikely in the case where there are validators who are aware of both chain heads.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="approval-process"><a class="header" href="#approval-process">Approval Process</a></h1>
@@ -625,14 +625,14 @@ things simple but at the same time that makes HRMP more demanding in terms of re
 <li>Scheduler: manages parachain and parathread scheduling as well as validator assignments.</li>
 <li>Inclusion: handles the inclusion and availability of scheduled parachains and parathreads.</li>
 <li>Validity: handles secondary checks and dispute resolution for included, available parablocks.</li>
-<li>Hrmp: handles horizontal messages between paras.</li>
-<li>Ump: Handles upward messages from a para to the relay chain.</li>
-<li>Dmp: Handles downward messages from the relay chain to the para.</li>
+<li>HRMP: handles horizontal messages between paras.</li>
+<li>UMP: Handles upward messages from a para to the relay chain.</li>
+<li>DMP: Handles downward messages from the relay chain to the para.</li>
 </ul>
 <p>The <a href="runtime/initializer.html">Initializer module</a> is special - it's responsible for handling the initialization logic of the other modules to ensure that the correct initialization order and related invariants are maintained. The other modules won't specify a on-initialize logic, but will instead expose a special semi-private routine that the initialization module will call. The other modules are relatively straightforward and perform the roles described above.</p>
 <p>The Parachain Host operates under a changing set of validators. Time is split up into periodic sessions, where each session brings a potentially new set of validators. Sessions are buffered by one, meaning that the validators of the upcoming session <code>n+1</code> are determined at the end of session <code>n-1</code>, right before session <code>n</code> starts. Parachain Host runtime modules need to react to changes in the validator set, as it will affect the runtime logic for processing candidate backing, availability bitfields, and misbehavior reports. The Parachain Host modules can't determine ahead-of-time exactly when session change notifications are going to happen within the block (note: this depends on module initialization order again - better to put session before parachains modules).</p>
 <p>The relay chain is intended to use BABE or SASSAFRAS, which both have the property that a session changing at a block is determined not by the number of the block but instead by the time the block is authored. In some sense, sessions change in-between blocks, not at blocks. This has the side effect that the session of a child block cannot be determined solely by the parent block's identifier. Being able to unilaterally determine the validator-set at a specific block based on its parent hash would make a lot of Node-side logic much simpler.</p>
-<p>In order to regain the property that the validator set of a block is predictable by its parent block, we delay session changes' application to Parachains by 1 block. This means that if there is a session change at block X, that session change will be stored and applied during initialization of direct descendents of X. This principal side effect of this change is that the Parachains runtime can disagree with session or consensus modules about which session it currently is. Misbehavior reporting routines in particular will be affected by this, although not severely. The parachains runtime might believe it is the last block of the session while the system is really in the first block of the next session. In such cases, a historical validator-set membership proof will need to accompany any misbehavior report, although they typically do not need to during current-session misbehavior reports.</p>
+<p>In order to regain the property that the validator set of a block is predictable by its parent block, we delay session changes' application to Parachains by 1 block. This means that if there is a session change at block X, that session change will be stored and applied during initialization of direct descendants of X. This principal side effect of this change is that the Parachains runtime can disagree with session or consensus modules about which session it currently is. Misbehavior reporting routines in particular will be affected by this, although not severely. The parachains runtime might believe it is the last block of the session while the system is really in the first block of the next session. In such cases, a historical validator-set membership proof will need to accompany any misbehavior report, although they typically do not need to during current-session misbehavior reports.</p>
 <p>So the other role of the initializer module is to forward session change notifications to modules in the initialization order. Session change is also the point at which the <a href="runtime/configuration.html">Configuration Module</a> updates the configuration. Most of the other modules will handle changes in the configuration during their session change operation, so the initializer should provide both the old and new configuration to all the other
 modules alongside the session change notification. This means that a session change notification should consist of the following data:</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -2007,7 +2007,7 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <div style="break-before: page; page-break-before: always;"></div><h1 id="runtime-apis"><a class="header" href="#runtime-apis">Runtime APIs</a></h1>
 <p>Runtime APIs are the means by which the node-side code extracts information from the state of the runtime.</p>
 <p>Every block in the relay-chain contains a <em>state root</em> which is the root hash of a state trie encapsulating all storage of runtime modules after execution of the block. This is a cryptographic commitment to a unique state. We use the terminology of accessing the <em>state at</em> a block to refer accessing the state referred to by the state root of that block.</p>
-<p>Although Runtime APIs are often used for simple storage access, they are actually empowered to do arbitrary computation. The implementation of the Runtime APIs lives within the Runtime as Wasm code and exposes extern functions that can be invoked with arguments and have a return value. Runtime APIs have access to a variety of host functions, which are contextual functions provided by the Wasm execution context, that allow it to carry out many different types of behaviors.</p>
+<p>Although Runtime APIs are often used for simple storage access, they are actually empowered to do arbitrary computation. The implementation of the Runtime APIs lives within the Runtime as Wasm code and exposes <code>extern</code> functions that can be invoked with arguments and have a return value. Runtime APIs have access to a variety of host functions, which are contextual functions provided by the Wasm execution context, that allow it to carry out many different types of behaviors.</p>
 <p>Abilities provided by host functions includes:</p>
 <ul>
 <li>State Access</li>
@@ -2275,7 +2275,7 @@ fn candidates_included(Vec&lt;(SessionIndex, CandidateHash)&gt;) -&gt; Vec&lt;bo
 <ul>
 <li>The underlying <strong>consensus</strong> algorithm, whether it is BABE or SASSAFRAS is implemented.</li>
 <li>There is a <strong>chain synchronization</strong> protocol which will search for and download the longest available chains at all times.</li>
-<li>The <strong>state</strong> of all blocks at the head of the chain is available. There may be <strong>state pruning</strong> such that state of the last <code>k</code> blocks behind the last finalized block are available, as well as the state of all their descendents. This assumption implies that the state of all active leaves and their last <code>k</code> ancestors are all available. The underlying implementation is expected to support <code>k</code> of a few hundred blocks, but we reduce this to a very conservative <code>k=5</code> for our purposes.</li>
+<li>The <strong>state</strong> of all blocks at the head of the chain is available. There may be <strong>state pruning</strong> such that state of the last <code>k</code> blocks behind the last finalized block are available, as well as the state of all their descendants. This assumption implies that the state of all active leaves and their last <code>k</code> ancestors are all available. The underlying implementation is expected to support <code>k</code> of a few hundred blocks, but we reduce this to a very conservative <code>k=5</code> for our purposes.</li>
 <li>There is an underlying <strong>networking</strong> framework which provides <strong>peer discovery</strong> services which will provide us with peers and will not create &quot;loopback&quot; connections to our own node. The number of peers we will have is assumed to be bounded at 1000.</li>
 <li>There is a <strong>transaction pool</strong> and a <strong>transaction propagation</strong> mechanism which maintains a set of current transactions and distributes to connected peers. Current transactions are those which are not outdated relative to some &quot;best&quot; fork of the chain, which is part of the active heads, and have not been included in the best fork.</li>
 </ul>
@@ -3273,8 +3273,8 @@ If not running as a validator, do nothing.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="approval-voting"><a class="header" href="#approval-voting">Approval Voting</a></h1>
 <p>Reading the <a href="node/approval/../../protocol-approval.html">section on the approval protocol</a> will likely be necessary to understand the aims of this subsystem.</p>
 <p>Approval votes are split into two parts: Assignments and Approvals. Validators first broadcast their assignment to indicate intent to check a candidate. Upon successfully checking, they broadcast an approval vote. If a validator doesn't broadcast their approval vote shortly after issuing an assignment, this is an indication that they are being prevented from recovering or validating the block data and that more validators should self-select to check the candidate. This is known as a &quot;no-show&quot;.</p>
-<p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of DelayTranches, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which DelayTranche those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
-<p>Another main component of this subsystem is the logic for determining when a (Block, Candidate) pair has been approved and when to broadcast and trigger our own assignment. Once a (Block, Candidate) pair has been approved, we mark a corresponding bit in the BlockEntry that indicates the candidate has been approved under the block. When we trigger our own assignment, we broadcast it via Approval Distribution, begin fetching the data from Availability Recovery, and then pass it through to the Candidate Validation. Once these steps are successful, we issue our approval vote. If any of these steps fail, we don't issue any vote and will &quot;no-show&quot; from the perspective of other validators. In the future we will initiate disputes as well.</p>
+<p>The core of this subsystem is a Tick-based timer loop, where Ticks are 500ms. We also reason about time in terms of <code>DelayTranche</code>s, which measure the number of ticks elapsed since a block was produced. We track metadata for all un-finalized but included candidates. We compute our local assignments to check each candidate, as well as which <code>DelayTranche</code> those assignments may be minimally triggered at. As the same candidate may appear in more than one block, we must produce our potential assignments for each (Block, Candidate) pair. The timing loop is based on waiting for assignments to become no-shows or waiting to broadcast and begin our own assignment to check.</p>
+<p>Another main component of this subsystem is the logic for determining when a (Block, Candidate) pair has been approved and when to broadcast and trigger our own assignment. Once a (Block, Candidate) pair has been approved, we mark a corresponding bit in the <code>BlockEntry</code> that indicates the candidate has been approved under the block. When we trigger our own assignment, we broadcast it via Approval Distribution, begin fetching the data from Availability Recovery, and then pass it through to the Candidate Validation. Once these steps are successful, we issue our approval vote. If any of these steps fail, we don't issue any vote and will &quot;no-show&quot; from the perspective of other validators. In the future we will initiate disputes as well.</p>
 <p>Where this all fits into Polkadot is via block finality. Our goal is to not finalize any block containing a candidate that is not approved. We provide a hook for a custom GRANDPA voting rule - GRANDPA makes requests of the form (target, minimum) consisting of a target block (i.e. longest chain) that it would like to finalize, and a minimum block which, due to the rules of GRANDPA, must be voted on. The minimum is typically the last finalized block, but may be beyond it, in the case of having a last-round-estimate beyond the last finalized. Thus, our goal is to inform GRANDPA of some block between target and minimum which we believe can be finalized safely. We do this by iterating backwards from the target to the minimum and finding the longest continuous chain from minimum where all candidates included by those blocks have been approved.</p>
 <h2 id="protocol-8"><a class="header" href="#protocol-8">Protocol</a></h2>
 <p>Input:</p>
@@ -3430,13 +3430,13 @@ struct State {
 </ul>
 <h3 id="incoming-messages"><a class="header" href="#incoming-messages">Incoming Messages</a></h3>
 <h4 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
-<p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the ChainApi subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendents of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>. We also update each of the <code>BlockNumber -&gt; Vec&lt;Hash&gt;</code> keys in the database to reflect the blocks at that height, clearing if empty.</p>
+<p>On receiving an <code>OverseerSignal::BlockFinalized(h)</code>, we fetch the block number <code>b</code> of that block from the <code>ChainApi</code> subsystem. We update our <code>StoredBlockRange</code> to begin at <code>b+1</code>. Additionally, we remove all block entries and candidates referenced by them up to and including <code>b</code>. Lastly, we prune out all descendants of <code>h</code> transitively: when we remove a <code>BlockEntry</code> with number <code>b</code> that is not equal to <code>h</code>, we recursively delete all the <code>BlockEntry</code>s referenced as children. We remove the <code>block_assignments</code> entry for the block hash and if <code>block_assignments</code> is now empty, remove the <code>CandidateEntry</code>. We also update each of the <code>BlockNumber -&gt; Vec&lt;Hash&gt;</code> keys in the database to reflect the blocks at that height, clearing if empty.</p>
 <h4 id="overseersignalactiveleavesupdate"><a class="header" href="#overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h4>
 <p>On receiving an <code>OverseerSignal::ActiveLeavesUpdate(update)</code>:</p>
 <ul>
-<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the ChainApi subsystem. Stale leaves in the update can be ignored.</li>
+<li>We determine the set of new blocks that were not in our previous view. This is done by querying the ancestry of all new items in the view and contrasting against the stored <code>BlockNumber</code>s. Typically, there will be only one new block. We fetch the headers and information on these blocks from the <code>ChainApi</code> subsystem. Stale leaves in the update can be ignored.</li>
 <li>We update the <code>StoredBlockRange</code> and the <code>BlockNumber</code> maps.</li>
-<li>We use the RuntimeApiSubsystem to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
+<li>We use the <code>RuntimeApiSubsystem</code> to determine information about these blocks. It is generally safe to assume that runtime state is available for recent, unfinalized blocks. In the case that it isn't, it means that we are catching up to the head of the chain and needn't worry about assignments to those blocks anyway, as the security assumption of the protocol tolerates nodes being temporarily offline or out-of-date.
 <ul>
 <li>We fetch the set of candidates included by each block by dispatching a <code>RuntimeApiRequest::CandidateEvents</code> and checking the <code>CandidateIncluded</code> events.</li>
 <li>We fetch the session of the block by dispatching a <code>session_index_for_child</code> request with the parent-hash of the block.</li>
@@ -3445,9 +3445,9 @@ struct State {
 <li>If any of the runtime API calls fail, we just warn and skip the block.</li>
 </ul>
 </li>
-<li>We use the RuntimeApiSubsystem to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks.</li>
+<li>We use the <code>RuntimeApiSubsystem</code> to determine the set of candidates included in these blocks and use BABE logic to determine the slot number and VRF of the blocks.</li>
 <li>We also note how late we appear to have received the block. We create a <code>BlockEntry</code> for each block and a <code>CandidateEntry</code> for each candidate obtained from <code>CandidateIncluded</code> events after making a <code>RuntimeApiRequest::CandidateEvents</code> request.</li>
-<li>For each candidate, if the amount of needed approvals is more than the validators remaining after the backing group of the candidate is subtracted, then the candidate is insta-approved as approval would be impossible otherwise. If all candidates in the block are insta-approved, or there are no candidates in the block, then the block is insta-approved. If the block is insta-approved, a <a href="node/approval/../../types/overseer-protocol.html#chainselectionmessage">`ChainSelectionMessage::Approvedl</a> should be sent for the block.</li>
+<li>For each candidate, if the amount of needed approvals is more than the validators remaining after the backing group of the candidate is subtracted, then the candidate is insta-approved as approval would be impossible otherwise. If all candidates in the block are insta-approved, or there are no candidates in the block, then the block is insta-approved. If the block is insta-approved, a <a href="node/approval/../../types/overseer-protocol.html#chainselectionmessage"><code>ChainSelectionMessage::Approved</code></a> should be sent for the block.</li>
 <li>Ensure that the <code>CandidateEntry</code> contains a <code>block_assignments</code> entry for the block, with the correct backing group set.</li>
 <li>If a validator in this session, compute and assign <code>our_assignment</code> for the <code>block_assignments</code>
 <ul>
@@ -3554,14 +3554,14 @@ struct State {
 <li>If the <code>approval_entry</code> is approved, this doesn't need to be woken up again.</li>
 <li>If <code>RequiredTranches::All</code> - no wakeup. We assume other incoming votes will trigger wakeup and potentially re-schedule.</li>
 <li>If <code>RequiredTranches::Pending { considered, next_no_show, uncovered, maximum_broadcast, clock_drift }</code> - schedule at the lesser of the next no-show tick, or the tick, offset positively by <code>clock_drift</code> of the next non-empty tranche we are aware of after <code>considered</code>, including any tranche containing our own unbroadcast assignment. This can lead to no wakeup in the case that we have already broadcast our assignment and there are no pending no-shows; that is, we have approval votes for every assignment we've received that is not already a no-show. In this case, we will be re-triggered by other validators broadcasting their assignments.</li>
-<li>If `RequiredTranches::Exact { next_no_show, .. } - set a wakeup for the next no-show tick.</li>
+<li>If <code>RequiredTranches::Exact { next_no_show, .. }</code> - set a wakeup for the next no-show tick.</li>
 </ul>
 <h4 id="launch-approval-work"><a class="header" href="#launch-approval-work">Launch Approval Work</a></h4>
 <ul>
 <li>Requires <code>(SessionIndex, SessionInfo, CandidateReceipt, ValidatorIndex, backing_group, block_hash, candidate_index)</code></li>
 <li>Extract the public key of the <code>ValidatorIndex</code> from the <code>SessionInfo</code> for the session.</li>
 <li>Issue an <code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session_index, Some(backing_group), response_sender)</code></li>
-<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::ValidationCodeByHash(</code>descriptor.validation_code_hash<code>)</code> against the state of <code>block_hash</code>.</li>
+<li>Load the historical validation code of the parachain by dispatching a <code>RuntimeApiRequest::ValidationCodeByHash(descriptor.validation_code_hash)</code> against the state of <code>block_hash</code>.</li>
 <li>Spawn a background task with a clone of <code>background_tx</code>
 <ul>
 <li>Wait for the available data</li>
@@ -4024,7 +4024,7 @@ dispute participation subsystem.</p>
 <li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
 </ul>
 </li>
-<li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the ChainApi subsystem to blacklist the chain.</li>
+<li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the <code>ChainApi</code> subsystem to blacklist the chain.</li>
 </ul>
 <h3 id="on-overseersignalconclude"><a class="header" href="#on-overseersignalconclude">On <code>OverseerSignal::Conclude</code></a></h3>
 <p>Exit gracefully.</p>
@@ -4079,7 +4079,7 @@ chain-selection subsystem.</li>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
 <li>Load <code>&quot;candidate-votes&quot;</code> for every <code>(SessionIndex, CandidateHash)</code> in the query and return data within each <code>CandidateVote</code>.
-If a particular <code>candidate-vote</code> is missing, that particular request is ommitted from the response.</li>
+If a particular <code>candidate-vote</code> is missing, that particular request is omitted from the response.</li>
 </ul>
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
@@ -4484,14 +4484,18 @@ no real harm done: There was no serious attack to begin with.</p>
 <li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><code>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
 (&quot;chunk&quot;, CandidateHash, u32) -&gt; Option&lt;ErasureChunk&gt;
 (&quot;meta&quot;, CandidateHash) -&gt; Option&lt;CandidateMeta&gt;
 
 (&quot;unfinalized&quot;, BlockNumber, BlockHash, CandidateHash) -&gt; Option&lt;()&gt;
 (&quot;prune_by_time&quot;, Timestamp, CandidateHash) -&gt; Option&lt;()&gt;
-</code></pre>
-<p>Timestamps are the wall-clock seconds since unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
+<span class="boring">}
+</span></code></pre></pre>
+<p>Timestamps are the wall-clock seconds since Unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateMeta</code> struct</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -4532,7 +4536,8 @@ enum State {
 </ul>
 <p>On <code>OverseerSignal::BlockFinalized(finalized)</code> events:</p>
 <ul>
-<li>for each key in <code>iter_with_prefix(&quot;unfinalized&quot;)</code>
+<li>
+<p>for each key in <code>iter_with_prefix(&quot;unfinalized&quot;)</code></p>
 <ul>
 <li>Stop if the key is beyond <code>(&quot;unfinalized, finalized)</code></li>
 <li>For each block number f that we encounter, load the finalized hash for that block.
@@ -4547,7 +4552,7 @@ enum State {
 <li>For each candidate that we encounter under <code>f</code> which is not under the finalized block hash,
 <ul>
 <li>Remove all entries under <code>f</code> in the <code>Unfinalized</code> state.</li>
-<li>If the <code>CandidateMeta</code> has state <code>Unfinalized</code> with an empty list of blocks, downgrade to <code>Unavailable</code> and re-schedule pruning under the timestamp + 1 hour. We do not prune here as the candidate still may be included in a descendent of the finalized chain.</li>
+<li>If the <code>CandidateMeta</code> has state <code>Unfinalized</code> with an empty list of blocks, downgrade to <code>Unavailable</code> and re-schedule pruning under the timestamp + 1 hour. We do not prune here as the candidate still may be included in a descendant of the finalized chain.</li>
 </ul>
 </li>
 <li>Remove all <code>&quot;unfinalized&quot;</code> keys under <code>f</code>.</li>
@@ -4555,61 +4560,80 @@ enum State {
 </li>
 </ul>
 </li>
-<li>Update last_finalized = finalized.</li>
-</ul>
+<li>
+<p>Update <code>last_finalized</code> = finalized.</p>
 <p>This is roughly <code>O(n * m)</code> where n is the number of blocks finalized since the last update, and <code>m</code> is the number of parachains.</p>
+</li>
+</ul>
 <p>On <code>QueryAvailableData</code> message:</p>
 <ul>
-<li>Query <code>(&quot;available&quot;, candidate_hash)</code></li>
-</ul>
+<li>
+<p>Query <code>(&quot;available&quot;, candidate_hash)</code></p>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+</li>
+</ul>
 <p>On <code>QueryDataAvailability</code> message:</p>
 <ul>
-<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and <code>data_available == true</code>.</li>
-</ul>
+<li>
+<p>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and <code>data_available == true</code>.</p>
 <p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
+</li>
+</ul>
 <p>On <code>QueryChunk</code> message:</p>
 <ul>
-<li>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></li>
-</ul>
+<li>
+<p>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></p>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+</li>
+</ul>
 <p>On <code>QueryAllChunks</code> message:</p>
 <ul>
 <li>Query <code>(&quot;meta&quot;, candidate_hash)</code>. If <code>None</code>, send an empty response and return.</li>
 <li>For all <code>1</code> bits in the <code>chunks_stored</code>, query <code>(&quot;chunk&quot;, candidate_hash, index)</code>. Ignore but warn on errors, and return a vector of all loaded chunks.</li>
 </ul>
-<p>On `QueryChunkAvailability message:</p>
+<p>On <code>QueryChunkAvailability</code> message:</p>
 <ul>
-<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</li>
-</ul>
+<li>
+<p>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</p>
 <p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
+</li>
+</ul>
 <p>On <code>StoreChunk</code> message:</p>
 <ul>
-<li>If there is a <code>CandidateMeta</code> under the candidate hash, set the bit of the erasure-chunk in the <code>chunks_stored</code> bitfield to <code>1</code>. If it was not <code>1</code> already, write the chunk under <code>(&quot;chunk&quot;, candidate_hash, chunk_index)</code>.</li>
-</ul>
+<li>
+<p>If there is a <code>CandidateMeta</code> under the candidate hash, set the bit of the erasure-chunk in the <code>chunks_stored</code> bitfield to <code>1</code>. If it was not <code>1</code> already, write the chunk under <code>(&quot;chunk&quot;, candidate_hash, chunk_index)</code>.</p>
 <p>This is <code>O(n)</code> in the size of the chunk.</p>
+</li>
+</ul>
 <p>On <code>StoreAvailableData</code> message:</p>
 <ul>
-<li>If there is no <code>CandidateMeta</code> under the candidate hash, create it with <code>State::Unavailable(now)</code>. Load the <code>CandidateMeta</code> otherwise.</li>
-<li>Store <code>data</code> under <code>(&quot;available&quot;, candidate_hash)</code> and set <code>data_available</code> to true.</li>
-<li>Store each chunk under <code>(&quot;chunk&quot;, candidate_hash, index)</code> and set every bit in <code>chunks_stored</code> to <code>1</code>.</li>
-</ul>
+<li>
+<p>If there is no <code>CandidateMeta</code> under the candidate hash, create it with <code>State::Unavailable(now)</code>. Load the <code>CandidateMeta</code> otherwise.</p>
+</li>
+<li>
+<p>Store <code>data</code> under <code>(&quot;available&quot;, candidate_hash)</code> and set <code>data_available</code> to true.</p>
+</li>
+<li>
+<p>Store each chunk under <code>(&quot;chunk&quot;, candidate_hash, index)</code> and set every bit in <code>chunks_stored</code> to <code>1</code>.</p>
 <p>This is <code>O(n)</code> in the size of the data as the aggregate size of the chunks is proportional to the data.</p>
+</li>
+</ul>
 <p>Every 5 minutes, run a pruning routine:</p>
 <ul>
-<li>for each key in <code>iter_with_prefix(&quot;prune_by_time&quot;)</code>:
+<li>
+<p>for each key in <code>iter_with_prefix(&quot;prune_by_time&quot;)</code>:</p>
 <ul>
-<li>If the key is beyond (&quot;prune_by_time&quot;, now), return.</li>
+<li>If the key is beyond <code>(&quot;prune_by_time&quot;, now)</code>, return.</li>
 <li>Remove the key.</li>
 <li>Extract <code>candidate_hash</code> from the key.</li>
 <li>Load and remove the <code>(&quot;meta&quot;, candidate_hash)</code></li>
 <li>For each erasure chunk bit set, remove <code>(&quot;chunk&quot;, candidate_hash, bit_index)</code>.</li>
-<li>If <code>data_available</code>, remove `(&quot;available&quot;, candidate_hash)</li>
+<li>If <code>data_available</code>, remove <code>(&quot;available&quot;, candidate_hash)</code>
+This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
+to be run very often.</li>
 </ul>
 </li>
 </ul>
-<p>This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
-to be run very often.</p>
 <h2 id="basic-scenarios-to-test"><a class="header" href="#basic-scenarios-to-test">Basic scenarios to test</a></h2>
 <p>Basically we need to test the correctness of data flow through state FSMs described earlier. These tests obviously assume that some mocking of time is happening.</p>
 <ul>
@@ -4639,7 +4663,7 @@ to be run very often.</p>
 </ul>
 </li>
 <li>
-<p>Forkfulness of the relay chain is taken into account</p>
+<p>Fork-awareness of the relay chain is taken into account</p>
 <ul>
 <li>Block <code>B1</code> is added to the store.</li>
 <li>Block <code>B2</code> is added to the store.</li>
@@ -5051,12 +5075,12 @@ struct CandidateDescriptor {
 	/// derived from relay-chain state that influence the validity of the block which
 	/// must also be kept available for secondary checkers.
 	persisted_validation_data_hash: Hash,
-	/// The blake2-256 hash of the pov-block.
+	/// The blake2-256 hash of the `pov-block`.
 	pov_hash: Hash,
 	/// The root of a block's erasure encoding Merkle tree.
 	erasure_root: Hash,
 	/// Signature on blake2-256 of components of this receipt:
-	/// The parachain index, the relay parent, the validation data hash, and the pov_hash.
+	/// The parachain index, the relay parent, the validation data hash, and the `pov_hash`.
 	signature: CollatorSignature,
 	/// Hash of the para header that is being generated by this candidate.
 	para_head: Hash,
@@ -5065,12 +5089,12 @@ struct CandidateDescriptor {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="persistedvalidationdata"><a class="header" href="#persistedvalidationdata">PersistedValidationData</a></h2>
+<h2 id="persistedvalidationdata"><a class="header" href="#persistedvalidationdata"><code>PersistedValidationData</code></a></h2>
 <p>The validation data provides information about how to create the inputs for validation of a candidate. This information is derived from the chain state and will vary from para to para, although some of the fields may be the same for every para.</p>
 <p>Since this data is used to form inputs to the validation function, it needs to be persisted by the availability system to avoid dependence on availability of the relay-chain state.</p>
 <p>Furthermore, the validation data acts as a way to authorize the additional data the collator needs to pass to the validation function. For example, the validation function can check whether the incoming messages (e.g. downward messages) were actually sent by using the data provided in the validation data using so called MQC heads.</p>
 <p>Since the commitments of the validation function are checked by the relay-chain, secondary checkers can rely on the invariant that the relay-chain only includes para-blocks for which these checks have already been done. As such, there is no need for the validation data used to inform validators and collators about the checks the relay-chain will perform to be persisted by the availability system.</p>
-<p>The <code>PersistedValidationData</code> should be relatively lightweight primarly because it is constructed during inclusion for each candidate and therefore lies on the critical path of inclusion.</p>
+<p>The <code>PersistedValidationData</code> should be relatively lightweight primarily because it is constructed during inclusion for each candidate and therefore lies on the critical path of inclusion.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -5093,7 +5117,7 @@ struct CandidateDescriptor {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="headdata"><a class="header" href="#headdata">HeadData</a></h2>
+<h2 id="headdata"><a class="header" href="#headdata"><code>HeadData</code></a></h2>
 <p>Head data is a type-safe abstraction around bytes (<code>Vec&lt;u8&gt;</code>) for the purposes of representing heads of parachains or parathreads.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6436,7 +6460,7 @@ enum ObservedRole {
 	/// specific relay-parent hash.
 	Awaiting(Hash, Vec&lt;Hash&gt;),
 	/// Notification of an awaited PoV, in a given relay-parent context.
-	/// (relay_parent, pov_hash, pov)
+	/// (`relay_parent`, `pov_hash`, `pov`)
 	SendPoV(Hash, Hash, PoV),
 }
 <span class="boring">}

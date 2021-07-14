@@ -165,14 +165,18 @@
 <li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><code>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
 (&quot;chunk&quot;, CandidateHash, u32) -&gt; Option&lt;ErasureChunk&gt;
 (&quot;meta&quot;, CandidateHash) -&gt; Option&lt;CandidateMeta&gt;
 
 (&quot;unfinalized&quot;, BlockNumber, BlockHash, CandidateHash) -&gt; Option&lt;()&gt;
 (&quot;prune_by_time&quot;, Timestamp, CandidateHash) -&gt; Option&lt;()&gt;
-</code></pre>
-<p>Timestamps are the wall-clock seconds since unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
+<span class="boring">}
+</span></code></pre></pre>
+<p>Timestamps are the wall-clock seconds since Unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateMeta</code> struct</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -213,7 +217,8 @@ enum State {
 </ul>
 <p>On <code>OverseerSignal::BlockFinalized(finalized)</code> events:</p>
 <ul>
-<li>for each key in <code>iter_with_prefix(&quot;unfinalized&quot;)</code>
+<li>
+<p>for each key in <code>iter_with_prefix(&quot;unfinalized&quot;)</code></p>
 <ul>
 <li>Stop if the key is beyond <code>(&quot;unfinalized, finalized)</code></li>
 <li>For each block number f that we encounter, load the finalized hash for that block.
@@ -228,7 +233,7 @@ enum State {
 <li>For each candidate that we encounter under <code>f</code> which is not under the finalized block hash,
 <ul>
 <li>Remove all entries under <code>f</code> in the <code>Unfinalized</code> state.</li>
-<li>If the <code>CandidateMeta</code> has state <code>Unfinalized</code> with an empty list of blocks, downgrade to <code>Unavailable</code> and re-schedule pruning under the timestamp + 1 hour. We do not prune here as the candidate still may be included in a descendent of the finalized chain.</li>
+<li>If the <code>CandidateMeta</code> has state <code>Unfinalized</code> with an empty list of blocks, downgrade to <code>Unavailable</code> and re-schedule pruning under the timestamp + 1 hour. We do not prune here as the candidate still may be included in a descendant of the finalized chain.</li>
 </ul>
 </li>
 <li>Remove all <code>&quot;unfinalized&quot;</code> keys under <code>f</code>.</li>
@@ -236,61 +241,80 @@ enum State {
 </li>
 </ul>
 </li>
-<li>Update last_finalized = finalized.</li>
-</ul>
+<li>
+<p>Update <code>last_finalized</code> = finalized.</p>
 <p>This is roughly <code>O(n * m)</code> where n is the number of blocks finalized since the last update, and <code>m</code> is the number of parachains.</p>
+</li>
+</ul>
 <p>On <code>QueryAvailableData</code> message:</p>
 <ul>
-<li>Query <code>(&quot;available&quot;, candidate_hash)</code></li>
-</ul>
+<li>
+<p>Query <code>(&quot;available&quot;, candidate_hash)</code></p>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+</li>
+</ul>
 <p>On <code>QueryDataAvailability</code> message:</p>
 <ul>
-<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and <code>data_available == true</code>.</li>
-</ul>
+<li>
+<p>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and <code>data_available == true</code>.</p>
 <p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
+</li>
+</ul>
 <p>On <code>QueryChunk</code> message:</p>
 <ul>
-<li>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></li>
-</ul>
+<li>
+<p>Query <code>(&quot;chunk&quot;, candidate_hash, index)</code></p>
 <p>This is <code>O(n)</code> in the size of the data, which may be large.</p>
+</li>
+</ul>
 <p>On <code>QueryAllChunks</code> message:</p>
 <ul>
 <li>Query <code>(&quot;meta&quot;, candidate_hash)</code>. If <code>None</code>, send an empty response and return.</li>
 <li>For all <code>1</code> bits in the <code>chunks_stored</code>, query <code>(&quot;chunk&quot;, candidate_hash, index)</code>. Ignore but warn on errors, and return a vector of all loaded chunks.</li>
 </ul>
-<p>On `QueryChunkAvailability message:</p>
+<p>On <code>QueryChunkAvailability</code> message:</p>
 <ul>
-<li>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</li>
-</ul>
+<li>
+<p>Query whether <code>(&quot;meta&quot;, candidate_hash)</code> exists and the bit at <code>index</code> is set.</p>
 <p>This is <code>O(n)</code> in the size of the metadata which is small.</p>
+</li>
+</ul>
 <p>On <code>StoreChunk</code> message:</p>
 <ul>
-<li>If there is a <code>CandidateMeta</code> under the candidate hash, set the bit of the erasure-chunk in the <code>chunks_stored</code> bitfield to <code>1</code>. If it was not <code>1</code> already, write the chunk under <code>(&quot;chunk&quot;, candidate_hash, chunk_index)</code>.</li>
-</ul>
+<li>
+<p>If there is a <code>CandidateMeta</code> under the candidate hash, set the bit of the erasure-chunk in the <code>chunks_stored</code> bitfield to <code>1</code>. If it was not <code>1</code> already, write the chunk under <code>(&quot;chunk&quot;, candidate_hash, chunk_index)</code>.</p>
 <p>This is <code>O(n)</code> in the size of the chunk.</p>
+</li>
+</ul>
 <p>On <code>StoreAvailableData</code> message:</p>
 <ul>
-<li>If there is no <code>CandidateMeta</code> under the candidate hash, create it with <code>State::Unavailable(now)</code>. Load the <code>CandidateMeta</code> otherwise.</li>
-<li>Store <code>data</code> under <code>(&quot;available&quot;, candidate_hash)</code> and set <code>data_available</code> to true.</li>
-<li>Store each chunk under <code>(&quot;chunk&quot;, candidate_hash, index)</code> and set every bit in <code>chunks_stored</code> to <code>1</code>.</li>
-</ul>
+<li>
+<p>If there is no <code>CandidateMeta</code> under the candidate hash, create it with <code>State::Unavailable(now)</code>. Load the <code>CandidateMeta</code> otherwise.</p>
+</li>
+<li>
+<p>Store <code>data</code> under <code>(&quot;available&quot;, candidate_hash)</code> and set <code>data_available</code> to true.</p>
+</li>
+<li>
+<p>Store each chunk under <code>(&quot;chunk&quot;, candidate_hash, index)</code> and set every bit in <code>chunks_stored</code> to <code>1</code>.</p>
 <p>This is <code>O(n)</code> in the size of the data as the aggregate size of the chunks is proportional to the data.</p>
+</li>
+</ul>
 <p>Every 5 minutes, run a pruning routine:</p>
 <ul>
-<li>for each key in <code>iter_with_prefix(&quot;prune_by_time&quot;)</code>:
+<li>
+<p>for each key in <code>iter_with_prefix(&quot;prune_by_time&quot;)</code>:</p>
 <ul>
-<li>If the key is beyond (&quot;prune_by_time&quot;, now), return.</li>
+<li>If the key is beyond <code>(&quot;prune_by_time&quot;, now)</code>, return.</li>
 <li>Remove the key.</li>
 <li>Extract <code>candidate_hash</code> from the key.</li>
 <li>Load and remove the <code>(&quot;meta&quot;, candidate_hash)</code></li>
 <li>For each erasure chunk bit set, remove <code>(&quot;chunk&quot;, candidate_hash, bit_index)</code>.</li>
-<li>If <code>data_available</code>, remove `(&quot;available&quot;, candidate_hash)</li>
+<li>If <code>data_available</code>, remove <code>(&quot;available&quot;, candidate_hash)</code>
+This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
+to be run very often.</li>
 </ul>
 </li>
 </ul>
-<p>This is O(n * m) in the amount of candidates and average size of the data stored. This is probably the most expensive operation but does not need
-to be run very often.</p>
 <h2 id="basic-scenarios-to-test"><a class="header" href="#basic-scenarios-to-test">Basic scenarios to test</a></h2>
 <p>Basically we need to test the correctness of data flow through state FSMs described earlier. These tests obviously assume that some mocking of time is happening.</p>
 <ul>
@@ -320,7 +344,7 @@ to be run very often.</p>
 </ul>
 </li>
 <li>
-<p>Forkfulness of the relay chain is taken into account</p>
+<p>Fork-awareness of the relay chain is taken into account</p>
 <ul>
 <li>Block <code>B1</code> is added to the store.</li>
 <li>Block <code>B2</code> is added to the store.</li>

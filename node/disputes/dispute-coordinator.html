@@ -230,7 +230,7 @@ dispute participation subsystem.</p>
 <li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
 </ul>
 </li>
-<li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the ChainApi subsystem to blacklist the chain.</li>
+<li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the <code>ChainApi</code> subsystem to blacklist the chain.</li>
 </ul>
 <h3 id="on-overseersignalconclude"><a class="header" href="#on-overseersignalconclude">On <code>OverseerSignal::Conclude</code></a></h3>
 <p>Exit gracefully.</p>
@@ -285,7 +285,7 @@ chain-selection subsystem.</li>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
 <ul>
 <li>Load <code>&quot;candidate-votes&quot;</code> for every <code>(SessionIndex, CandidateHash)</code> in the query and return data within each <code>CandidateVote</code>.
-If a particular <code>candidate-vote</code> is missing, that particular request is ommitted from the response.</li>
+If a particular <code>candidate-vote</code> is missing, that particular request is omitted from the response.</li>
 </ul>
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
 <ul>
