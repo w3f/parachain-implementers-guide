@@ -789,7 +789,7 @@ Parachains Runtime system would be safe to apply.</li>
 <ol>
 <li>For security, validators that misbehave shouldn't only be slashed on one fork, but on all possible forks. Validators that misbehave shouldn't be able to create a new fork of the chain when caught and get away with their misbehavior.</li>
 <li>It is possible (and likely) that the parablock being contested has not appeared on all forks.</li>
-<li>If a block author believes that there is a disputed parablock on a specific fork that will resolve to a reversion of the fork, that block author is better incentivized to build on a different fork which does not include that parablock.</li>
+<li>If a block author believes that there is a disputed parablock on a specific fork that will resolve to a reversion of the fork, that block author has more incentive to build on a different fork which does not include that parablock.</li>
 </ol>
 <p>This means that in all likelihood, there is the possibility of disputes that are started on one fork of the relay chain, and as soon as the dispute resolution process starts to indicate that the parablock is indeed invalid, that fork of the relay chain will be abandoned and the dispute will never be fully resolved on that chain.</p>
 <p>Even if this doesn't happen, there is the possibility that there are two disputes underway, and one resolves leading to a reversion of the chain before the other has concluded. In this case we want to both transplant the concluded dispute onto other forks of the chain as well as the unconcluded dispute.</p>
@@ -822,11 +822,12 @@ Included: double_map (SessionIndex, CandidateHash) -&gt; Option&lt;BlockNumber&g
 // fewer than `byzantine_threshold + 1` validators.
 //
 // The i'th entry of the vector corresponds to the i'th validator in the session.
-SpamSlots: map SessionIndex -&gt; Vec&lt;u32&gt;,
-// Whether the chain is frozen or not. Starts as `false`. When this is `true`,
-// the chain will not accept any new parachain blocks for backing or inclusion.
-// It can only be set back to `false` by governance intervention.
-Frozen: bool,
+SpamSlots: map SessionIndex -&gt; Option&lt;Vec&lt;u32&gt;&gt;,
+// Whether the chain is frozen or not. Starts as `None`. When this is `Some`,
+// the chain will not accept any new parachain blocks for backing or inclusion,
+// and its value indicates the last valid block number in the chain.
+// It can only be set back to `None` by governance intervention.
+Frozen: Option&lt;BlockNumber&gt;,
 <span class="boring">}
 </span></code></pre></pre>
 <blockquote>
@@ -835,7 +836,8 @@ Frozen: bool,
 <h2 id="session-change-3"><a class="header" href="#session-change-3">Session Change</a></h2>
 <ol>
 <li>If the current session is not greater than <code>config.dispute_period + 1</code>, nothing to do here.</li>
-<li>Set <code>pruning_target = current_session - config.dispute_period - 1</code>. We add the extra <code>1</code> because we want to keep things for <code>config.dispute_period</code> <em>full</em> sessions. The stuff at the end of the most recent session has been around for ~0 sessions, not ~1.</li>
+<li>Set <code>pruning_target = current_session - config.dispute_period - 1</code>. We add the extra <code>1</code> because we want to keep things for <code>config.dispute_period</code> <em>full</em> sessions. 
+The stuff at the end of the most recent session has been around for a little over 0 sessions, not a little over 1.</li>
 <li>If <code>LastPrunedSession</code> is <code>None</code>, then set <code>LastPrunedSession</code> to <code>Some(pruning_target)</code> and return.</li>
 <li>Otherwise, clear out all disputes, included candidates, and <code>SpamSlots</code> entries in the range <code>last_pruned..=pruning_target</code> and set <code>LastPrunedSession</code> to <code>Some(pruning_target)</code>.</li>
 </ol>
@@ -848,7 +850,6 @@ Frozen: bool,
 <li>
 <p><code>provide_multi_dispute_data(MultiDisputeStatementSet) -&gt; Vec&lt;(SessionIndex, Hash)&gt;</code>:</p>
 <ol>
-<li>Fail if any disputes in the set are duplicate or concluded before the <code>config.dispute_post_conclusion_acceptance_period</code> window relative to now.</li>
 <li>Pass on each dispute statement set to <code>provide_dispute_data</code>, propagating failure.</li>
 <li>Return a list of all candidates who just had disputes initiated.</li>
 </ol>
@@ -860,14 +861,17 @@ Frozen: bool,
 <li><code>SessionInfo</code> is used to check statement signatures and this function should fail if any signatures are invalid.</li>
 <li>If there is no dispute under <code>Disputes</code>, create a new <code>DisputeState</code> with blank bitfields.</li>
 <li>If <code>concluded_at</code> is <code>Some</code>, and is <code>concluded_at + config.post_conclusion_acceptance_period &lt; now</code>, return false.</li>
-<li>If the overlap of the validators in the <code>DisputeStatementSet</code> and those already present in the <code>DisputeState</code> is fewer in number than <code>byzantine_threshold + 1</code> and the candidate is not present in the <code>Included</code> map</li>
-<li>increment <code>SpamSlots</code> for each validator in the <code>DisputeStatementSet</code> which is not already in the <code>DisputeState</code>. Initialize the <code>SpamSlots</code> to a zeroed vector first, if necessary.</li>
+<li>If the overlap of the validators in the <code>DisputeStatementSet</code> and those already present in the <code>DisputeState</code> is fewer in number than <code>byzantine_threshold + 1</code> and the candidate is not present in the <code>Included</code> map
+<ol>
+<li>increment <code>SpamSlots</code> for each validator in the <code>DisputeStatementSet</code> which is not already in the <code>DisputeState</code>. Initialize the <code>SpamSlots</code> to a zeroed vector first, if necessary. do not increment <code>SpamSlots</code> if the candidate is local.</li>
 <li>If the value for any spam slot exceeds <code>config.dispute_max_spam_slots</code>, return false.</li>
-<li>If the overlap of the validators in the <code>DisputeStatementSet</code> and those already present in the <code>DisputeState</code> is at least <code>byzantine_threshold + 1</code>, the <code>DisputeState</code> has fewer than <code>byzantine_threshold + 1</code> validators, and the candidate is not present in the <code>Included</code> map, decrement <code>SpamSlots</code> for each validator in the <code>DisputeState</code>.</li>
-<li>Import all statements into the dispute. This should fail if any statements are duplicate; if the corresponding bit for the corresponding validator is set in the dispute already.</li>
-<li>If <code>concluded_at</code> is <code>None</code>, reward all statements slightly less.</li>
+</ol>
+</li>
+<li>If the overlap of the validators in the <code>DisputeStatementSet</code> and those already present in the <code>DisputeState</code> is at least <code>byzantine_threshold + 1</code>, the <code>DisputeState</code> has fewer than <code>byzantine_threshold + 1</code> validators, and the candidate is not present in the <code>Included</code> map, then decrease <code>SpamSlots</code> by 1 for each validator in the <code>DisputeState</code>.</li>
+<li>Import all statements into the dispute. This should fail if any statements are duplicate or if the corresponding bit for the corresponding validator is set in the dispute already.</li>
+<li>If <code>concluded_at</code> is <code>None</code>, reward all statements.</li>
 <li>If <code>concluded_at</code> is <code>Some</code>, reward all statements slightly less.</li>
-<li>If either side now has supermajority, slash the other side. This may be both sides, and we support this possibility in code, but note that this requires validators to participate on both sides which has negative expected value. Set <code>concluded_at</code> to <code>Some(now)</code>.</li>
+<li>If either side now has supermajority and did not previously, slash the other side. This may be both sides, and we support this possibility in code, but note that this requires validators to participate on both sides which has negative expected value. Set <code>concluded_at</code> to <code>Some(now)</code> if it was <code>None</code>.</li>
 <li>If just concluded against the candidate and the <code>Included</code> map contains <code>(session, candidate)</code>: invoke <code>revert_and_freeze</code> with the stored block number.</li>
 <li>Return true if just initiated, false otherwise.</li>
 </ol>
@@ -875,14 +879,14 @@ Frozen: bool,
 <li>
 <p><code>disputes() -&gt; Vec&lt;(SessionIndex, CandidateHash, DisputeState)&gt;</code>: Get a list of all disputes and info about dispute state.</p>
 <ol>
-<li>Iterate over all disputes in <code>Disputes</code>. Set the flag according to <code>concluded</code>.</li>
+<li>Iterate over all disputes in <code>Disputes</code> and collect into a vector.</li>
 </ol>
 </li>
 <li>
 <p><code>note_included(SessionIndex, CandidateHash, included_in: BlockNumber)</code>:</p>
 <ol>
 <li>Add <code>(SessionIndex, CandidateHash)</code> to the <code>Included</code> map with <code>included_in - 1</code> as the value.</li>
-<li>If there is a dispute under <code>(Sessionindex, CandidateHash)</code> with fewer than <code>byzantine_threshold + 1</code> participating validators, decrement <code>SpamSlots</code> for each validator in the <code>DisputeState</code>.</li>
+<li>If there is a dispute under <code>(Sessionindex, CandidateHash)</code> with fewer than <code>byzantine_threshold + 1</code> participating validators, decrease <code>SpamSlots</code> by 1 for each validator in the <code>DisputeState</code>.</li>
 <li>If there is a dispute under <code>(SessionIndex, CandidateHash)</code> that has concluded against the candidate, invoke <code>revert_and_freeze</code> with the stored block number.</li>
 </ol>
 </li>
@@ -890,14 +894,16 @@ Frozen: bool,
 <p><code>could_be_invalid(SessionIndex, CandidateHash) -&gt; bool</code>: Returns whether a candidate has a live dispute ongoing or a dispute which has already concluded in the negative.</p>
 </li>
 <li>
-<p><code>is_frozen()</code>: Load the value of <code>Frozen</code> from storage.</p>
+<p><code>is_frozen()</code>: Load the value of <code>Frozen</code> from storage. Return true if <code>Some</code> and false if <code>None</code>.</p>
 </li>
 <li>
-<p>`revert_and_freeze(BlockNumber):</p>
+<p><code>last_valid_block()</code>: Load the value of <code>Frozen</code> from storage and return. None indicates that all blocks in the chain are potentially valid.</p>
+</li>
+<li>
+<p><code>revert_and_freeze(BlockNumber)</code>:</p>
 <ol>
 <li>If <code>is_frozen()</code> return.</li>
-<li>issue a digest in the block header which indicates the chain is to be abandoned back to the stored block number.</li>
-<li>Set <code>Frozen</code> to true.</li>
+<li>Set <code>Frozen</code> to <code>Some(BlockNumber)</code> to indicate a rollback to the given block number is necessary.</li>
 </ol>
 </li>
 </ul>
@@ -6644,7 +6650,7 @@ struct AssignmentCert {
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="disputes-2"><a class="header" href="#disputes-2">Disputes</a></h1>
-<h2 id="disputestatementset"><a class="header" href="#disputestatementset">DisputeStatementSet</a></h2>
+<h2 id="disputestatementset"><a class="header" href="#disputestatementset"><code>DisputeStatementSet</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -6656,7 +6662,7 @@ struct DisputeStatementSet {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="disputestatement"><a class="header" href="#disputestatement">DisputeStatement</a></h2>
+<h2 id="disputestatement"><a class="header" href="#disputestatement"><code>DisputeStatement</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -6679,8 +6685,8 @@ enum DisputeStatement {
 </span><span class="boring">fn main() {
 </span>enum ValidDisputeStatementKind {
     Explicit,
-    BackingSeconded,
-    BackingValid,
+    BackingSeconded(Hash),
+    BackingValid(Hash),
     ApprovalChecking,
 }
 
@@ -6689,7 +6695,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement">ExplicitDisputeStatement</a></h2>
+<h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement"><code>ExplicitDisputeStatement</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -6700,7 +6706,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset">MultiDisputeStatementSet</a></h2>
+<h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></h2>
 <p>Sets of statements for many (zero or more) disputes.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6708,7 +6714,7 @@ enum InvalidDisputeStatementKind {
 </span>type MultiDisputeStatementSet = Vec&lt;DisputeStatementSet&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="disputestate"><a class="header" href="#disputestate">DisputeState</a></h2>
+<h2 id="disputestate"><a class="header" href="#disputestate"><code>DisputeState</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

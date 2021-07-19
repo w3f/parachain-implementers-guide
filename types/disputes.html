@@ -144,7 +144,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
-<h2 id="disputestatementset"><a class="header" href="#disputestatementset">DisputeStatementSet</a></h2>
+<h2 id="disputestatementset"><a class="header" href="#disputestatementset"><code>DisputeStatementSet</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -156,7 +156,7 @@ struct DisputeStatementSet {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="disputestatement"><a class="header" href="#disputestatement">DisputeStatement</a></h2>
+<h2 id="disputestatement"><a class="header" href="#disputestatement"><code>DisputeStatement</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -179,8 +179,8 @@ enum DisputeStatement {
 </span><span class="boring">fn main() {
 </span>enum ValidDisputeStatementKind {
     Explicit,
-    BackingSeconded,
-    BackingValid,
+    BackingSeconded(Hash),
+    BackingValid(Hash),
     ApprovalChecking,
 }
 
@@ -189,7 +189,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement">ExplicitDisputeStatement</a></h2>
+<h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement"><code>ExplicitDisputeStatement</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -200,7 +200,7 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset">MultiDisputeStatementSet</a></h2>
+<h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></h2>
 <p>Sets of statements for many (zero or more) disputes.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -208,7 +208,7 @@ enum InvalidDisputeStatementKind {
 </span>type MultiDisputeStatementSet = Vec&lt;DisputeStatementSet&gt;;
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="disputestate"><a class="header" href="#disputestate">DisputeState</a></h2>
+<h2 id="disputestate"><a class="header" href="#disputestate"><code>DisputeState</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
