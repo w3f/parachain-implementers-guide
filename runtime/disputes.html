@@ -208,6 +208,16 @@ The stuff at the end of the most recent session has been around for a little ove
 <h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
 <ul>
 <li>
+<p><code>filter_multi_dispute_data(MultiDisputeStatementSet) -&gt; MultiDisputeStatementSet</code>:</p>
+<ol>
+<li>Takes a <code>MultiDisputeStatementSet</code> and filters it down to a <code>MultiDisputeStatementSet</code>
+that satisfies all the criteria of <code>provide_multi_dispute_data</code>. That is, eliminating
+ancient votes, votes which overwhelm the maximum amount of spam slots, and duplicates. 
+This can be used by block authors to create the final submission in a block which is 
+guaranteed to pass the <code>provide_multi_dispute_data</code> checks.</li>
+</ol>
+</li>
+<li>
 <p><code>provide_multi_dispute_data(MultiDisputeStatementSet) -&gt; Vec&lt;(SessionIndex, Hash)&gt;</code>:</p>
 <ol>
 <li>Pass on each dispute statement set to <code>provide_dispute_data</code>, propagating failure.</li>
