@@ -150,14 +150,14 @@
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
-<li>NetworkBridgeUpdateV1(update)</li>
-<li>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session, backing_group, response)</li>
+<li><code>NetworkBridgeUpdateV1(update)</code></li>
+<li><code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session, backing_group, response)</code></li>
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridge::SendValidationMessage</li>
-<li>NetworkBridge::ReportPeer</li>
-<li>AvailabilityStore::QueryChunk</li>
+<li><code>NetworkBridge::SendValidationMessage</code></li>
+<li><code>NetworkBridge::ReportPeer</code></li>
+<li><code>AvailabilityStore::QueryChunk</code></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>We hold a state which tracks the current recovery interactions we have live, as well as which request IDs correspond to which interactions. An interaction is a structure encapsulating all interaction with the network necessary to recover the available data.</p>
@@ -191,7 +191,7 @@ struct InteractionParams {
     validator_authority_keys: Vec&lt;AuthorityId&gt;,
     validators: Vec&lt;ValidatorId&gt;,
     // The number of pieces needed.
-    threshold: usize, 
+    threshold: usize,
     candidate_hash: Hash,
     erasure_root: Hash,
 }
@@ -205,7 +205,7 @@ enum InteractionPhase {
     RequestChunks {
         // a random shuffling of the validators which indicates the order in which we connect to the validators and
         // request the chunk from them.
-        shuffling: Vec&lt;ValidatorIndex&gt;, 
+        shuffling: Vec&lt;ValidatorIndex&gt;,
         received_chunks: Map&lt;ValidatorIndex, ErasureChunk&gt;,
         requesting_chunks: FuturesUnordered&lt;Receiver&lt;ErasureChunkRequestResponse&gt;&gt;,
     }
@@ -226,14 +226,14 @@ struct Interaction {
 <ol>
 <li>Check the <code>availability_lru</code> for the candidate and return the data if so.</li>
 <li>Check if there is already an interaction handle for the request. If so, add the response handle to it.</li>
-<li>Otherwise, load the session info for the given session under the state of <code>live_block_hash</code>, and initiate an interaction with <em>launch_interaction</em>. Add an interaction handle to the state and add the response channel to it.</li>
+<li>Otherwise, load the session info for the given session under the state of <code>live_block_hash</code>, and initiate an interaction with <em><code>launch_interaction</code></em>. Add an interaction handle to the state and add the response channel to it.</li>
 <li>If the session info is not available, return <code>RecoveryError::Unavailable</code> on the response channel.</li>
 </ol>
 <h3 id="from-interaction-logic"><a class="header" href="#from-interaction-logic">From-interaction logic</a></h3>
 <h4 id="frominteractionconcluded"><a class="header" href="#frominteractionconcluded"><code>FromInteraction::Concluded</code></a></h4>
 <ol>
 <li>Load the entry from the <code>interactions</code> map. It should always exist, if not for logic errors. Send the result to each member of <code>awaiting</code>.</li>
-<li>Add the entry to the availability_lru.</li>
+<li>Add the entry to the <code>availability_lru</code>.</li>
 </ol>
 <h3 id="interaction-logic"><a class="header" href="#interaction-logic">Interaction logic</a></h3>
 <h4 id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
@@ -263,14 +263,14 @@ const N_PARALLEL: usize = 50;
 <ul>
 <li>Loop:
 <ul>
-<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>. </li>
+<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>.</li>
 <li>If the <code>requesting_pov</code> is <code>None</code>, take the next backer off the <code>shuffled_backers</code>.
 <ul>
 <li>If the backer is <code>Some</code>, issue a <code>NetworkBridgeMessage::Requests</code> with a network request for the <code>AvailableData</code> and wait for the response.</li>
-<li>If it concludes with a <code>None</code> result, return to beginning. </li>
-<li>If it concludes with available data, attempt a re-encoding. 
+<li>If it concludes with a <code>None</code> result, return to beginning.</li>
+<li>If it concludes with available data, attempt a re-encoding.
 <ul>
-<li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>. </li>
+<li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>.</li>
 <li>If it has an incorrect erasure-root, return to beginning.</li>
 </ul>
 </li>

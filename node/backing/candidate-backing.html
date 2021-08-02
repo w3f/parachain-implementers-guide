@@ -247,7 +247,7 @@
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch Pov Block</a></h3>
+<h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <a href="../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a><code>::FetchPoV{ validator_index, pov_hash, candidate_hash, tx, } and listen on the passed receiver for a response. Availability distribution will send the request to the validator specified by </code>validator_index`, which might not be serving it for whatever reasons, therefore we need to retry with other backing validators in that case.</p>
 <h3 id="validate-pov-block"><a class="header" href="#validate-pov-block">Validate PoV Block</a></h3>

@@ -147,14 +147,14 @@
 <p>This subsystem is responsible for actually participating in disputes: when notified of a dispute, we need to recover the candidate data, validate the candidate, and cast our vote in the dispute.</p>
 <p>Fortunately, most of that work is handled by other subsystems; this subsystem is just a small glue component for tying other subsystems together and issuing statements based on their validity.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
-<p>Input: <a href="../../types/overseer-protocol.html#dispute-participation-message">DisputeParticipationMessage</a></p>
+<p>Input: <a href="../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="../../types/overseer-protocol.html#runtime-api-message">RuntimeApiMessage</a></li>
-<li><a href="../../types/overseer-protocol.html#candidate-validation-message">CandidateValidationMessage</a></li>
-<li><a href="../../types/overseer-protocol.html#availability-recovery-message">AvailabilityRecoveryMessage</a></li>
-<li><a href="../../types/overseer-protocol.html#availability-store-message">AvailabilityStoreMessage</a></li>
-<li><a href="../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
+<li><a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#candidate-validation-message"><code>CandidateValidationMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></li>
+<li><a href="../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage</code></a></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>In-memory state:</p>
@@ -190,7 +190,7 @@ via the <code>report_availability</code> oneshot.</li>
 </ul>
 <h3 id="cast-votes"><a class="header" href="#cast-votes">Cast Votes</a></h3>
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
-<p>Invoke <a href="../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parametrization.</p>
+<p>Invoke <a href="../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parameterization,.</p>
 
                     </main>
 

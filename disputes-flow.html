@@ -206,7 +206,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>The dispute availability message must contain code, persisted validation data, and the proof of validity.</p>
 <p>Only peers that already voted shall be queried for the dispute availability data.</p>
 <p>The peer to be queried for disputes data, must be picked at random.</p>
-<p>A validator must retain code, persisted validation data and PoV until a block, that contains the dispute resolution, is finalized - plus an additional 24h.</p>
+<p>A validator must retain code, persisted validation data and PoV until a block, that contains the dispute resolution, is finalized - plus an additional 24 hours.</p>
 <p>Dispute availability gossip must continue beyond the dispute resolution, until the post resolution timeout expired (equiv to the timeout until which additional late votes are accepted).</p>
 <p>Remote disputes are disputes that are in relation to a chain that is not part of the local validators active heads.</p>
 <p>All incoming votes must be persisted.</p>
@@ -219,7 +219,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>If the validator was also a backer of the block, validation and casting an additional vote should be skipped.</p>
 <p>If the count of votes pro or cons regarding the disputed block, reaches the required ⅔ supermajority (including the backing votes), the conclusion must be recorded on chain and the voters on the loosing and no-shows being slashed appropriately.</p>
 <p>If a block is found invalid by a dispute resolution, it must be blacklisted to avoid resync or further build on that chain if other chains are available (to be detailed in the grandpa fork choice rule).</p>
-<p>A dispute accepts Votes after the dispute is resolved, for 1d.</p>
+<p>A dispute accepts Votes after the dispute is resolved, for 1 day.</p>
 <p>If a vote is received, after the dispute is resolved, the vote shall still be recorded in the state root, albeit yielding less reward.</p>
 <p>Recording in the state root might happen batched, at timeout expiry.</p>
 <p>If a new active head/chain appears, and the dispute resolution was not recorded on that chain yet, the dispute resolution or open dispute must be recorded / transplanted to that chain as well, since the disputes must be present on all chains to make sure the offender is punished.</p>

@@ -261,7 +261,7 @@ struct CandidateEntry {
 Ensure a vector is present in <code>pending_known</code> for each hash in the view that does not have an entry in <code>blocks</code>.</p>
 <h4 id="networkbridgeeventpeerviewchange"><a class="header" href="#networkbridgeeventpeerviewchange"><code>NetworkBridgeEvent::PeerViewChange</code></a></h4>
 <p>Invoke <code>unify_with_peer(peer, view)</code> to catch them up to messages we have.</p>
-<p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their 'finalized_number` forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
+<p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their <code>finalized_number</code> forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
 <p>One of the safeguards we can implement is to reject view updates from peers where the new <code>finalized_number</code> is less than the previous.</p>
 <p>We augment that by defining <code>constrain(x)</code> to output the x bounded by the first and last numbers in <code>state.blocks_by_number</code>.</p>
 <p>From there, we can loop backwards from <code>constrain(view.finalized_number)</code> until <code>constrain(last_view.finalized_number)</code> is reached, removing the <code>PeerId</code> from all <code>BlockEntry</code>s referenced at that height. We can break the loop early if we ever exit the bound supplied by the first block in <code>state.blocks_by_number</code>.</p>
@@ -306,7 +306,7 @@ Ensure a vector is present in <code>pending_known</code> for each hash in the vi
 </ul>
 <p>The algorithm is the following:</p>
 <ul>
-<li>Load the BlockEntry using <code>assignment.block_hash</code>. If it does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
+<li>Load the <code>BlockEntry</code> using <code>assignment.block_hash</code>. If it does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the <code>assignment</code> using <code>claimed_candidate_index</code>.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
@@ -339,7 +339,7 @@ If we did this check earlier, a peer could provide data out-of-view repeatedly a
 <h4 id="import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><a class="header" href="#import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><code>import_and_circulate_approval(source: MessageSource, approval: IndirectSignedApprovalVote)</code></a></h4>
 <p>Imports an approval signature referenced by block hash and candidate index:</p>
 <ul>
-<li>Load the BlockEntry using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
+<li>Load the <code>BlockEntry</code> using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the approval.</li>
 <li>Compute a fingerprint for the corresponding assignment. If the <code>BlockEntry</code>'s knowledge does not contain that fingerprint, then report the source if it is <code>MessageSource::Peer</code> and return. All references to a fingerprint after this refer to the approval's, not the assignment's.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:

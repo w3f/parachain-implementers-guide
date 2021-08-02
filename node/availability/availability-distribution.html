@@ -155,34 +155,33 @@ Availability data are chunks, <code>PoV</code>s and <code>AvailableData</code> (
 this is to ensure availability by at least 2/3+ of all validators, this
 happens after a candidate is backed.</li>
 <li>Fetch <code>PoV</code> from validators, when requested via <code>FetchPoV</code> message from
-backing (pov_requester module).</li>
-<li></li>
+backing (<code>pov_requester</code> module).</li>
 </ul>
 <p>The backing subsystem is responsible of making available data available in the
 local <code>Availability Store</code> upon validation. This subsystem will serve any
 network requests by querying that store.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>This subsystem does not handle any peer set messages, but the <code>pov_requester</code>
-does  connecto to validators of the same backing group on the validation peer
+does connect to validators of the same backing group on the validation peer
 set, to ensure fast propagation of statements between those validators and for
 ensuring already established connections for requesting <code>PoV</code>s. Other than that
 this subsystem drives request/response protocols.</p>
 <p>Input:</p>
 <ul>
-<li>OverseerSignal::ActiveLeaves(<code>[ActiveLeavesUpdate]</code>)</li>
-<li>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</li>
-<li>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</li>
-<li>AvailabilityDistributionMessage{msg: FetchPoV}</li>
+<li><code>OverseerSignal::ActiveLeaves(ActiveLeavesUpdate)</code></li>
+<li><code>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</code></li>
+<li><code>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</code></li>
+<li><code>AvailabilityDistributionMessage{msg: FetchPoV}</code></li>
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>, IfDisconnected::TryConnect)</li>
-<li>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</li>
-<li>AvailabilityStore::StoreChunk(candidate_hash, chunk)</li>
-<li>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</li>
-<li>RuntimeApiRequest::SessionIndexForChild</li>
-<li>RuntimeApiRequest::SessionInfo</li>
-<li>RuntimeApiRequest::AvailabilityCores</li>
+<li><code>NetworkBridgeMessage::SendRequests(Requests, IfDisconnected::TryConnect)</code></li>
+<li><code>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</code></li>
+<li><code>AvailabilityStore::StoreChunk(candidate_hash, chunk)</code></li>
+<li><code>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</code></li>
+<li><code>RuntimeApiRequest::SessionIndexForChild</code></li>
+<li><code>RuntimeApiRequest::SessionInfo</code></li>
+<li><code>RuntimeApiRequest::AvailabilityCores</code></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <h3 id="pov-requester"><a class="header" href="#pov-requester">PoV Requester</a></h3>

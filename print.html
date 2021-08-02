@@ -257,28 +257,28 @@
 <p><strong>Approval assignment keys</strong> are sr25519/schnorrkel keys used only for the assignment criteria VRFs.  We implicitly sign assignment notices with approval assignment keys by including their relay chain context and additional data in the VRF's extra message, but exclude these from its VRF input.</p>
 </li>
 <li>
-<p><strong>Approval vote keys</strong> would only sign off on candidate parablock validity and has no natural key type restrictions. There's no need for this to actualy embody a new session key type. We just want to make a distinction between assignments and approvals, although distant future node configurations might favor separate roles. We re-use the same keys as are used for parachain backing in practice.</p>
+<p><strong>Approval vote keys</strong> would only sign off on candidate parablock validity and has no natural key type restrictions. There's no need for this to actually embody a new session key type. We just want to make a distinction between assignments and approvals, although distant future node configurations might favor separate roles. We re-use the same keys as are used for parachain backing in practice.</p>
 </li>
 </ul>
-<p>Approval vote keys could relatively easily be handled by some hardened signer tooling, perhaps even HSMs assuming we select ed25519 for approval vote keys.  Approval assignment keys might or might not support hardened signer tooling, but doing so sounds far more complex.  In fact, assignment keys determine only VRF outputs that determine approval checker assignments, for which they can only act or not act, so they cannot equivocate, lie, etc. and represent little if any slashing risk for validator operators. </p>
-<p>In future, we shall determine which among the several hardening techniques best benefits the netwrok as a whole.  We could provide a multi-process multi-machine architecture for validators, perhaps even reminiscent of GNUNet, or perhaps more resembling smart HSM tooling.  We might instead design a system that more resembled full systems, like like Cosmos' sentry nodes.  In either case, approval assignments might be handled by a slightly hardened machine, but not necessarily nearly as hardened as approval votes, but approval votes machines must similarly run foreign WASM code, which increases their risk, so assignments being separate sounds helpful.</p>
+<p>Approval vote keys could relatively easily be handled by some hardened signer tooling, perhaps even HSMs assuming we select ed25519 for approval vote keys.  Approval assignment keys might or might not support hardened signer tooling, but doing so sounds far more complex.  In fact, assignment keys determine only VRF outputs that determine approval checker assignments, for which they can only act or not act, so they cannot equivocate, lie, etc. and represent little if any slashing risk for validator operators.</p>
+<p>In future, we shall determine which among the several hardening techniques best benefits the network as a whole.  We could provide a multi-process multi-machine architecture for validators, perhaps even reminiscent of GNUNet, or perhaps more resembling smart HSM tooling.  We might instead design a system that more resembled full systems, like like Cosmos' sentry nodes.  In either case, approval assignments might be handled by a slightly hardened machine, but not necessarily nearly as hardened as approval votes, but approval votes machines must similarly run foreign WASM code, which increases their risk, so assignments being separate sounds helpful.</p>
 <h2 id="assignments"><a class="header" href="#assignments">Assignments</a></h2>
 <p>Approval assignment determines on which candidate parachain blocks each validator performs approval checks.  An approval session considers only one relay chain block and assigns only those candidates that relay chain block declares available.</p>
 <p>Assignment balances several concerns:</p>
 <ul>
 <li>limits adversaries' foreknowledge about assignments,</li>
-<li>ensures enough checkers, and </li>
+<li>ensures enough checkers, and</li>
 <li>distributes assignments relatively equitably.</li>
 </ul>
-<p>Assignees determine their own assignments to check specific candidates using two or three assignment criteria.  Assignees never reveal their assignments until relevant, and gossip delays assignments sent early, which limits others' foreknowledge.  Assignees learn their assignment only with the relay chain block. </p>
+<p>Assignees determine their own assignments to check specific candidates using two or three assignment criteria.  Assignees never reveal their assignments until relevant, and gossip delays assignments sent early, which limits others' foreknowledge.  Assignees learn their assignment only with the relay chain block.</p>
 <p>All criteria require the validator evaluate a verifiable random function (VRF) using their VRF secret key.  All criteria input specific data called &quot;stories&quot; about the session's relay chain block, and output candidates to check and a precedence called a <code>DelayTranche</code>.</p>
-<p>We liberate availability cores when their candidate becomes available of course, but one approval assignment criteria continues associating each candidate with the core number it occupied when it became available. </p>
+<p>We liberate availability cores when their candidate becomes available of course, but one approval assignment criteria continues associating each candidate with the core number it occupied when it became available.</p>
 <p>Assignment operates in loosely timed rounds determined by this <code>DelayTranche</code>s, which proceed roughly 12 times faster than six second block production assuming half second gossip times.  If a candidate <code>C</code> needs more approval checkers by the time we reach round <code>t</code> then any validators with an assignment to <code>C</code> in delay tranche <code>t</code> gossip their send assignment notice for <code>C</code>.  We continue until all candidates have enough approval checkers assigned.  We take entire tranches together if we do not yet have enough, so we expect strictly more than enough checkers.  We also take later tranches if some checkers return their approval votes too slow (see no shows below).</p>
 <p>Assignment ensures validators check those relay chain blocks for which they have delay tranche zero aka the highest precedence, so that adversaries always face honest checkers equal to the expected number of assignments with delay tranche zero.</p>
 <p>Among these criteria, the BABE VRF output provides the story for two, which reduces how frequently adversaries could position their own checkers.  We have one criterion whose story consists of the candidate's block hash plus external knowledge that a relay chain equivocation exists with a conflicting candidate.  It provides unforeseeable assignments when adversaries gain foreknowledge about the other two by committing an equivocation in relay chain block production.</p>
 <h2 id="announcements--notices"><a class="header" href="#announcements--notices">Announcements / Notices</a></h2>
 <p>We gossip assignment notices among nodes so that all validators know which validators should check each candidate, and if any candidate requires more checkers.</p>
-<p>Assignment notices consist of a relay chain context given by a block hash, an assignment criteria, consisting of the criteria identifier and optionally a criteria specific field, an assignee identifier, and a VRF signature by the assignee, which itself consists of a VRF pre-output and a DLEQ proof.  Its VRF input consists of the criteria, usually including a criteria specific field, and a &quot;story&quot; about its relay chain context block. </p>
+<p>Assignment notices consist of a relay chain context given by a block hash, an assignment criteria, consisting of the criteria identifier and optionally a criteria specific field, an assignee identifier, and a VRF signature by the assignee, which itself consists of a VRF pre-output and a DLEQ proof.  Its VRF input consists of the criteria, usually including a criteria specific field, and a &quot;story&quot; about its relay chain context block.</p>
 <p>We never include stories inside the gossip messages containing assignment notices, but require each validator reconstruct them.  We never care about assignments in the disputes process, so this does not complicate remote disputes.</p>
 <p>In a Schnorr VRF, there is an extra signed message distinct from this input, which we set to the relay chain block hash.  As a result, assignment notices are self signing and can be &quot;politely&quot; gossiped without additional signatures, meaning between nodes who can compute the story from the relay chain context.  In other words, if we cannot compute the story required by an assignment notice's VRF part then our self signing property fails and we cannot verify its origin.  We could fix this with either another signature layer (64 bytes) or by including the VRF input point computed from the story (32 bytes), but doing so appears unhelpful.</p>
 <p>Any validator could send their assignment notices and/or approval votes too early.  We gossip the approval votes early because they represent a major commitment by the validator.  We delay gossiping the assignment notices until they agree with our local clock however.  We also impose a politeness condition that the recipient knows the relay chain context used by the assignment notice.</p>
@@ -287,7 +287,7 @@
 <p>We first have a <code>RelayVRFStory</code> that outputs the randomness from another VRF output produced by the relay chain block producer when creating <code>R</code>.  Among honest nodes, only this one relay chain block producer who creates <code>R</code> knew the story in advance, and even they knew nothing two epochs previously.</p>
 <p>In BABE, we create this value calling <code>schnorrkel::vrf::VRFInOut::make_bytes</code> with a context &quot;A&amp;V RC-VRF&quot;, with the <code>VRFInOut</code> coming from either the VRF that authorized block production for primary blocks, or else from the secondary block VRF for the secondary block type.</p>
 <p>In Sassafras, we shall always use the non-anonymized recycling VRF output, never the anonymized ring VRF that authorizes block production.  We do not currently know if Sassafras shall have a separate schnorrkel key, but if it reuses its ring VRF key there is an equivalent <code>ring_vrf::VRFInOut::make_bytes</code>.</p>
-<p>We like that <code>RelayVRFStory</code> admits relatively few choices, but an adversary who equivocates in relay chain block production could learn assignments that depend upon the <code>RelayVRFStory</code> too early because the same relay chain VRF appears in multiple blocks. </p>
+<p>We like that <code>RelayVRFStory</code> admits relatively few choices, but an adversary who equivocates in relay chain block production could learn assignments that depend upon the <code>RelayVRFStory</code> too early because the same relay chain VRF appears in multiple blocks.</p>
 <p>We therefore provide a secondary <code>RelayEquivocationStory</code> that outputs the candidate's block hash, but only for candidate equivocations.  We say a candidate <code>C</code> in <code>R</code> is an equivocation when there exists another relay chain block <code>R1</code> that equivocates for <code>R</code> in the sense that <code>R</code> and <code>R1</code> have the same <code>RelayVRFStory</code>, but <code>R</code> contains <code>C</code> and <code>R1</code> does not contain <code>C</code>.</p>
 <p>We want checkers for candidate equivocations that lie outside our preferred relay chain as well, which represents a slightly different usage for the assignments module, and might require more information in the gossip messages.</p>
 <h2 id="assignment-criteria"><a class="header" href="#assignment-criteria">Assignment criteria</a></h2>
@@ -297,37 +297,37 @@
 <p><code>RelayVRFModulo</code> runs several distinct samples whose VRF input is the <code>RelayVRFStory</code> and the sample number.  It computes the VRF output with <code>schnorrkel::vrf::VRFInOut::make_bytes</code> using the context &quot;A&amp;V Core&quot;, reduces this number modulo the number of availability cores, and outputs the candidate just declared available by, and included by aka leaving, that availability core.  We drop any samples that return no candidate because no candidate was leaving the sampled availability core in this relay chain block.  We choose three samples initially, but we could make polkadot more secure and efficient by increasing this to four or five, and reducing the backing checks accordingly.  All successful <code>RelayVRFModulo</code> samples are assigned delay tranche zero.</p>
 <p>There is no sampling process for <code>RelayVRFDelay</code> and <code>RelayEquivocation</code>.  We instead run them on specific candidates and they compute a delay from their VRF output.  <code>RelayVRFDelay</code> runs for all candidates included under, aka declared available by, a relay chain block, and inputs the associated VRF output via <code>RelayVRFStory</code>.  <code>RelayEquivocation</code> runs only on candidate block equivocations, and inputs their block hashes via the <code>RelayEquivocation</code> story.</p>
 <p><code>RelayVRFDelay</code> and <code>RelayEquivocation</code> both compute their output with <code>schnorrkel::vrf::VRFInOut::make_bytes</code> using the context &quot;A&amp;V Tranche&quot; and reduce the result modulo <code>num_delay_tranches + zeroth_delay_tranche_width</code>, and consolidate results 0 through <code>zeroth_delay_tranche_width</code> to be 0.  In this way, they ensure the zeroth delay tranche has <code>zeroth_delay_tranche_width+1</code> times as many assignments as any other tranche.</p>
-<p>As future work (or TODO?), we should merge assignment notices with the same delay and story using <code>vrf_merge</code>.  We cannot merge those with the same delay and different stories because <code>RelayEquivocationStory</code>s could change but <code>RelayVRFStory</code> never changes. </p>
+<p>As future work (or TODO?), we should merge assignment notices with the same delay and story using <code>vrf_merge</code>.  We cannot merge those with the same delay and different stories because <code>RelayEquivocationStory</code>s could change but <code>RelayVRFStory</code> never changes.</p>
 <h2 id="announcer-and-watchertracker"><a class="header" href="#announcer-and-watchertracker">Announcer and Watcher/Tracker</a></h2>
 <p>We track all validators' announced approval assignments for each candidate associated to each relay chain block, which tells us which validators were assigned to which candidates.</p>
-<p>We permit at most one assignment per candidate per story per validator, so one validator could be assigned under both the <code>RelayVRFDelay</code> and <code>RelayEquivocation</code> criteria, but not under both <code>RelayVRFModulo</code> and <code>RelayVRFDelay</code> criteria, since those both use the same story.  We permit only one approval vote per candidate per validator, which counts for any applicable criteria. </p>
-<p>We announce, and start checking for, our own assignments when their tranche's delay is reached, but only if the tracker says the assignee candidate requires more approval checkers.  We never announce an assignment we believe unnecessary because early announcements gives an adversary information.  All delay tranche zero assignments always get announced, which includes all <code>RelayVRFModulo</code> assignments.</p>
+<p>We permit at most one assignment per candidate per story per validator, so one validator could be assigned under both the <code>RelayVRFDelay</code> and <code>RelayEquivocation</code> criteria, but not under both <code>RelayVRFModulo</code> and <code>RelayVRFDelay</code> criteria, since those both use the same story.  We permit only one approval vote per candidate per validator, which counts for any applicable criteria.</p>
+<p>We announce, and start checking for, our own assignments when the delay of their tranche is reached, but only if the tracker says the assignee candidate requires more approval checkers.  We never announce an assignment we believe unnecessary because early announcements gives an adversary information.  All delay tranche zero assignments always get announced, which includes all <code>RelayVRFModulo</code> assignments.</p>
 <p>In other words, if some candidate <code>C</code> needs more approval checkers by the time we reach round <code>t</code> then any validators with an assignment to <code>C</code> in delay tranche <code>t</code> gossip their send assignment notice for <code>C</code>, and begin reconstruction and validation for 'C.  If however <code>C</code> reached enough assignments, then validators with later assignments skip announcing their assignments.</p>
 <p>We continue until all candidates have enough approval checkers assigned.  We never prioritize assignments within tranches and count all or no assignments for a given tranche together, so we often overshoot the target number of assigned approval checkers.</p>
 <h3 id="no-shows"><a class="header" href="#no-shows">No shows</a></h3>
 <p>We have a &quot;no show&quot; timeout longer than one relay chain slot, so at least 6 seconds, during which we expect approval checks should succeed in reconstructing the candidate block, in redoing its erasure coding to check the candidate receipt, and finally in rechecking the candidate block itself.</p>
 <p>We consider a validator a &quot;no show&quot; if they do not approve or dispute within this &quot;no show&quot; timeout from our receiving their assignment notice.  We time this from our receipt of their assignment notice instead of our imagined real time for their tranche because otherwise receiving late assignment notices creates immediate &quot;no shows&quot; and unnecessary work.</p>
-<p>We worry &quot;no shows&quot; represent a validator under denial of service attack, presumably to prevent it from reconstructing the candidate, but perhaps delaying it form gossiping a dispute too.  We therefore always replace &quot;no shows&quot; by adding one entire extra delay tranche worth of validators, so such attacks always result in additional checkers. </p>
+<p>We worry &quot;no shows&quot; represent a validator under denial of service attack, presumably to prevent it from reconstructing the candidate, but perhaps delaying it form gossiping a dispute too.  We therefore always replace &quot;no shows&quot; by adding one entire extra delay tranche worth of validators, so such attacks always result in additional checkers.</p>
 <p>As an example, imagine we need 20 checkers, but tranche zero produces only 14, and tranche one only 4, then we take all 5 from tranche two, and thus require 23 checkers for that candidate.  If one checker Charlie from tranche one or two does not respond within say 8 seconds, then we add all 7 checkers from tranche three.  If again one checker Cindy from tranche three does not respond within 8 seconds then we take all 3 checkers from tranche four.  We now have 33 checkers working on the candidate, so this escalated quickly.</p>
 <p>We escalated so quickly because we worried that Charlie and Cindy might be the only honest checkers assigned to that candidate.  If therefore either Charlie or Cindy finally return an approval, then we can conclude approval, and abandon the checkers from tranche four.</p>
 <p>We therefore require the &quot;no show&quot; timeout to be longer than a relay chain slot so that we can witness &quot;no shows&quot; on-chain.  We discuss below how this helps reward validators who replace &quot;no shows&quot;.</p>
-<p>We avoid slashing for &quot;no shows&quot; per se, although being &quot;no show&quot; could enter into some computation that punishes repeated poor performance, presumably replaces ImOnline, and we could reduce their rewards and further rewards those who filled in.</p>
-<p>As future work, we foresee expanding the &quot;no show&quot; scheme to anonymizes the additional checkers, like by using assignment noticed with a new criteria that employs a ring VRF and then all validators providing cover by requesting a couple erasure coded pieces, but such anonymity scheme sound extremely complex and lie far beyond our initial functionality.</p>
+<p>We avoid slashing for &quot;no shows&quot; by itself, although being &quot;no show&quot; could enter into some computation that punishes repeated poor performance, presumably replaces <code>ImOnline</code>, and we could reduce their rewards and further rewards those who filled in.</p>
+<p>As future work, we foresee expanding the &quot;no show&quot; scheme to anonymize the additional checkers, like by using assignment noticed with a new criteria that employs a ring VRF and then all validators providing cover by requesting a couple erasure coded pieces, but such anonymity scheme sound extremely complex and lie far beyond our initial functionality.</p>
 <h2 id="assignment-postponement"><a class="header" href="#assignment-postponement">Assignment postponement</a></h2>
 <p>We expect validators could occasionally overloaded when they randomly acquire too many assignments.  All these fluctuations amortize over multiple blocks fairly well, but this slows down finality.</p>
 <p>We therefore permit validators to delay sending their assignment noticed intentionally.  If nobody knows about their assignment then they avoid creating &quot;no shows&quot; and the workload progresses normally.</p>
 <p>We strongly prefer if postponements come from tranches higher aka less important than zero because tranche zero checks provide somewhat more security.</p>
 <p>TODO: When?  Is this optimal for the network?  etc.</p>
 <h2 id="on-chain-verification"><a class="header" href="#on-chain-verification">On-chain verification</a></h2>
-<p>We should verify approval on-chain to reward approval checkers. We therefore require the &quot;no show&quot; timeout to be longer than a relay chain slot so that we can witness &quot;no shows&quot; on-chain, which helps with this goal. The major challenge with an on-chain record of the off-chain process is adversarial block producers who may either censor votes or publish votes to the chain which cause other votes to be ignored and unrewards (reward stealing).</p>
+<p>We should verify approval on-chain to reward approval checkers. We therefore require the &quot;no show&quot; timeout to be longer than a relay chain slot so that we can witness &quot;no shows&quot; on-chain, which helps with this goal. The major challenge with an on-chain record of the off-chain process is adversarial block producers who may either censor votes or publish votes to the chain which cause other votes to be ignored and unrewarded (reward stealing).</p>
 <p>In principle, all validators have some &quot;tranche&quot; at which they're assigned to the parachain candidate, which ensures we reach enough validators eventually.  As noted above, we often retract &quot;no shows&quot; when the slow validator eventually shows up, so witnessing their initially being a &quot;no show&quot; helps manage rewards.</p>
 <p>We expect on-chain verification should work in two phases:  We first record assignments notices and approval votes on-chain in relay chain block, doing the VRF or regular signature verification again in block verification, and inserting chain authenticated unsigned notes into the relay chain state that contain the checker, tranche, paraid, and relay block height for each assignment notice.  We then later have another relay chain block that runs some &quot;approved&quot; intrinsic, which extract all these notes from the state and feeds them into our approval code.</p>
 <p>We now encounter one niche concern in the interaction between postponement and on-chain verification:  Any validator with a tranche zero (or other low) assignment could delay sending an assignment notice, like because they postponed their assigned tranche (which is allowed).  If they later send this assignment notices right around finality time, then they race with this approved. intrinsic:  If their announcement gets on-chain (also allowed), then yes it delays finality. If it does not get on-chain, then yes we've one announcement that the off-chain consensus system says is valid, but the chain ignores for being too slow.</p>
 <p>We need the chain to win in this case, but doing this requires imposing an annoyingly long overarching delay upon finality.  We might explore limits on postponement too, but this sounds much harder.</p>
 <h2 id="parameters"><a class="header" href="#parameters">Parameters</a></h2>
-<p>We prefer doing approval checkers assignments under <code>RelayVRFModulo</code> as opposed to <code>RelayVRFDelay</code> because <code>RelayVRFModulo</code> avoids giving individual checkers too many assignments and tranche zero assignments benefit security the most.  We suggest assigning at least 16 checkers under <code>RelayVRFModulo</code> although assignment levels have never been properly analysed. </p>
+<p>We prefer doing approval checkers assignments under <code>RelayVRFModulo</code> as opposed to <code>RelayVRFDelay</code> because <code>RelayVRFModulo</code> avoids giving individual checkers too many assignments and tranche zero assignments benefit security the most.  We suggest assigning at least 16 checkers under <code>RelayVRFModulo</code> although assignment levels have never been properly analyzed.</p>
 <p>Our delay criteria <code>RelayVRFDelay</code> and <code>RelayEquivocation</code> both have two primary paramaters, expected checkers per tranche and the zeroth delay tranche width.</p>
-<p>We require expected checkers per tranche to be less than three because otherwise an adversary with 1/3 stake could force all nodes into checking all blocks.  We strongly recommend expected checkers per tranche to be less than two, which helps avoid both accedental and intentional explosions.  We also suggest expected checkers per tranche be larger than one, which helps prevent adversaries from predicting than advancing one tranche adds only their own validators.</p>
+<p>We require expected checkers per tranche to be less than three because otherwise an adversary with 1/3 stake could force all nodes into checking all blocks.  We strongly recommend expected checkers per tranche to be less than two, which helps avoid both accidental and intentional explosions.  We also suggest expected checkers per tranche be larger than one, which helps prevent adversaries from predicting than advancing one tranche adds only their own validators.</p>
 <p>We improve security more with tranche zero assignments, so <code>RelayEquivocation</code> should consolidates its first several tranches into tranche zero.  We describe this as the zeroth delay tranche width, which initially we set to 12 for <code>RelayEquivocation</code> and <code>1</code> for <code>RelayVRFDelay</code>.</p>
 <h2 id="why-vrfs"><a class="header" href="#why-vrfs">Why VRFs?</a></h2>
 <p>We do assignments with VRFs to give &quot;enough&quot; checkers some meaning beyond merely &quot;expected&quot; checkers:</p>
@@ -335,17 +335,17 @@
 <p>VRFs though require adversaries wait far longer between such attacks, which also helps against adversaries with little at stake because they compromised validators.  VRFs raise user confidence that no such &quot;drive by&quot; attacks occurred because the delay tranche system ensure at least some minimum number of approval checkers.  In this vein, VRFs permit reducing backing checks and increasing approval checks, which makes polkadot more efficient.</p>
 <h2 id="gossip"><a class="header" href="#gossip">Gossip</a></h2>
 <p>Any validator could send their assignment notices and/or approval votes too early.  We gossip the approval votes because they represent a major commitment by the validator.  We retain but delay gossiping the assignment notices until they agree with our local clock.</p>
-<p>Assignment notices being gossiped too early might create a denial of service vector.  If so, we might exploit the relative time scheme that synchronises our clocks, which conceivably permits just dropping excessively early assignments. </p>
+<p>Assignment notices being gossiped too early might create a denial of service vector.  If so, we might exploit the relative time scheme that synchronizes our clocks, which conceivably permits just dropping excessively early assignments.</p>
 <h2 id="finality-grandpa-voting-rule"><a class="header" href="#finality-grandpa-voting-rule">Finality GRANDPA Voting Rule</a></h2>
 <p>The relay-chain requires validators to participate in GRANDPA. In GRANDPA, validators submit off-chain votes on what they believe to be the best block of the chain, and GRANDPA determines the common block contained by a supermajority of sub-chains. There are also additional constraints on what can be submitted based on results of previous rounds of voting.</p>
 <p>In order to avoid finalizing anything which has not received enough approval votes or is disputed, we will pair the approval protocol with an alteration to the GRANDPA voting strategy for honest nodes which causes them to vote only on chains where every parachain candidate within has been approved.  Furthermore, the voting rule prevents voting for chains where there is any live dispute or any dispute has resolved to a candidate being invalid.</p>
 <p>Thus, the finalized relay-chain should contain only relay-chain blocks where a majority believe that every block within has been sufficiently approved.</p>
 <h3 id="future-work"><a class="header" href="#future-work">Future work</a></h3>
 <p>We could consider additional gossip messages with which nodes claims &quot;slow availability&quot; and/or &quot;slow candidate&quot; to fine tune the assignments &quot;no show&quot; system, but long enough &quot;no show&quot; delays suffice probably.</p>
-<p>We shall develop more practical experience with UDP once the availability system works using direct UDP connections.  In this, we should discover if reconstruction performs adequately with a complete graphs or<br />
+<p>We shall develop more practical experience with UDP once the availability system works using direct UDP connections.  In this, we should discover if reconstruction performs adequately with a complete graphs or
 benefits from topology restrictions.  At this point, an assignment notices could implicitly request pieces from a random 1/3rd, perhaps topology restricted, which saves one gossip round.  If this preliminary fast reconstruction fails, then nodes' request alternative pieces directly.  There is an interesting design space in how this overlaps with &quot;slow availability&quot; claims.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
-<p>Fast forward to <a href="./disputes-flow.html">more detailed disputes requirments</a>.</p>
+<p>Fast forward to <a href="./disputes-flow.html">more detailed disputes requirements</a>.</p>
 <h2 id="motivation-and-background"><a class="header" href="#motivation-and-background">Motivation and Background</a></h2>
 <p>All parachain blocks that end up in the finalized relay chain should be valid. This does not apply to blocks that are only backed, but not included.</p>
 <p>We have two primary components for ensuring that nothing invalid ends up in the finalized relay chain:</p>
@@ -454,7 +454,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>The dispute availability message must contain code, persisted validation data, and the proof of validity.</p>
 <p>Only peers that already voted shall be queried for the dispute availability data.</p>
 <p>The peer to be queried for disputes data, must be picked at random.</p>
-<p>A validator must retain code, persisted validation data and PoV until a block, that contains the dispute resolution, is finalized - plus an additional 24h.</p>
+<p>A validator must retain code, persisted validation data and PoV until a block, that contains the dispute resolution, is finalized - plus an additional 24 hours.</p>
 <p>Dispute availability gossip must continue beyond the dispute resolution, until the post resolution timeout expired (equiv to the timeout until which additional late votes are accepted).</p>
 <p>Remote disputes are disputes that are in relation to a chain that is not part of the local validators active heads.</p>
 <p>All incoming votes must be persisted.</p>
@@ -467,7 +467,7 @@ the validators that had duty at the time of backing, plus backing votes by the b
 <p>If the validator was also a backer of the block, validation and casting an additional vote should be skipped.</p>
 <p>If the count of votes pro or cons regarding the disputed block, reaches the required ⅔ supermajority (including the backing votes), the conclusion must be recorded on chain and the voters on the loosing and no-shows being slashed appropriately.</p>
 <p>If a block is found invalid by a dispute resolution, it must be blacklisted to avoid resync or further build on that chain if other chains are available (to be detailed in the grandpa fork choice rule).</p>
-<p>A dispute accepts Votes after the dispute is resolved, for 1d.</p>
+<p>A dispute accepts Votes after the dispute is resolved, for 1 day.</p>
 <p>If a vote is received, after the dispute is resolved, the vote shall still be recorded in the state root, albeit yielding less reward.</p>
 <p>Recording in the state root might happen batched, at timeout expiry.</p>
 <p>If a new active head/chain appears, and the dispute resolution was not recorded on that chain yet, the dispute resolution or open dispute must be recorded / transplanted to that chain as well, since the disputes must be present on all chains to make sure the offender is punished.</p>
@@ -2637,7 +2637,7 @@ into the inherent data. From that point on, control passes from the node to the 
                              +------------------------------+
 </code></pre>
 <p>First, the subsystem that spawned a job is responsible for handling the first step of the communication. The overseer is not aware of the hierarchy of tasks within any given subsystem and is only responsible for subsystem-to-subsystem communication. So the sending subsystem must pass on the message via the overseer to the receiving subsystem, in such a way that the receiving subsystem can further address the communication to one of its internal tasks, if necessary.</p>
-<p>This communication prevents a certain class of race conditions. When the Overseer determines that it is time for subsystems to begin working on top of a particular relay-parent, it will dispatch a <code>ActiveLeavesUpdate</code> message to all subsystems to do so, and those messages will be handled asynchronously by those subsystems. Some subsystems will receive those messsages before others, and it is important that a message sent by subsystem A after receiving <code>ActiveLeavesUpdate</code> message will arrive at subsystem B after its <code>ActiveLeavesUpdate</code> message. If subsystem A maintaned an independent channel with subsystem B to communicate, it would be possible for subsystem B to handle the side message before the <code>ActiveLeavesUpdate</code> message, but it wouldn't have any logical course of action to take with the side message - leading to it being discarded or improperly handled. Well-architectured state machines should have a single source of inputs, so that is what we do here.</p>
+<p>This communication prevents a certain class of race conditions. When the Overseer determines that it is time for subsystems to begin working on top of a particular relay-parent, it will dispatch a <code>ActiveLeavesUpdate</code> message to all subsystems to do so, and those messages will be handled asynchronously by those subsystems. Some subsystems will receive those messsages before others, and it is important that a message sent by subsystem A after receiving <code>ActiveLeavesUpdate</code> message will arrive at subsystem B after its <code>ActiveLeavesUpdate</code> message. If subsystem A maintained an independent channel with subsystem B to communicate, it would be possible for subsystem B to handle the side message before the <code>ActiveLeavesUpdate</code> message, but it wouldn't have any logical course of action to take with the side message - leading to it being discarded or improperly handled. Well-architectured state machines should have a single source of inputs, so that is what we do here.</p>
 <p>One exception is reasonable to make for responses to requests. A request should be made via the overseer in order to ensure that it arrives after any relevant <code>ActiveLeavesUpdate</code> message. A subsystem issuing a request as a result of a <code>ActiveLeavesUpdate</code> message can safely receive the response via a side-channel for two reasons:</p>
 <ol>
 <li>It's impossible for a request to be answered before it arrives, it is provable that any response to a request obeys the same ordering constraint.</li>
@@ -2797,9 +2797,9 @@ struct CollationGenerationConfig {
 <p>Several approaches have been discussed, but all have some issues:</p>
 <ul>
 <li>The current approach is very straightforward. However, that protocol is vulnerable to a single collator which, as an attack or simply through chance, gets its block candidate to the node more often than its fair share of the time.</li>
-<li>If collators produce blocks via Aura, BABE or in future Sassafrass, it may be possible to choose an &quot;Official&quot; collator for the round, but it may be tricky to ensure that the PVF logic is enforced at collator leader election.</li>
+<li>If collators produce blocks via Aura, BABE or in future Sassafras, it may be possible to choose an &quot;Official&quot; collator for the round, but it may be tricky to ensure that the PVF logic is enforced at collator leader election.</li>
 <li>We could use relay-chain BABE randomness to generate some delay <code>D</code> on the order of 1 second, +- 1 second. The collator would then second the first valid parablock which arrives after <code>D</code>, or in case none has arrived by <code>2*D</code>, the last valid parablock which has arrived. This makes it very hard for a collator to game the system to always get its block nominated, but it reduces the maximum throughput of the system by introducing delay into an already tight schedule.</li>
-<li>A variation of that scheme would be to have a fixed acceptance window <code>D</code> for parablock candidates and keep track of count <code>C</code>: the number of parablock candidates received. At the end of the period <code>D</code>, we choose a random number I in the range [0, C) and second the block at Index I. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
+<li>A variation of that scheme would be to have a fixed acceptance window <code>D</code> for parablock candidates and keep track of count <code>C</code>: the number of parablock candidates received. At the end of the period <code>D</code>, we choose a random number I in the range <code>[0, C)</code> and second the block at Index I. Its drawback is the same: it must wait the full <code>D</code> period before seconding any of its received candidates, reducing throughput.</li>
 <li>In order to protect against DoS attacks, it may be prudent to run throw out collations from collators that have behaved poorly (whether recently or historically) and subsequently only verify the PoV for the most suitable of collations.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="backing-subsystems"><a class="header" href="#backing-subsystems">Backing Subsystems</a></h1>
@@ -2915,7 +2915,7 @@ struct CollationGenerationConfig {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch Pov Block</a></h3>
+<h3 id="fetch-pov-block"><a class="header" href="#fetch-pov-block">Fetch PoV Block</a></h3>
 <p>Create a <code>(sender, receiver)</code> pair.
 Dispatch a <a href="node/backing/../../types/overseer-protocol.html#availability-distribution-message"><code>AvailabilityDistributionMessage</code></a><code>::FetchPoV{ validator_index, pov_hash, candidate_hash, tx, } and listen on the passed receiver for a response. Availability distribution will send the request to the validator specified by </code>validator_index`, which might not be serving it for whatever reasons, therefore we need to retry with other backing validators in that case.</p>
 <h3 id="validate-pov-block"><a class="header" href="#validate-pov-block">Validate PoV Block</a></h3>
@@ -2929,18 +2929,18 @@ Dispatch a <code>CandidateValidationMessage::Validate(validation function, candi
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
-<li>NetworkBridgeUpdate(update)</li>
-<li>StatementDistributionMessage</li>
+<li><code>NetworkBridgeUpdate(update)</code></li>
+<li><code>StatementDistributionMessage</code></li>
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridge::SendMessage(<code>[PeerId]</code>, message)</li>
-<li>NetworkBridge::SendRequests (StatementFetching)</li>
-<li>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</li>
+<li><code>NetworkBridge::SendMessage(PeerId, message)</code></li>
+<li><code>NetworkBridge::SendRequests(StatementFetching)</code></li>
+<li><code>NetworkBridge::ReportPeer(PeerId, cost_or_benefit)</code></li>
 </ul>
 <h2 id="functionality-3"><a class="header" href="#functionality-3">Functionality</a></h2>
 <p>Implemented as a gossip protocol. Handle updates to our view and peers' views. Neighbor packets are used to inform peers which chain heads we are interested in data for.</p>
-<p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer in the same backing group, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement. On receiving <code>StatementDistributionMessage::Share</code> we make sure to send messages to our backing group in addition to random other peers, to ensure a fast backing process and getting all statements quickly for distribtution.</p>
+<p>It is responsible for distributing signed statements that we have generated and forwarding them, and for detecting a variety of Validator misbehaviors for reporting to <a href="node/backing/../utility/misbehavior-arbitration.html">Misbehavior Arbitration</a>. During the Backing stage of the inclusion pipeline, it's the main point of contact with peer nodes. On receiving a signed statement from a peer in the same backing group, assuming the peer receipt state machine is in an appropriate state, it sends the Candidate Receipt to the <a href="node/backing/candidate-backing.html">Candidate Backing subsystem</a> to handle the validator's statement. On receiving <code>StatementDistributionMessage::Share</code> we make sure to send messages to our backing group in addition to random other peers, to ensure a fast backing process and getting all statements quickly for distribution.</p>
 <p>Track equivocating validators and stop accepting information from them. Establish a data-dependency order:</p>
 <ul>
 <li>In order to receive a <code>Seconded</code> message we have the corresponding chain head in our view</li>
@@ -2970,7 +2970,7 @@ upgrades</a> are implemented.</p>
 <p>At this level, we are primarily concerned about flood-protection, and to some extent, detecting equivocations is a part of that. In particular, we are interested in detecting equivocations of <code>Seconded</code> statements. Since every other statement is dependent on <code>Seconded</code> statements, ensuring that we only ever hold a bounded number of <code>Seconded</code> statements is sufficient for flood-protection.</p>
 <p>The simple approach is to say that we only receive up to two <code>Seconded</code> statements per validator per chain head. However, the marginal cost of equivocation, conditional on having already equivocated, is close to 0, since a single double-vote offence is counted as all double-vote offences for a particular chain-head. Even if it were not, there is some amount of equivocations that can be done such that the marginal cost of issuing further equivocations is close to 0, as there would be an amount of equivocations necessary to be completely and totally obliterated by the slashing algorithm. We fear the validator with nothing left to lose.</p>
 <p>With that in mind, this simple approach has a caveat worth digging deeper into.</p>
-<p>First: We may be aware of two equivocated <code>Seconded</code> statements issued by a validator. A totally honest peer of ours can also be aware of one or two different <code>Seconded</code> statements issued by the same validator. And yet another peer may be aware of one or two <em>more</em> <code>Seconded</code> statements. And so on. This interacts badly with pre-emptive sending logic. Upon sending a <code>Seconded</code> statement to a peer, we will want to pre-emptively follow up with all statements relative to that candidate. Waiting for acknowledgement introduces latency at every hop, so that is best avoided. What can happen is that upon receipt of the <code>Seconded</code> statement, the peer will discard it as it falls beyond the bound of 2 that it is allowed to store. It cannot store anything in memory about discarded candidates as that would introduce a DoS vector. Then, the peer would receive from us all of the statements pertaining to that candidate, which, from its perspective, would be undesired - they are data-dependent on the <code>Seconded</code> statement we sent them, but they have erased all record of that from their memory. Upon receiving a potential flood of undesired statements, this 100% honest peer may choose to disconnect from us. In this way, an adversary may be able to partition the network with careful distribution of equivocated <code>Seconded</code> statements.</p>
+<p>First: We may be aware of two equivocated <code>Seconded</code> statements issued by a validator. A totally honest peer of ours can also be aware of one or two different <code>Seconded</code> statements issued by the same validator. And yet another peer may be aware of one or two <em>more</em> <code>Seconded</code> statements. And so on. This interacts badly with pre-emptive sending logic. Upon sending a <code>Seconded</code> statement to a peer, we will want to pre-emptively follow up with all statements relative to that candidate. Waiting for acknowledgment introduces latency at every hop, so that is best avoided. What can happen is that upon receipt of the <code>Seconded</code> statement, the peer will discard it as it falls beyond the bound of 2 that it is allowed to store. It cannot store anything in memory about discarded candidates as that would introduce a DoS vector. Then, the peer would receive from us all of the statements pertaining to that candidate, which, from its perspective, would be undesired - they are data-dependent on the <code>Seconded</code> statement we sent them, but they have erased all record of that from their memory. Upon receiving a potential flood of undesired statements, this 100% honest peer may choose to disconnect from us. In this way, an adversary may be able to partition the network with careful distribution of equivocated <code>Seconded</code> statements.</p>
 <p>The fix is to track, per-peer, the hashes of up to 4 candidates per validator (per relay-parent) that the peer is aware of. It is 4 because we may send them 2 and they may send us 2 different ones. We track the data that they are aware of as the union of things we have sent them and things they have sent us. If we receive a 1st or 2nd <code>Seconded</code> statement from a peer, we note it in the peer's known candidates even if we do disregard the data locally. And then, upon receipt of any data dependent on that statement, we do not reduce that peer's standing in our eyes, as the data was not undesired.</p>
 <p>There is another caveat to the fix: we don't want to allow the peer to flood us because it has set things up in a way that it knows we will drop all of its traffic.
 We also track how many statements we have received per peer, per candidate, and per chain-head. This is any statement concerning a particular candidate: <code>Seconded</code>, <code>Valid</code>, or <code>Invalid</code>. If we ever receive a statement from a peer which would push any of these counters beyond twice the amount of validators at the chain-head, we begin to lower the peer's standing and eventually disconnect. This bound is a massive overestimate and could be reduced to twice the number of validators in the corresponding validator group. It is worth noting that the goal at the time of writing is to ensure any finite bound on the amount of stored data, as any equivocation results in a large slash.</p>
@@ -3011,34 +3011,33 @@ Availability data are chunks, <code>PoV</code>s and <code>AvailableData</code> (
 this is to ensure availability by at least 2/3+ of all validators, this
 happens after a candidate is backed.</li>
 <li>Fetch <code>PoV</code> from validators, when requested via <code>FetchPoV</code> message from
-backing (pov_requester module).</li>
-<li></li>
+backing (<code>pov_requester</code> module).</li>
 </ul>
 <p>The backing subsystem is responsible of making available data available in the
 local <code>Availability Store</code> upon validation. This subsystem will serve any
 network requests by querying that store.</p>
 <h2 id="protocol-4"><a class="header" href="#protocol-4">Protocol</a></h2>
 <p>This subsystem does not handle any peer set messages, but the <code>pov_requester</code>
-does  connecto to validators of the same backing group on the validation peer
+does connect to validators of the same backing group on the validation peer
 set, to ensure fast propagation of statements between those validators and for
 ensuring already established connections for requesting <code>PoV</code>s. Other than that
 this subsystem drives request/response protocols.</p>
 <p>Input:</p>
 <ul>
-<li>OverseerSignal::ActiveLeaves(<code>[ActiveLeavesUpdate]</code>)</li>
-<li>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</li>
-<li>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</li>
-<li>AvailabilityDistributionMessage{msg: FetchPoV}</li>
+<li><code>OverseerSignal::ActiveLeaves(ActiveLeavesUpdate)</code></li>
+<li><code>AvailabilityDistributionMessage{msg: ChunkFetchingRequest}</code></li>
+<li><code>AvailabilityDistributionMessage{msg: PoVFetchingRequest}</code></li>
+<li><code>AvailabilityDistributionMessage{msg: FetchPoV}</code></li>
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridgeMessage::SendRequests(<code>[Requests]</code>, IfDisconnected::TryConnect)</li>
-<li>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</li>
-<li>AvailabilityStore::StoreChunk(candidate_hash, chunk)</li>
-<li>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</li>
-<li>RuntimeApiRequest::SessionIndexForChild</li>
-<li>RuntimeApiRequest::SessionInfo</li>
-<li>RuntimeApiRequest::AvailabilityCores</li>
+<li><code>NetworkBridgeMessage::SendRequests(Requests, IfDisconnected::TryConnect)</code></li>
+<li><code>AvailabilityStore::QueryChunk(candidate_hash, index, response_channel)</code></li>
+<li><code>AvailabilityStore::StoreChunk(candidate_hash, chunk)</code></li>
+<li><code>AvailabilityStore::QueryAvailableData(candidate_hash, response_channel)</code></li>
+<li><code>RuntimeApiRequest::SessionIndexForChild</code></li>
+<li><code>RuntimeApiRequest::SessionInfo</code></li>
+<li><code>RuntimeApiRequest::AvailabilityCores</code></li>
 </ul>
 <h2 id="functionality-4"><a class="header" href="#functionality-4">Functionality</a></h2>
 <h3 id="pov-requester"><a class="header" href="#pov-requester">PoV Requester</a></h3>
@@ -3087,14 +3086,14 @@ happens in the <code>responder</code> module.</p>
 <p><code>PeerSet</code>: <code>Validation</code></p>
 <p>Input:</p>
 <ul>
-<li>NetworkBridgeUpdateV1(update)</li>
-<li>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session, backing_group, response)</li>
+<li><code>NetworkBridgeUpdateV1(update)</code></li>
+<li><code>AvailabilityRecoveryMessage::RecoverAvailableData(candidate, session, backing_group, response)</code></li>
 </ul>
 <p>Output:</p>
 <ul>
-<li>NetworkBridge::SendValidationMessage</li>
-<li>NetworkBridge::ReportPeer</li>
-<li>AvailabilityStore::QueryChunk</li>
+<li><code>NetworkBridge::SendValidationMessage</code></li>
+<li><code>NetworkBridge::ReportPeer</code></li>
+<li><code>AvailabilityStore::QueryChunk</code></li>
 </ul>
 <h2 id="functionality-5"><a class="header" href="#functionality-5">Functionality</a></h2>
 <p>We hold a state which tracks the current recovery interactions we have live, as well as which request IDs correspond to which interactions. An interaction is a structure encapsulating all interaction with the network necessary to recover the available data.</p>
@@ -3128,7 +3127,7 @@ struct InteractionParams {
     validator_authority_keys: Vec&lt;AuthorityId&gt;,
     validators: Vec&lt;ValidatorId&gt;,
     // The number of pieces needed.
-    threshold: usize, 
+    threshold: usize,
     candidate_hash: Hash,
     erasure_root: Hash,
 }
@@ -3142,7 +3141,7 @@ enum InteractionPhase {
     RequestChunks {
         // a random shuffling of the validators which indicates the order in which we connect to the validators and
         // request the chunk from them.
-        shuffling: Vec&lt;ValidatorIndex&gt;, 
+        shuffling: Vec&lt;ValidatorIndex&gt;,
         received_chunks: Map&lt;ValidatorIndex, ErasureChunk&gt;,
         requesting_chunks: FuturesUnordered&lt;Receiver&lt;ErasureChunkRequestResponse&gt;&gt;,
     }
@@ -3163,14 +3162,14 @@ struct Interaction {
 <ol>
 <li>Check the <code>availability_lru</code> for the candidate and return the data if so.</li>
 <li>Check if there is already an interaction handle for the request. If so, add the response handle to it.</li>
-<li>Otherwise, load the session info for the given session under the state of <code>live_block_hash</code>, and initiate an interaction with <em>launch_interaction</em>. Add an interaction handle to the state and add the response channel to it.</li>
+<li>Otherwise, load the session info for the given session under the state of <code>live_block_hash</code>, and initiate an interaction with <em><code>launch_interaction</code></em>. Add an interaction handle to the state and add the response channel to it.</li>
 <li>If the session info is not available, return <code>RecoveryError::Unavailable</code> on the response channel.</li>
 </ol>
 <h3 id="from-interaction-logic"><a class="header" href="#from-interaction-logic">From-interaction logic</a></h3>
 <h4 id="frominteractionconcluded"><a class="header" href="#frominteractionconcluded"><code>FromInteraction::Concluded</code></a></h4>
 <ol>
 <li>Load the entry from the <code>interactions</code> map. It should always exist, if not for logic errors. Send the result to each member of <code>awaiting</code>.</li>
-<li>Add the entry to the availability_lru.</li>
+<li>Add the entry to the <code>availability_lru</code>.</li>
 </ol>
 <h3 id="interaction-logic"><a class="header" href="#interaction-logic">Interaction logic</a></h3>
 <h4 id="launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><a class="header" href="#launch_interactionsession_index-session_info-candidate_receipt-candidate_hash-optionbacking_group_index"><code>launch_interaction(session_index, session_info, candidate_receipt, candidate_hash, Option&lt;backing_group_index&gt;)</code></a></h4>
@@ -3200,14 +3199,14 @@ const N_PARALLEL: usize = 50;
 <ul>
 <li>Loop:
 <ul>
-<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>. </li>
+<li>If the <code>requesting_pov</code> is <code>Some</code>, poll for updates on it. If it concludes, set <code>requesting_pov</code> to <code>None</code>.</li>
 <li>If the <code>requesting_pov</code> is <code>None</code>, take the next backer off the <code>shuffled_backers</code>.
 <ul>
 <li>If the backer is <code>Some</code>, issue a <code>NetworkBridgeMessage::Requests</code> with a network request for the <code>AvailableData</code> and wait for the response.</li>
-<li>If it concludes with a <code>None</code> result, return to beginning. </li>
-<li>If it concludes with available data, attempt a re-encoding. 
+<li>If it concludes with a <code>None</code> result, return to beginning.</li>
+<li>If it concludes with available data, attempt a re-encoding.
 <ul>
-<li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>. </li>
+<li>If it has the correct erasure-root, break and issue a <code>Ok(available_data)</code>.</li>
 <li>If it has an incorrect erasure-root, return to beginning.</li>
 </ul>
 </li>
@@ -3267,8 +3266,8 @@ Accept and distribute only one bitfield per validator.</p>
 <p>There is no dedicated input mechanism for bitfield signing. Instead, Bitfield Signing produces a bitfield representing the current state of availability on <code>StartWork</code>.</p>
 <p>Output:</p>
 <ul>
-<li>BitfieldDistribution::DistributeBitfield: distribute a locally signed bitfield</li>
-<li>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</li>
+<li><code>BitfieldDistribution::DistributeBitfield</code>: distribute a locally signed bitfield</li>
+<li><code>AvailabilityStore::QueryChunk(CandidateHash, validator_index, response_channel)</code></li>
 </ul>
 <h2 id="functionality-7"><a class="header" href="#functionality-7">Functionality</a></h2>
 <p>Upon receipt of an <code>ActiveLeavesUpdate</code>, launch bitfield signing job for each <code>activated</code> head referring to a fresh leaf. Stop the job for each <code>deactivated</code> head.</p>
@@ -3793,7 +3792,7 @@ struct CandidateEntry {
 Ensure a vector is present in <code>pending_known</code> for each hash in the view that does not have an entry in <code>blocks</code>.</p>
 <h4 id="networkbridgeeventpeerviewchange"><a class="header" href="#networkbridgeeventpeerviewchange"><code>NetworkBridgeEvent::PeerViewChange</code></a></h4>
 <p>Invoke <code>unify_with_peer(peer, view)</code> to catch them up to messages we have.</p>
-<p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their 'finalized_number` forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
+<p>We also need to use the <code>view.finalized_number</code> to remove the <code>PeerId</code> from any blocks that it won't be wanting information about anymore. Note that we have to be on guard for peers doing crazy stuff like jumping their <code>finalized_number</code> forward 10 trillion blocks to try and get us stuck in a loop for ages.</p>
 <p>One of the safeguards we can implement is to reject view updates from peers where the new <code>finalized_number</code> is less than the previous.</p>
 <p>We augment that by defining <code>constrain(x)</code> to output the x bounded by the first and last numbers in <code>state.blocks_by_number</code>.</p>
 <p>From there, we can loop backwards from <code>constrain(view.finalized_number)</code> until <code>constrain(last_view.finalized_number)</code> is reached, removing the <code>PeerId</code> from all <code>BlockEntry</code>s referenced at that height. We can break the loop early if we ever exit the bound supplied by the first block in <code>state.blocks_by_number</code>.</p>
@@ -3838,7 +3837,7 @@ Ensure a vector is present in <code>pending_known</code> for each hash in the vi
 </ul>
 <p>The algorithm is the following:</p>
 <ul>
-<li>Load the BlockEntry using <code>assignment.block_hash</code>. If it does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
+<li>Load the <code>BlockEntry</code> using <code>assignment.block_hash</code>. If it does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the <code>assignment</code> using <code>claimed_candidate_index</code>.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
 <ul>
@@ -3871,7 +3870,7 @@ If we did this check earlier, a peer could provide data out-of-view repeatedly a
 <h4 id="import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><a class="header" href="#import_and_circulate_approvalsource-messagesource-approval-indirectsignedapprovalvote"><code>import_and_circulate_approval(source: MessageSource, approval: IndirectSignedApprovalVote)</code></a></h4>
 <p>Imports an approval signature referenced by block hash and candidate index:</p>
 <ul>
-<li>Load the BlockEntry using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
+<li>Load the <code>BlockEntry</code> using <code>approval.block_hash</code> and the candidate entry using <code>approval.candidate_entry</code>. If either does not exist, report the source if it is <code>MessageSource::Peer</code> and return.</li>
 <li>Compute a fingerprint for the approval.</li>
 <li>Compute a fingerprint for the corresponding assignment. If the <code>BlockEntry</code>'s knowledge does not contain that fingerprint, then report the source if it is <code>MessageSource::Peer</code> and return. All references to a fingerprint after this refer to the approval's, not the assignment's.</li>
 <li>If the source is <code>MessageSource::Peer(sender)</code>:
@@ -3931,21 +3930,21 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <li>Detection. Detect bad parablocks, either during candidate backing or approval checking, and initiate a dispute.</li>
 <li>Participation. Participate in active disputes. When a node becomes aware of a dispute, it should recover the data for the disputed block, check the validity of the parablock, and issue a statement regarding the validity of the parablock.</li>
 <li>Distribution. Validators should notify each other of active disputes and relevant statements over the network.</li>
-<li>Submission. When authoring a block, a validator should inspect the state of the parent block and provide any information about disputes that the chain needs as part of the ParaInherent. This should initialize new disputes on-chain as necessary.</li>
-<li>Fork-choice and Finality. When observing a block issuing a DisputeRollback digest in the header, that branch of the relay chain should be abandoned all the way back to the indicated block. When voting on chains in GRANDPA, no chains that contain blocks that are or have been disputed should be voted on.</li>
+<li>Submission. When authoring a block, a validator should inspect the state of the parent block and provide any information about disputes that the chain needs as part of the <code>ParaInherent</code>. This should initialize new disputes on-chain as necessary.</li>
+<li>Fork-choice and Finality. When observing a block issuing a <code>DisputeRollback</code> digest in the header, that branch of the relay chain should be abandoned all the way back to the indicated block. When voting on chains in GRANDPA, no chains that contain blocks that are or have been disputed should be voted on.</li>
 </ul>
 <h2 id="components-1"><a class="header" href="#components-1">Components</a></h2>
 <h3 id="dispute-coordinator"><a class="header" href="#dispute-coordinator">Dispute Coordinator</a></h3>
 <p>This component is responsible for coordinating other subsystems around disputes.</p>
 <p>This component should track all statements received from all validators over some window of sessions. This includes backing statements, approval votes, and statements made specifically for disputes. This will be used to identify disagreements or instances where validators conflict with themselves.</p>
 <p>This is responsible for tracking and initiating disputes. Disputes will be initiated either externally by another subsystem which has identified an issue with a parablock or internally upon observing two statements which conflict with each other on the validity of a parablock.</p>
-<p>No more than one statement by each validator on each side of the dispute needs to be stored. That is, validators are allowed to participate on both sides of the dispute, although we won't write code to do so. Such behavior has negative EV in the runtime.</p>
+<p>No more than one statement by each validator on each side of the dispute needs to be stored. That is, validators are allowed to participate on both sides of the dispute, although we won't write code to do so. Such behavior has negative extractable value in the runtime.</p>
 <p>This will notify the dispute participation subsystem of a new dispute if the local validator has not issued any statements on the disputed candidate already.</p>
 <p>Locally authored statements related to disputes will be forwarded to the dispute distribution subsystem.</p>
 <p>This subsystem also provides two further behaviors for the interactions between disputes and fork-choice</p>
 <ul>
-<li>Enhancing the finality voting rule. Given description of a chain and candidates included at different heights in that chain, it returns the BlockHash corresponding to the highest BlockNumber that there are no disputes before. I expect that we will slightly change ApprovalVoting::ApprovedAncestor to return this set and then the target block to vote on will be further constrained by this function.</li>
-<li>Chain roll-backs. Whenever importing new blocks, the header should be scanned for a roll-back digest. If there is one, the chain should be rolled back according to the digest. I expect this would be implemented with a ChainApi function and possibly an ApprovalVoting function to clean up the approval voting DB.</li>
+<li>Enhancing the finality voting rule. Given description of a chain and candidates included at different heights in that chain, it returns the <code>BlockHash</code> corresponding to the highest <code>BlockNumber</code> that there are no disputes before. I expect that we will slightly change <code>ApprovalVoting::ApprovedAncestor</code> to return this set and then the target block to vote on will be further constrained by this function.</li>
+<li>Chain roll-backs. Whenever importing new blocks, the header should be scanned for a roll-back digest. If there is one, the chain should be rolled back according to the digest. I expect this would be implemented with a <code>ChainApi</code> function and possibly an <code>ApprovalVoting</code> function to clean up the approval voting DB.</li>
 </ul>
 <h3 id="dispute-participation-1"><a class="header" href="#dispute-participation-1">Dispute Participation</a></h3>
 <p>This subsystem ties together the dispute tracker, availability recovery, candidate validation, and dispute distribution subsystems. When notified of a new dispute by the Dispute Tracker, the data should be recovered, the validation code loaded from the relay chain, and the candidate is executed.</p>
@@ -4122,14 +4121,14 @@ distributed to other validators.</li>
 <p>This subsystem is responsible for actually participating in disputes: when notified of a dispute, we need to recover the candidate data, validate the candidate, and cast our vote in the dispute.</p>
 <p>Fortunately, most of that work is handled by other subsystems; this subsystem is just a small glue component for tying other subsystems together and issuing statements based on their validity.</p>
 <h2 id="protocol-11"><a class="header" href="#protocol-11">Protocol</a></h2>
-<p>Input: <a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message">DisputeParticipationMessage</a></p>
+<p>Input: <a href="node/disputes/../../types/overseer-protocol.html#dispute-participation-message"><code>DisputeParticipationMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message">RuntimeApiMessage</a></li>
-<li><a href="node/disputes/../../types/overseer-protocol.html#candidate-validation-message">CandidateValidationMessage</a></li>
-<li><a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message">AvailabilityRecoveryMessage</a></li>
-<li><a href="node/disputes/../../types/overseer-protocol.html#availability-store-message">AvailabilityStoreMessage</a></li>
-<li><a href="node/disputes/../../types/overseer-protocol.html#chain-api-message">ChainApiMessage</a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#candidate-validation-message"><code>CandidateValidationMessage</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#availability-recovery-message"><code>AvailabilityRecoveryMessage</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#availability-store-message"><code>AvailabilityStoreMessage</code></a></li>
+<li><a href="node/disputes/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage</code></a></li>
 </ul>
 <h2 id="functionality-11"><a class="header" href="#functionality-11">Functionality</a></h2>
 <p>In-memory state:</p>
@@ -4165,7 +4164,7 @@ via the <code>report_availability</code> oneshot.</li>
 </ul>
 <h3 id="cast-votes"><a class="header" href="#cast-votes">Cast Votes</a></h3>
 <p>This requires the parameters <code>{ candidate_receipt, candidate_hash, session, voted_indices }</code> as well as a choice of either <code>Valid</code> or <code>Invalid</code>.</p>
-<p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parametrization.</p>
+<p>Invoke <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::IssueLocalStatement</code></a> with <code>is_valid</code> according to the parameterization,.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
 <p>Dispute distribution is responsible for ensuring all concerned validators will
 be aware of a dispute and have the relevant votes.</p>
@@ -4190,7 +4189,7 @@ be aware of a dispute and have the relevant votes.</p>
 </ul>
 <h3 id="wire-format"><a class="header" href="#wire-format">Wire format</a></h3>
 <h4 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h4>
-<p>Protocol: &quot;/polkadot/send_dispute/1&quot;</p>
+<p>Protocol: <code>&quot;/polkadot/send_dispute/1&quot;</code></p>
 <p>Request:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -4246,7 +4245,7 @@ pub struct ValidDisputeVote {
 <span class="boring">}
 </span></code></pre></pre>
 <h4 id="vote-recovery"><a class="header" href="#vote-recovery">Vote Recovery</a></h4>
-<p>Protocol: &quot;/polkadot/req_votes/1&quot;</p>
+<p>Protocol: <code>&quot;/polkadot/req_votes/1&quot;</code></p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -4386,7 +4385,7 @@ they will always take some time as we have to wait for availability to fail.</li
 </ul>
 <p>So this general rate limit, that we drop requests from same peers if they come
 faster than we can import the statements should not cause any problems for
-honest nodes and is in their favour.</p>
+honest nodes and is in their favor.</p>
 <p>Size of <code>N</code>: The larger <code>N</code> the better we can handle distributed flood attacks
 (see previous paragraph), but we also get potentially more availability recovery
 processes happening at the same time, which slows down the individual processes.
@@ -4873,47 +4872,47 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 <h3 id="main-loop"><a class="header" href="#main-loop">Main Loop</a></h3>
 <p>The bulk of the work done by this subsystem is in responding to network events, signals from the overseer, and messages from other subsystems.</p>
 <p>Each network event is associated with a particular peer-set.</p>
-<h3 id="overseer-signal-activeleavesupdate"><a class="header" href="#overseer-signal-activeleavesupdate">Overseer Signal: ActiveLeavesUpdate</a></h3>
+<h3 id="overseer-signal-activeleavesupdate"><a class="header" href="#overseer-signal-activeleavesupdate">Overseer Signal: <code>ActiveLeavesUpdate</code></a></h3>
 <p>The <code>activated</code> and <code>deactivated</code> lists determine the evolution of our local view over time. A <code>ProtocolMessage::ViewUpdate</code> is issued to each connected peer on each peer-set, and a <code>NetworkBridgeEvent::OurViewChange</code> is issued to each event handler for each protocol.</p>
 <p>We only send view updates if the node has indicated that it has finished major blockchain synchronization.</p>
 <p>If we are connected to the same peer on both peer-sets, we will send the peer two view updates as a result.</p>
-<h3 id="overseer-signal-blockfinalized"><a class="header" href="#overseer-signal-blockfinalized">Overseer Signal: BlockFinalized</a></h3>
+<h3 id="overseer-signal-blockfinalized"><a class="header" href="#overseer-signal-blockfinalized">Overseer Signal: <code>BlockFinalized</code></a></h3>
 <p>We update our view's <code>finalized_number</code> to the provided one and delay <code>ProtocolMessage::ViewUpdate</code> and <code>NetworkBridgeEvent::OurViewChange</code> till the next <code>ActiveLeavesUpdate</code>.</p>
-<h3 id="network-event-peer-connected"><a class="header" href="#network-event-peer-connected">Network Event: Peer Connected</a></h3>
+<h3 id="network-event-peerconnected"><a class="header" href="#network-event-peerconnected">Network Event: <code>PeerConnected</code></a></h3>
 <p>Issue a <code>NetworkBridgeEvent::PeerConnected</code> for each <a href="node/utility/network-bridge.html#event-handlers">Event Handler</a> of the peer-set and negotiated protocol version of the peer. Also issue a <code>NetworkBridgeEvent::PeerViewChange</code> and send the peer our current view, but only if the node has indicated that it has finished major blockchain synchronization. Otherwise, we only send the peer an empty view.</p>
-<h3 id="network-event-peer-disconnected"><a class="header" href="#network-event-peer-disconnected">Network Event: Peer Disconnected</a></h3>
+<h3 id="network-event-peerdisconnected"><a class="header" href="#network-event-peerdisconnected">Network Event: <code>PeerDisconnected</code></a></h3>
 <p>Issue a <code>NetworkBridgeEvent::PeerDisconnected</code> for each <a href="node/utility/network-bridge.html#event-handlers">Event Handler</a> of the peer-set and negotiated protocol version of the peer.</p>
-<h3 id="network-event-protocolmessage"><a class="header" href="#network-event-protocolmessage">Network Event: ProtocolMessage</a></h3>
+<h3 id="network-event-protocolmessage"><a class="header" href="#network-event-protocolmessage">Network Event: <code>ProtocolMessage</code></a></h3>
 <p>Map the message onto the corresponding <a href="node/utility/network-bridge.html#event-handlers">Event Handler</a> based on the peer-set this message was received on and dispatch via overseer.</p>
-<h3 id="network-event-viewupdate"><a class="header" href="#network-event-viewupdate">Network Event: ViewUpdate</a></h3>
+<h3 id="network-event-viewupdate"><a class="header" href="#network-event-viewupdate">Network Event: <code>ViewUpdate</code></a></h3>
 <ul>
 <li>Check that the new view is valid and note it as the most recent view update of the peer on this peer-set.</li>
 <li>Map a <code>NetworkBridgeEvent::PeerViewChange</code> onto the corresponding <a href="node/utility/network-bridge.html#event-handlers">Event Handler</a> based on the peer-set this message was received on and dispatch  via overseer.</li>
 </ul>
-<h3 id="reportpeer"><a class="header" href="#reportpeer">ReportPeer</a></h3>
+<h3 id="reportpeer"><a class="header" href="#reportpeer"><code>ReportPeer</code></a></h3>
 <ul>
 <li>Adjust peer reputation according to cost or benefit provided</li>
 </ul>
-<h3 id="disconnectpeer"><a class="header" href="#disconnectpeer">DisconnectPeer</a></h3>
+<h3 id="disconnectpeer"><a class="header" href="#disconnectpeer"><code>DisconnectPeer</code></a></h3>
 <ul>
 <li>Disconnect the peer from the peer-set requested, if connected.</li>
 </ul>
-<h3 id="sendvalidationmessage--sendvalidationmessages"><a class="header" href="#sendvalidationmessage--sendvalidationmessages">SendValidationMessage / SendValidationMessages</a></h3>
+<h3 id="sendvalidationmessage--sendvalidationmessages"><a class="header" href="#sendvalidationmessage--sendvalidationmessages"><code>SendValidationMessage</code> / <code>SendValidationMessages</code></a></h3>
 <ul>
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the validation peer-set.</li>
 </ul>
-<h3 id="sendcollationmessage--sendcollationmessages"><a class="header" href="#sendcollationmessage--sendcollationmessages">SendCollationMessage / SendCollationMessages</a></h3>
+<h3 id="sendcollationmessage--sendcollationmessages"><a class="header" href="#sendcollationmessage--sendcollationmessages"><code>SendCollationMessage</code> / <code>SendCollationMessages</code></a></h3>
 <ul>
 <li>Issue a corresponding <code>ProtocolMessage</code> to each listed peer on the collation peer-set.</li>
 </ul>
-<h3 id="connecttovalidators"><a class="header" href="#connecttovalidators">ConnectToValidators</a></h3>
+<h3 id="connecttovalidators"><a class="header" href="#connecttovalidators"><code>ConnectToValidators</code></a></h3>
 <ul>
 <li>Determine the DHT keys to use for each validator based on the relay-chain state and Runtime API.</li>
 <li>Recover the Peer IDs of the validators from the DHT. There may be more than one peer ID per validator.</li>
 <li>Send all <code>(ValidatorId, PeerId)</code> pairs on the response channel.</li>
 <li>Feed all Peer IDs to peer set manager the underlying network provides.</li>
 </ul>
-<h3 id="newgossiptopology"><a class="header" href="#newgossiptopology">NewGossipTopology</a></h3>
+<h3 id="newgossiptopology"><a class="header" href="#newgossiptopology"><code>NewGossipTopology</code></a></h3>
 <ul>
 <li>Map all <code>AuthorityDiscoveryId</code>s to <code>PeerId</code>s and issue a corresponding <code>NetworkBridgeUpdateV1</code>
 to all validation subsystems.</li>
@@ -4942,8 +4941,8 @@ validators. Our neighbors in this graph will be forwarded to the network bridge
 with the <code>NetworkBridgeMessage::NewGossipTopology</code> message.</p>
 <p>See https://github.com/paritytech/polkadot/issues/3239 for more details.</p>
 <p>The gossip topology is used by parachain distribution subsystems,
-such as Bitfield Distrubution, (small) Statement Distributuion and
-Approval Distibution to limit the amount of peers we send messages to
+such as Bitfield Distribution, (small) Statement Distribution and
+Approval Distribution to limit the amount of peers we send messages to
 and handle view updates.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="misbehavior-arbitration"><a class="header" href="#misbehavior-arbitration">Misbehavior Arbitration</a></h1>
 <p>The Misbehavior Arbitration subsystem collects reports of validator misbehavior, and slashes the stake of both misbehaving validator nodes and false accusers.</p>
@@ -4964,13 +4963,13 @@ and handle view updates.</p>
 <p>Input: <a href="node/utility/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></p>
 <p>Output: None</p>
 <h2 id="functionality-18"><a class="header" href="#functionality-18">Functionality</a></h2>
-<p>On receipt of <code>RuntimeApiMessage::Request(relay_parent, request)</code>, answer the request using the post-state of the relay_parent provided and provide the response to the side-channel embedded within the request.</p>
+<p>On receipt of <code>RuntimeApiMessage::Request(relay_parent, request)</code>, answer the request using the post-state of the <code>relay_parent</code> provided and provide the response to the side-channel embedded within the request.</p>
 <blockquote>
 <p>TODO Do some caching. The underlying rocksdb already has a cache of trie nodes so duplicate requests are unlikely to hit disk. Not required for functionality.</p>
 </blockquote>
 <h2 id="jobs"><a class="header" href="#jobs">Jobs</a></h2>
 <blockquote>
-<p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on relay_parents that are not active based on <code>ActiveLeavesUpdate</code> messages. Maybe with some leeway for things that have just been stopped.</p>
+<p>TODO Don't limit requests based on parent hash, but limit caching. No caching should be done for any requests on <code>relay_parent</code>s that are not active based on <code>ActiveLeavesUpdate</code> messages. Maybe with some leeway for things that have just been stopped.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chain-api"><a class="header" href="#chain-api">Chain API</a></h1>
 <p>The Chain API subsystem is responsible for providing a single point of access to chain state data via a set of pre-determined queries.</p>
@@ -4998,7 +4997,7 @@ and handle view updates.</p>
 <li>On every <code>ChainSelectionMessage::Approve</code></li>
 <li>Periodically, to detect stagnation.</li>
 </ul>
-<p>Simple implementations of these updates do O(n_unfinalized_blocks) disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
+<p>Simple implementations of these updates do <code>O(n_unfinalized_blocks)</code> disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
 <h3 id="overseersignalactiveleavesupdate-1"><a class="header" href="#overseersignalactiveleavesupdate-1"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
 <p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly. The weights of imported blocks can be determined by the <a href="node/utility/../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockWeight</code></a>.</p>
 <h3 id="overseersignalblockfinalized-2"><a class="header" href="#overseersignalblockfinalized-2"><code>OverseerSignal::BlockFinalized</code></a></h3>
@@ -6561,9 +6560,9 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="approval-types"><a class="header" href="#approval-types">Approval Types</a></h1>
-<h2 id="assignmentid"><a class="header" href="#assignmentid">AssignmentId</a></h2>
+<h2 id="assignmentid"><a class="header" href="#assignmentid"><code>AssignmentId</code></a></h2>
 <p>The public key of a keypair used by a validator for determining assignments to approve included parachain candidates.</p>
-<h2 id="assignmentcert"><a class="header" href="#assignmentcert">AssignmentCert</a></h2>
+<h2 id="assignmentcert"><a class="header" href="#assignmentcert"><code>AssignmentCert</code></a></h2>
 <p>An <code>AssignmentCert</code>, short for Assignment Certificate, is a piece of data provided by a validator to prove that they have been selected to perform secondary approval checks on an included candidate.</p>
 <p>These certificates can be checked in the context of a specific block, candidate, and validator assignment VRF key. The block state will also provide further context about the availability core states at that block.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -6587,9 +6586,9 @@ struct AssignmentCert {
 <span class="boring">}
 </span></code></pre></pre>
 <blockquote>
-<p>TODO: RelayEquivocation cert. Probably can only be broadcast to chains that have handled an equivocation report.</p>
+<p>TODO: <code>RelayEquivocation</code> cert. Probably can only be broadcast to chains that have handled an equivocation report.</p>
 </blockquote>
-<h2 id="indirectassignmentcert"><a class="header" href="#indirectassignmentcert">IndirectAssignmentCert</a></h2>
+<h2 id="indirectassignmentcert"><a class="header" href="#indirectassignmentcert"><code>IndirectAssignmentCert</code></a></h2>
 <p>An assignment cert which refers to the candidate under which the assignment is relevant by block hash.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6602,7 +6601,7 @@ struct AssignmentCert {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="approvalvote"><a class="header" href="#approvalvote">ApprovalVote</a></h2>
+<h2 id="approvalvote"><a class="header" href="#approvalvote"><code>ApprovalVote</code></a></h2>
 <p>A vote of approval on a candidate.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6610,7 +6609,7 @@ struct AssignmentCert {
 </span>struct ApprovalVote(Hash);
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="signedapprovalvote"><a class="header" href="#signedapprovalvote">SignedApprovalVote</a></h2>
+<h2 id="signedapprovalvote"><a class="header" href="#signedapprovalvote"><code>SignedApprovalVote</code></a></h2>
 <p>An approval vote signed with a validator's key. This should be verifiable under the <code>ValidatorId</code> corresponding to the <code>ValidatorIndex</code> of the session, which should be implicit from context.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
@@ -6622,7 +6621,7 @@ struct AssignmentCert {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="indirectsignedapprovalvote"><a class="header" href="#indirectsignedapprovalvote">IndirectSignedApprovalVote</a></h2>
+<h2 id="indirectsignedapprovalvote"><a class="header" href="#indirectsignedapprovalvote"><code>IndirectSignedApprovalVote</code></a></h2>
 <p>A signed approval vote which references the candidate indirectly via the block. If there exists a look-up to the candidate hash from the block hash and candidate index, then this can be transformed into a <code>SignedApprovalVote</code>.</p>
 <p>Although this vote references the candidate by a specific block hash and candidate index, the signature is computed on the actual <code>SignedApprovalVote</code> payload.</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -6638,8 +6637,8 @@ struct AssignmentCert {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="checkedassignmentcert"><a class="header" href="#checkedassignmentcert">CheckedAssignmentCert</a></h2>
-<p>An assignment cert which has checked both the VRF and the validity of the implied assignment according to the selection criteria rules of the protocol. This type should be declared in such a way as to be instantiable only when the checks have actually been done. Fields should be accessible via getters, not direct struct access.</p>
+<h2 id="checkedassignmentcert"><a class="header" href="#checkedassignmentcert"><code>CheckedAssignmentCert</code></a></h2>
+<p>An assignment cert which has checked both the VRF and the validity of the implied assignment according to the selection criteria rules of the protocol. This type should be declared in such a way as to be instantiatable only when the checks have actually been done. Fields should be accessible via getters, not direct struct access.</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
@@ -6652,7 +6651,7 @@ struct AssignmentCert {
 }
 <span class="boring">}
 </span></code></pre></pre>
-<h2 id="delaytranche"><a class="header" href="#delaytranche">DelayTranche</a></h2>
+<h2 id="delaytranche"><a class="header" href="#delaytranche"><code>DelayTranche</code></a></h2>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {

@@ -153,7 +153,7 @@
 <li>On every <code>ChainSelectionMessage::Approve</code></li>
 <li>Periodically, to detect stagnation.</li>
 </ul>
-<p>Simple implementations of these updates do O(n_unfinalized_blocks) disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
+<p>Simple implementations of these updates do <code>O(n_unfinalized_blocks)</code> disk operations. If the amount of unfinalized blocks is relatively small, the updates should not take very much time. However, in cases where there are hundreds or thousands of unfinalized blocks the naive implementations of these update algorithms would have to be replaced with more sophisticated versions.</p>
 <h3 id="overseersignalactiveleavesupdate"><a class="header" href="#overseersignalactiveleavesupdate"><code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
 <p>Determine all new blocks implicitly referenced by any new active leaves and add them to the view. Update the set of viable leaves accordingly. The weights of imported blocks can be determined by the <a href="../../types/overseer-protocol.html#chain-api-message"><code>ChainApiMessage::BlockWeight</code></a>.</p>
 <h3 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h3>
