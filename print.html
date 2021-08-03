@@ -1049,6 +1049,35 @@ PastCodePruning: Vec&lt;(ParaId, BlockNumber)&gt;;
 FutureCodeUpgrades: map ParaId =&gt; Option&lt;BlockNumber&gt;;
 /// The actual future code of a para.
 FutureCodeHash: map ParaId =&gt; Option&lt;ValidationCodeHash&gt;;
+/// This is used by the relay-chain to communicate to a parachain a go-ahead with in the upgrade procedure.
+///
+/// This value is absent when there are no upgrades scheduled or during the time the relay chain
+/// performs the checks. It is set at the first relay-chain block when the corresponding parachain
+/// can switch its upgrade function. As soon as the parachain's block is included, the value
+/// gets reset to `None`.
+///
+/// NOTE that this field is used by parachains via merkle storage proofs, therefore changing
+/// the format will require migration of parachains.
+UpgradeGoAheadSignal: map hasher(twox_64_concat) ParaId =&gt; Option&lt;UpgradeGoAhead&gt;;
+/// This is used by the relay-chain to communicate that there are restrictions for performing
+/// an upgrade for this parachain.
+///
+/// This may be a because the parachain waits for the upgrade cooldown to expire. Another
+/// potential use case is when we want to perform some maintanance (such as storage migration)
+/// we could restrict upgrades to make the process simpler.
+///
+/// NOTE that this field is used by parachains via merkle storage proofs, therefore changing
+/// the format will require migration of parachains.
+UpgradeRestrictionSignal: map hasher(twox_64_concat) ParaId =&gt; Option&lt;UpgradeRestriction&gt;;
+/// The list of parachains that are awaiting for their upgrade restriction to cooldown.
+///
+/// Ordered ascending by block number.
+UpgradeCooldowns: Vec&lt;(ParaId, T::BlockNumber)&gt;;
+/// The list of upcoming code upgrades. Each item is a pair of which para performs a code
+/// upgrade and at which relay-chain block it is expected at.
+///
+/// Ordered ascending by block number.
+UpcomingUpgrades: Vec&lt;(ParaId, T::BlockNumber)&gt;;
 /// The actions to perform during the start of a specific session index.
 ActionsQueue: map SessionIndex =&gt; Vec&lt;ParaId&gt;;
 /// Upcoming paras instantiation arguments.
@@ -1086,6 +1115,9 @@ parameters.</li>
 <ol>
 <li>Do pruning based on all entries in <code>PastCodePruning</code> with <code>BlockNumber &lt;= now</code>. Update the
 corresponding <code>PastCodeMeta</code> and <code>PastCode</code> accordingly.</li>
+<li>Toggle the upgrade related signals</li>
+<li>Collect all <code>(para_id, expected_at)</code> from <code>UpcomingUpgrades</code> where <code>expected_at &lt;= now</code> and prune them. For each para pruned set <code>UpgradeGoAheadSignal</code> to <code>GoAhead</code>.</li>
+<li>Collect all <code>(para_id, next_possible_upgrade_at)</code> from <code>UpgradeCooldowns</code> where <code>next_possible_upgrade_at &lt;= now</code> and prune them. For each para pruned set <code>UpgradeRestrictionSignal</code> to <code>Present</code>.</li>
 </ol>
 <h2 id="routines-2"><a class="header" href="#routines-2">Routines</a></h2>
 <ul>
@@ -1094,12 +1126,12 @@ session. Noop if para is already registered in the system with some <code>ParaLi
 <li><code>schedule_para_cleanup(ParaId)</code>: Schedule a para to be cleaned up after the next full session.</li>
 <li><code>schedule_parathread_upgrade(ParaId)</code>: Schedule a parathread to be upgraded to a parachain.</li>
 <li><code>schedule_parachain_downgrade(ParaId)</code>: Schedule a parachain to be downgraded to a parathread.</li>
-<li><code>schedule_code_upgrade(ParaId, CurrentCode, expected_at: BlockNumber)</code>: Schedule a future code
+<li><code>schedule_code_upgrade(ParaId, CurrentCode, relay_parent: BlockNumber, HostConfiguration)</code>: Schedule a future code
 upgrade of the given parachain, to be applied after inclusion of a block of the same parachain
-executed in the context of a relay-chain block with number &gt;= <code>expected_at</code>.</li>
+executed in the context of a relay-chain block with number &gt;= <code>relay_parent + config.validation_upgrade_delay</code>. If the upgrade is scheduled <code>UpgradeRestrictionSignal</code> is set and it will remain set until <code>relay_parent + config.validation_upgrade_frequency</code>.</li>
 <li><code>note_new_head(ParaId, HeadData, BlockNumber)</code>: note that a para has progressed to a new head,
 where the new head was executed in the context of a relay-chain block with given number. This will
-apply pending code upgrades based on the block number provided.</li>
+apply pending code upgrades based on the block number provided. If an upgrade took place it will clear the <code>UpgradeGoAheadSignal</code>.</li>
 <li><code>validation_code_at(ParaId, at: BlockNumber, assume_intermediate: Option&lt;BlockNumber&gt;)</code>: Fetches
 the validation code to be used when validating a block in the context of the given relay-chain
 height. A second block number parameter may be used to tell the lookup to proceed as if an
@@ -1347,7 +1379,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <li>
 <p><code>process_bitfields(expected_bits, Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
 <ol>
-<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to expected_bits.</li>
+<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to <code>expected_bits</code>.</li>
 <li>check that there are no duplicates</li>
 <li>check all validator signatures.</li>
 <li>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</li>
@@ -1384,7 +1416,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <li>
 <p><code>enact_candidate(relay_parent_number: BlockNumber, CommittedCandidateReceipt)</code>:</p>
 <ol>
-<li>If the receipt contains a code upgrade, Call <code>Paras::schedule_code_upgrade(para_id, code, relay_parent_number + config.validationl_upgrade_delay)</code>.</li>
+<li>If the receipt contains a code upgrade, Call <code>Paras::schedule_code_upgrade(para_id, code, relay_parent_number, config)</code>.</li>
 </ol>
 <blockquote>
 <p>TODO: Note that this is safe as long as we never enact candidates where the relay parent is across a session boundary. In that case, which we should be careful to avoid with contextual execution, the configuration might have changed and the para may de-sync from the host's understanding of it.</p>

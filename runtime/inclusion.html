@@ -190,7 +190,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <li>
 <p><code>process_bitfields(expected_bits, Bitfields, core_lookup: Fn(CoreIndex) -&gt; Option&lt;ParaId&gt;)</code>:</p>
 <ol>
-<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to expected_bits.</li>
+<li>check that there is at most 1 bitfield per validator and that the number of bits in each bitfield is equal to <code>expected_bits</code>.</li>
 <li>check that there are no duplicates</li>
 <li>check all validator signatures.</li>
 <li>apply each bit of bitfield to the corresponding pending candidate. looking up parathread cores using the <code>core_lookup</code>. Disregard bitfields that have a <code>1</code> bit for any free cores.</li>
@@ -227,7 +227,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <li>
 <p><code>enact_candidate(relay_parent_number: BlockNumber, CommittedCandidateReceipt)</code>:</p>
 <ol>
-<li>If the receipt contains a code upgrade, Call <code>Paras::schedule_code_upgrade(para_id, code, relay_parent_number + config.validationl_upgrade_delay)</code>.</li>
+<li>If the receipt contains a code upgrade, Call <code>Paras::schedule_code_upgrade(para_id, code, relay_parent_number, config)</code>.</li>
 </ol>
 <blockquote>
 <p>TODO: Note that this is safe as long as we never enact candidates where the relay parent is across a session boundary. In that case, which we should be careful to avoid with contextual execution, the configuration might have changed and the para may de-sync from the host's understanding of it.</p>
