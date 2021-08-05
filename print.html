@@ -5760,7 +5760,7 @@ enum BitfieldSigningMessage { }
     ///
     /// The result sender should be informed when at least one parachain validator seconded the collation. It is also
     /// completely okay to just drop the sender.
-    DistributeCollation(CandidateReceipt, PoV, Option&lt;oneshot::Sender&lt;SignedFullStatement&gt;&gt;),
+    DistributeCollation(CandidateReceipt, PoV, Option&lt;oneshot::Sender&lt;CollationSecondedSignal&gt;&gt;),
     /// Fetch a collation under the given relay-parent for the given ParaId.
     FetchCollation(Hash, ParaId, ResponseChannel&lt;(CandidateReceipt, PoV)&gt;),
     /// Report a collator as having provided an invalid collation. This should lead to disconnect
