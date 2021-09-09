@@ -1683,8 +1683,6 @@ dispatching any of individual upward messages returns an error.</p>
 struct HrmpOpenChannelRequest {
     /// Indicates if this request was confirmed by the recipient.
     confirmed: bool,
-    /// How many session boundaries ago this request was seen.
-    age: SessionIndex,
     /// The amount that the sender supplied at the time of creation of this request.
     sender_deposit: Balance,
     /// The maximum message size that could be put into the channel.
@@ -1853,8 +1851,8 @@ HrmpChannelDigests: map ParaId =&gt; Vec&lt;(BlockNumber, Vec&lt;ParaId&gt;)&gt;
 <li>Set <code>HrmpWatermarks</code> for <code>P</code> to be equal to <code>new_hrmp_watermark</code></li>
 </ol>
 <blockquote>
-<p>NOTE: That collecting digests can be inefficient and the time it takes grows very fast. Thanks to the aggresive
-parametrization this shouldn't be a big of a deal.
+<p>NOTE: That collecting digests can be inefficient and the time it takes grows very fast. Thanks to the aggressive
+parameterization this shouldn't be a big of a deal.
 If that becomes a problem consider introducing an extra dictionary which says at what block the given sender
 sent a message to the recipient.</p>
 </blockquote>
@@ -1931,6 +1929,16 @@ minus 1.</li>
 </li>
 </ol>
 </li>
+<li><code>hrmp_cancel_open_request(ch)</code>:
+<ol>
+<li>Check that <code>origin</code> is either <code>ch.sender</code> or <code>ch.recipient</code></li>
+<li>Check that the open channel request <code>ch</code> exists.</li>
+<li>Check that the open channel request for <code>ch</code> is not confirmed.</li>
+<li>Remove <code>ch</code> from <code>HrmpOpenChannelRequests</code> and <code>HrmpOpenChannelRequestsList</code></li>
+<li>Decrement <code>HrmpAcceptedChannelRequestCount</code> for <code>ch.recipient</code> by 1.</li>
+<li>Unreserve the deposit of <code>ch.sender</code>.</li>
+</ol>
+</li>
 <li><code>hrmp_close_channel(ch)</code>:
 <ol>
 <li>Check that <code>origin</code> is either <code>ch.sender</code> or <code>ch.recipient</code></li>
@@ -1962,23 +1970,20 @@ and append <code>ch</code> to <code>HrmpCloseChannelRequestsList</code>.</li>
 <li>Remove all outbound channels of <code>P</code>, i.e. <code>(P, _)</code>,</li>
 <li>Remove <code>HrmpOpenChannelRequestCount</code> for <code>P</code></li>
 <li>Remove <code>HrmpAcceptedChannelRequestCount</code> for <code>P</code>.</li>
+<li>Remove <code>HrmpOpenChannelRequests</code> and <code>HrmpOpenChannelRequestsList</code> for <code>(P, _)</code> and <code>(_, P)</code>.
+<ol>
+<li>For each removed channel request <code>C</code>:
+<ol>
+<li>Unreserve the sender's deposit if the sender is not present in <code>outgoing_paras</code></li>
+<li>Unreserve the recipient's deposit if <code>C</code> is confirmed and the recipient is not present in <code>outgoing_paras</code></li>
+</ol>
+</li>
+</ol>
+</li>
 </ol>
 </li>
 <li>For each channel designator <code>D</code> in <code>HrmpOpenChannelRequestsList</code> we query the request <code>R</code> from <code>HrmpOpenChannelRequests</code>:
 <ol>
-<li>if <code>R.confirmed = false</code>:
-<ol>
-<li>increment <code>R.age</code> by 1.</li>
-<li>if <code>R.age</code> reached a preconfigured time-to-live limit <code>config.hrmp_open_request_ttl</code>, then:
-<ol>
-<li>refund <code>R.sender_deposit</code> to the sender</li>
-<li>decrement <code>HrmpOpenChannelRequestCount</code> for <code>D.sender</code> by 1.</li>
-<li>remove <code>R</code></li>
-<li>remove <code>D</code></li>
-</ol>
-</li>
-</ol>
-</li>
 <li>if <code>R.confirmed = true</code>,
 <ol>
 <li>if both <code>D.sender</code> and <code>D.recipient</code> are not offboarded.</li>
@@ -6270,7 +6275,7 @@ pub enum CandidateValidationMessage {
 	pub dispute_period: SessionIndex,
 	/// How long after dispute conclusion to accept statements.
 	pub dispute_post_conclusion_acceptance_period: BlockNumber,
-	/// The maximum number of dispute spam slots 
+	/// The maximum number of dispute spam slots
 	pub dispute_max_spam_slots: u32,
 	/// How long it takes for a dispute to conclude by time-out, if no supermajority is reached.
 	pub dispute_conclusion_by_time_out_period: BlockNumber,
@@ -6313,8 +6318,6 @@ pub enum CandidateValidationMessage {
 	/// decide to do with its PoV so this value in practice will be picked as a fraction of the PoV
 	/// size.
 	pub max_downward_message_size: u32,
-	/// Number of sessions after which an HRMP open channel request expires.
-	pub hrmp_open_request_ttl: u32,
 	/// The deposit that the sender should provide for opening an HRMP channel.
 	pub hrmp_sender_deposit: u32,
 	/// The deposit that the recipient should provide for accepting opening an HRMP channel.
@@ -6346,7 +6349,7 @@ pub enum CandidateValidationMessage {
 <p>Inherent data passed to a runtime entry-point for the advancement of parachain consensus.</p>
 <p>This contains 3 pieces of data:</p>
 <ol>
-<li><a href="types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a> </li>
+<li><a href="types/availability.html#signed-availability-bitfield"><code>Bitfields</code></a></li>
 <li><a href="types/backing.html#backed-candidate"><code>BackedCandidates</code></a></li>
 <li><a href="types/disputes.html#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></li>
 </ol>
