@@ -143,7 +143,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="parainherent"><a class="header" href="#parainherent">ParaInherent</a></h1>
+                        <h1 id="parainherent"><a class="header" href="#parainherent"><code>ParaInherent</code></a></h1>
 <p>This module is responsible for providing all data given to the runtime by the block author to the various parachains modules. The entry-point is mandatory, in that it must be invoked exactly once within every block, and it is also &quot;inherent&quot;, in that it is provided with no origin by the block author. The data within it carries its own authentication; i.e. the data takes the form of signed statements by validators. If any of the steps within fails, the entry-point is considered as having failed and the block will be invalid.</p>
 <p>This module does not have the same initialization/finalization concerns as the others, as it only requires that entry points be triggered after all modules have initialized and that finalization happens after entry points are triggered. Both of these are assumptions we have already made about the runtime's order of operations, so this module doesn't need to be initialized or finalized by the <code>Initializer</code>.</p>
 <p>There are a couple of important notes to the operations in this inherent as they relate to disputes.</p>
@@ -171,7 +171,7 @@
 <li>Hash the parent header and make sure that it corresponds to the block hash of the parent (tracked by the <code>frame_system</code> FRAME module),</li>
 <li>Invoke <code>Disputes::provide_multi_dispute_data</code>.</li>
 <li>If <code>Disputes::is_frozen</code>, return and set <code>Included</code> to <code>Some(())</code>.</li>
-<li>If there are any created disputes from the current session, invoke <code>Inclusion::collect_disputed</code> with the disputed candidates. Annotate each returned core with <code>FreedReason::Concluded</code>.</li>
+<li>If there are any concluded disputes from the current session, invoke <code>Inclusion::collect_disputed</code> with the disputed candidates. Annotate each returned core with <code>FreedReason::Concluded</code>.</li>
 <li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide the number of availability cores (<code>Scheduler::availability_cores().len()</code>) as the expected number of bits and a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>For each freed candidate from the <code>Inclusion::process_bitfields</code> call, invoke <code>Disputes::note_included(current_session, candidate)</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it and annotate each of those freed cores with <code>FreedReason::TimedOut</code>.</li>
@@ -179,7 +179,7 @@
 <li>Invoke <code>Scheduler::clear</code></li>
 <li>Invoke <code>Scheduler::schedule(freed_cores, System::current_block())</code></li>
 <li>Extract <code>parent_storage_root</code> from the parent header,</li>
-<li>If <code>Disputes::could_be_invalid(current_session, candidate)</code> is true for any of the <code>backed_candidates</code>, fail.</li>
+<li>If <code>Disputes::concluded_invalid(current_session, candidate)</code> is true for any of the <code>backed_candidates</code>, fail.</li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(parent_storage_root, backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
 <li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
 <li>Call the <code>Ump::process_pending_upward_messages</code> routine to execute all messages in upward dispatch queues.</li>
