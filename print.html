@@ -929,7 +929,8 @@ guaranteed to pass the <code>provide_multi_dispute_data</code> checks.</li>
 <p><code>revert_and_freeze(BlockNumber)</code>:</p>
 <ol>
 <li>If <code>is_frozen()</code> return.</li>
-<li>Set <code>Frozen</code> to <code>Some(BlockNumber)</code> to indicate a rollback to the given block number is necessary.</li>
+<li>Set <code>Frozen</code> to <code>Some(BlockNumber)</code> to indicate a rollback to the block number.</li>
+<li>Issue a <code>Revert(BlockNumber + 1)</code> log to indicate a rollback of the block's child in the header chain, which is the same as a rollback to the block number.</li>
 </ol>
 </li>
 </ul>
