@@ -247,6 +247,9 @@ CandidateHash =&gt; CandidateEntry
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>const APPROVAL_SESSIONS: SessionIndex = 6;
+
+// The minimum amount of ticks that an assignment must have been known for.
+const APPROVAL_DELAY: Tick = 2;
 <span class="boring">}
 </span></code></pre></pre>
 <p>In-memory state:</p>
@@ -427,7 +430,7 @@ struct State {
 <li>If the <code>approval_entry</code> is approved, this doesn't need to be woken up again.</li>
 <li>If <code>RequiredTranches::All</code> - no wakeup. We assume other incoming votes will trigger wakeup and potentially re-schedule.</li>
 <li>If <code>RequiredTranches::Pending { considered, next_no_show, uncovered, maximum_broadcast, clock_drift }</code> - schedule at the lesser of the next no-show tick, or the tick, offset positively by <code>clock_drift</code> of the next non-empty tranche we are aware of after <code>considered</code>, including any tranche containing our own unbroadcast assignment. This can lead to no wakeup in the case that we have already broadcast our assignment and there are no pending no-shows; that is, we have approval votes for every assignment we've received that is not already a no-show. In this case, we will be re-triggered by other validators broadcasting their assignments.</li>
-<li>If <code>RequiredTranches::Exact { next_no_show, .. }</code> - set a wakeup for the next no-show tick.</li>
+<li>If <code>RequiredTranches::Exact { next_no_show, latest_assignment_tick, .. }</code> - set a wakeup for the earlier of the next no-show tick or the latest assignment tick + <code>APPROVAL_DELAY</code>.</li>
 </ul>
 <h4 id="launch-approval-work"><a class="header" href="#launch-approval-work">Launch Approval Work</a></h4>
 <ul>
@@ -496,6 +499,8 @@ struct State {
     /// event that there are some assignments that don't have corresponding approval votes. If this
     /// is `None`, all assignments have approvals.
     next_no_show: Option&lt;Tick&gt;,
+    /// The last tick at which a needed assignment was received.
+    last_assignment_tick: Option&lt;Tick&gt;,
   }
 }
 <span class="boring">}
@@ -511,8 +516,9 @@ struct State {
 <li>Set a clock drift of <code>depth * no_show_duration</code></li>
 <li>Take tranches up to <code>tranche_now - clock_drift</code> until all needed assignments are met.</li>
 <li>Keep track of the <code>next_no_show</code> according to the clock drift, as we go.</li>
+<li>Keep track of the <code>last_assignment_tick</code> as we go.</li>
 <li>If running out of tranches before then, return <code>Pending { considered, next_no_show, maximum_broadcast, clock_drift }</code></li>
-<li>If there are no no-shows, return <code>Exact { needed, tolerated_missing, next_no_show }</code></li>
+<li>If there are no no-shows, return <code>Exact { needed, tolerated_missing, next_no_show, last_assignment_tick }</code></li>
 <li><code>maximum_broadcast</code> is either <code>DelayTranche::max_value()</code> at tranche 0 or otherwise by the last considered tranche + the number of uncovered no-shows at this point.</li>
 <li>If there are no-shows, return to the beginning, incrementing <code>depth</code> and attempting to cover the number of no-shows. Each no-show must be covered by a non-empty tranche, which are tranches that have at least one assignment. Each non-empty tranche covers exactly one no-show.</li>
 <li>If at any point, it seems that all validators are required, do an early return with <code>RequiredTranches::All</code> which indicates that everyone should broadcast.</li>
@@ -524,7 +530,12 @@ struct State {
 <li>If we have <code>3 * n_approvals &gt; n_validators</code>, return true. This is because any set with f+1 validators must have at least one honest validator, who has approved the candidate.</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::Pending</code>, return false</li>
 <li>If <code>n_tranches</code> is <code>RequiredTranches::All</code>, return false.</li>
-<li>If <code>n_tranches</code> is <code>RequiredTranches::Exact { tranche, tolerated_missing, .. }</code>, then we return whether all assigned validators up to <code>tranche</code> less <code>tolerated_missing</code> have approved. e.g. if we had 5 tranches and 1 tolerated missing, we would accept only if all but 1 of assigned validators in tranches 0..=5 have approved. In that example, we also accept all validators in tranches 0..=5 having approved, but that would indicate that the <code>RequiredTranches</code> value was incorrectly constructed, so it is not realistic. <code>tolerated_missing</code> actually represents covered no-shows. If there are more missing approvals than there are tolerated missing, that indicates that there are some assignments which are not yet no-shows, but may become no-shows, and we should wait for the validators to either approve or become no-shows.</li>
+<li>If <code>n_tranches</code> is <code>RequiredTranches::Exact { tranche, tolerated_missing, latest_assignment_tick, .. }</code>, then we return whether all assigned validators up to <code>tranche</code> less <code>tolerated_missing</code> have approved and <code>latest_assignment_tick + APPROVAL_DELAY &gt;= tick_now</code>. 
+<ul>
+<li>e.g. if we had 5 tranches and 1 tolerated missing, we would accept only if all but 1 of assigned validators in tranches 0..=5 have approved. In that example, we also accept all validators in tranches 0..=5 having approved, but that would indicate that the <code>RequiredTranches</code> value was incorrectly constructed, so it is not realistic. <code>tolerated_missing</code> actually represents covered no-shows. If there are more missing approvals than there are tolerated missing, that indicates that there are some assignments which are not yet no-shows, but may become no-shows, and we should wait for the validators to either approve or become no-shows. </li>
+<li>e.g. If the above passes and the <code>latest_assignment_tick</code> was 5 and the current tick was 6, then we'd return false.</li>
+</ul>
+</li>
 </ul>
 <h3 id="time"><a class="header" href="#time">Time</a></h3>
 <h4 id="current-tranche"><a class="header" href="#current-tranche">Current Tranche</a></h4>
