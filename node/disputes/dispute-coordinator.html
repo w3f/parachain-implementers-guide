@@ -222,6 +222,11 @@ dispute participation subsystem.</p>
 </ul>
 </li>
 <li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the <code>ChainApi</code> subsystem to blacklist the chain.</li>
+<li>For each new block, use the <code>RuntimeApi</code> to obtain a <code>ScrapedOnChainVotes</code> and handle them as if they were provided by means of a incoming <code>DisputeCoordinatorMessage::ImportStatement</code> message.
+<ul>
+<li>In the case of a concluded dispute, there are some cases that do not guarantee the presence of a <code>CandidateReceipt</code>, where handling has to be defered <a href="https://github.com/paritytech/polkadot/issues/4011">https://github.com/paritytech/polkadot/issues/4011</a>.</li>
+</ul>
+</li>
 </ul>
 <h3 id="on-overseersignalconclude"><a class="header" href="#on-overseersignalconclude">On <code>OverseerSignal::Conclude</code></a></h3>
 <p>Exit gracefully.</p>

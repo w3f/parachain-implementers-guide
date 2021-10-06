@@ -148,7 +148,15 @@
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>Included: Option&lt;()&gt;,
+</span>/// Whether the para inherent was included or not.
+Included: Option&lt;()&gt;,
+<span class="boring">}
+</span></code></pre></pre>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Scraped on chain votes to be used in disputes off-chain.
+OnChainVotes: Option&lt;ScrapedOnChainVotes&gt;,
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="finalization"><a class="header" href="#finalization">Finalization</a></h2>
@@ -163,7 +171,7 @@
 <li>Invoke <code>Disputes::provide_multi_dispute_data</code>.</li>
 <li>If <code>Disputes::is_frozen</code>, return and set <code>Included</code> to <code>Some(())</code>.</li>
 <li>If there are any concluded disputes from the current session, invoke <code>Inclusion::collect_disputed</code> with the disputed candidates. Annotate each returned core with <code>FreedReason::Concluded</code>, sort them, and invoke <code>Scheduler::free_cores</code> with them.</li>
-<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set of freed cores. Provide the number of availability cores (<code>Scheduler::availability_cores().len()</code>) as the expected number of bits and a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
+<li>The <code>Bitfields</code> are first forwarded to the <code>Inclusion::process_bitfields</code> routine, returning a set included candidates and the respective freed cores. Provide the number of availability cores (<code>Scheduler::availability_cores().len()</code>) as the expected number of bits and a <code>Scheduler::core_para</code> as a core-lookup to the <code>process_bitfields</code> routine. Annotate each of these freed cores with <code>FreedReason::Concluded</code>.</li>
 <li>For each freed candidate from the <code>Inclusion::process_bitfields</code> call, invoke <code>Disputes::note_included(current_session, candidate)</code>.</li>
 <li>If <code>Scheduler::availability_timeout_predicate</code> is <code>Some</code>, invoke <code>Inclusion::collect_pending</code> using it and annotate each of those freed cores with <code>FreedReason::TimedOut</code>.</li>
 <li>Combine and sort the the bitfield-freed cores and the timed-out cores.</li>
@@ -172,7 +180,9 @@
 <li>Extract <code>parent_storage_root</code> from the parent header,</li>
 <li>If <code>Disputes::concluded_invalid(current_session, candidate)</code> is true for any of the <code>backed_candidates</code>, fail.</li>
 <li>Invoke the <code>Inclusion::process_candidates</code> routine with the parameters <code>(parent_storage_root, backed_candidates, Scheduler::scheduled(), Scheduler::group_validators)</code>.</li>
-<li>Call <code>Scheduler::occupied</code> using the return value of the <code>Inclusion::process_candidates</code> call above, first sorting the list of assigned core indices.</li>
+<li>Deconstruct the returned <code>ProcessedCandidates</code> value into <code>occupied</code> core indices, and backing validators by candidate <code>backing_validators_per_candidate</code> represented by <code>Vec&lt;(CandidateReceipt, Vec&lt;(ValidatorIndex, ValidityAttestation)&gt;)&gt;</code>.</li>
+<li>Set <code>OnChainVotes</code> to <code>ScrapedOnChainVotes</code>, based on the <code>current_session</code>, concluded <code>disputes</code>, and <code>backing_validators_per_candidate</code>.</li>
+<li>Call <code>Scheduler::occupied</code> using the <code>occupied</code> core indices of the returned  above, first sorting the list of assigned core indices.</li>
 <li>Call the <code>Ump::process_pending_upward_messages</code> routine to execute all messages in upward dispatch queues.</li>
 <li>If all of the above succeeds, set <code>Included</code> to <code>Some(())</code>.</li>
 </ol>

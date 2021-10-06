@@ -211,6 +211,24 @@ enum InvalidDisputeStatementKind {
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h2 id="scrapedonchainvotes"><a class="header" href="#scrapedonchainvotes"><code>ScrapedOnChainVotes</code></a></h2>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>/// Type for transcending recorded on-chain
+/// dispute relevant votes and conclusions to
+/// the off-chain `DisputesCoordinator`.
+struct ScrapedOnChainVotes {
+    /// The session index at which the block was included.
+    session: SessionIndex,
+    /// The backing and seconding validity attestations for all candidates, provigind the full candidate receipt.
+    backing_validators_per_candidate: Vec&lt;(CandidateReceipt&lt;H&gt;, Vec&lt;(ValidatorIndex, ValidityAttestation)&gt;)&gt;
+    /// Set of concluded disputes that were recorded
+    /// on chain within the inherent.
+    disputes: MultiDisputeStatementSet,
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
