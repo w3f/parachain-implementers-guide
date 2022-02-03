@@ -27,10 +27,14 @@ jobs:
       with:
         mdbook-version: 'latest'
 
-    - name: Setup mdBook extensions
+    - name: Setup mdBook lincheck and mermaid
+      run: |
+        cargo install mdbook-linkcheck mdbook-mermaid
+
+    - name: Setup mdBook graphviz
       run: |
         sudo apt install -y graphviz
-        cargo install mdbook-linkcheck mdbook-mermaid  mdbook-graphviz
+        cargo install --git https://github.com/dylanowen/mdbook-graphviz
 
     - name: Build implementers guide
       run: |
