@@ -1,4 +1,4 @@
-name: Build the Parachain Implementers's Guide and save as static website.
+name: Build and deploy the Parachain Implementers Guide to Github Pages
 
 on:
   schedule:
@@ -12,45 +12,33 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Checkout local repo
-      uses: actions/checkout@v2
-
     - name: Clone polkadot repo
       uses: actions/checkout@v2
       with:
         repository: paritytech/polkadot
-        path: .tmp_polkadot
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
 
     - name: Setup mdBook
       uses: peaceiris/actions-mdbook@v1
       with:
         mdbook-version: 'latest'
 
-    - name: Setup mdbook-linkcheck
-      run: |
-        cargo install mdbook-linkcheck
-
-    - name: Use Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-
-    - name: Setup mdbook-graphviz
+    - name: Setup mdBook extensions
       run: |
         sudo apt install -y graphviz
-        cargo install mdbook-graphviz
+        cargo install mdbook-linkcheck mdbook-mermaid  mdbook-graphviz
 
-    - name: Setup mdbook-mermaid
+    - name: Build implementers guide
       run: |
-        cargo install mdbook-mermaid
+        mdbook build roadmap/implementers-guide/
 
-    - name: Build book.
-      run: |
-        mdbook build .tmp_polkadot/roadmap/implementers-guide/
-
-    - name: Deploy
+    - name: Deploy implementers guide
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: .tmp_polkadot/roadmap/implementers-guide/book/html/
+        publish_dir: roadmap/implementers-guide/book/html/
 
