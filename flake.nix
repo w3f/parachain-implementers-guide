@@ -18,9 +18,9 @@
 
         mdbook-linkcheck = pkgs.callPackage ./mdbook-linkcheck.nix {};
 
-        rev = if self ? rev
-          then (builtins.substring 0 8 self.rev) 
-          else toString self.lastModified;
+        rev = if polkadot ? rev
+          then (builtins.substring 0 8 polkadot.rev) 
+          else toString polkadot.lastModified;
           
         args = { 
           version = rev;
