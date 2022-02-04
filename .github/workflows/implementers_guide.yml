@@ -22,16 +22,13 @@ jobs:
       with:
         toolchain: stable
 
-    - name: Setup mdBook
-      uses: peaceiris/actions-mdbook@v1
-      with:
-        mdbook-version: 'latest'
+    - uses: Swatinem/rust-cache@v1.3.0
 
-    - name: Setup mdBook lincheck and mermaid
+    - name: Setup stable mdbook and extensions
       run: |
-        cargo install mdbook-linkcheck mdbook-mermaid
+        cargo install mdbook mdbook-linkcheck mdbook-mermaid
 
-    - name: Setup mdBook graphviz
+    - name: Setup mdBook graphviz (master)
       run: |
         sudo apt install -y graphviz
         cargo install --git https://github.com/dylanowen/mdbook-graphviz
