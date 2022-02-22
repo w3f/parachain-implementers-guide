@@ -372,15 +372,15 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 </ul>
 <h4 id="unify_with_peerpeer-peerid-view"><a class="header" href="#unify_with_peerpeer-peerid-view"><code>unify_with_peer(peer: PeerId, view)</code>:</a></h4>
 <ol>
-<li>Initialize a set <code>fresh_blocks = {}</code></li>
+<li>Initialize a set <code>missing_knowledge = {}</code></li>
 </ol>
 <p>For each block in the view:
 2. Load the <code>BlockEntry</code> for the block. If the block is unknown, or the number is less than or equal to the view's finalized number go to step 6.
-3. Inspect the <code>known_by</code> set of the <code>BlockEntry</code>. If the peer is already present, go to step 6.
-4. Add the peer to <code>known_by</code> with a cloned version of <code>block_entry.knowledge</code>. and add the hash of the block to <code>fresh_blocks</code>.
+3. Inspect the <code>known_by</code> set of the <code>BlockEntry</code>. If the peer already knows all assignments/approvals, go to step 6.
+4. Add the peer to <code>known_by</code> and add the hash and missing knowledge of the block to <code>missing_knowledge</code>.
 5. Return to step 2 with the ancestor of the block.</p>
 <ol start="6">
-<li>For each block in <code>fresh_blocks</code>, send all assignments and approvals for all candidates in those blocks to the peer.</li>
+<li>For each block in <code>missing_knowledge</code>, send all assignments and approvals for all candidates in those blocks to the peer.</li>
 </ol>
 
                     </main>
