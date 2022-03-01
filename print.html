@@ -4292,14 +4292,20 @@ Note that we must do this after checking for out-of-view to avoid being spammed.
 <p>This is a networking component by which validators notify each other of live disputes and statements on those disputes.</p>
 <p>Validators will in the future distribute votes to each other via the network, but at the moment learn of disputes just from watching the chain.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-coordinator-1"><a class="header" href="#dispute-coordinator-1">Dispute Coordinator</a></h1>
-<p>This is the central subsystem of the node-side components which participate in disputes. This subsystem wraps a database which tracks all statements observed by all validators over some window of sessions. Votes older than this session window are pruned.</p>
-<p>This subsystem will be the point which produce dispute votes, either positive or negative, based on locally-observed validation results as well as a sink for votes received by other subsystems. When importing a dispute vote from another node, this will trigger participation in the dispute.</p>
+<p>The coordinator is the central subsystem of the node-side components which participate in disputes. It
+wraps a database, which used to track all statements observed by <em>all</em> validators over some window
+of sessions. Votes older than this session window are pruned.</p>
+<p>This subsystem will be the point which produce dispute votes, either positive or negative, based on
+locally-observed validation results as well as a sink for votes received by other subsystems. When
+a statement import makes it clear that a dispute has been raised (there are opposing votes for a
+candidate), the dispute coordinator will make sure the local node will participate in the dispute.</p>
 <h2 id="database-schema-1"><a class="header" href="#database-schema-1">Database Schema</a></h2>
 <p>We use an underlying Key-Value database where we assume we have the following operations available:</p>
 <ul>
 <li><code>write(key, value)</code></li>
 <li><code>read(key) -&gt; Option&lt;value&gt;</code></li>
-<li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
+<li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in
+lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
 <pre><pre class="playground"><code class="language-rust">
@@ -4315,33 +4321,144 @@ This draws on the <a href="node/disputes/../../types/disputes.html">dispute stat
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>struct CandidateVotes {
-    // The receipt of the candidate itself.
-    candidate_receipt: CandidateReceipt,
-    // Sorted by validator index.
-    valid: Vec&lt;(ValidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
-    // Sorted by validator index.
-    invalid: Vec&lt;(InvalidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
+</span>/// Tracked votes on candidates, for the purposes of dispute resolution.
+pub struct CandidateVotes {
+  /// The receipt of the candidate itself.
+  pub candidate_receipt: CandidateReceipt,
+  /// Votes of validity, sorted by validator index.
+  pub valid: Vec&lt;(ValidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
+  /// Votes of invalidity, sorted by validator index.
+  pub invalid: Vec&lt;(InvalidDisputeStatementKind, ValidatorIndex, ValidatorSignature)&gt;,
 }
 
-// The status of the dispute.
-enum DisputeStatus {
-  // Dispute is still active.
+/// The mapping for recent disputes; any which have not yet been pruned for being ancient.
+pub type RecentDisputes = std::collections::BTreeMap&lt;(SessionIndex, CandidateHash), DisputeStatus&gt;;
+
+/// The status of dispute. This is a state machine which can be altered by the
+/// helper methods.
+pub enum DisputeStatus {
+  /// The dispute is active and unconcluded.
   Active,
-  // Dispute concluded positive (2/3 supermajority) along with what
-  // timestamp it concluded at.
-  ConcludedPositive(Timestamp),
-  // Dispute concluded negative (2/3 supermajority, takes precedence over
-  // positive in the case of many double-votes).
-  ConcludedNegative(Timestamp),
-}
-
-struct RecentDisputes {
-    // sorted by session index and then by candidate hash.
-    disputed: Vec&lt;(SessionIndex, CandidateHash, DisputeStatus)&gt;,
+  /// The dispute has been concluded in favor of the candidate
+  /// since the given timestamp.
+  ConcludedFor(Timestamp),
+  /// The dispute has been concluded against the candidate
+  /// since the given timestamp.
+  ///
+  /// This takes precedence over `ConcludedFor` in the case that
+  /// both are true, which is impossible unless a large amount of
+  /// validators are participating on both sides.
+  ConcludedAgainst(Timestamp),
+  /// Dispute has been confirmed (more than `byzantine_threshold` have already participated/ or
+  /// we have seen the candidate included already/participated successfully ourselves).
+  Confirmed,
 }
 <span class="boring">}
 </span></code></pre></pre>
+<h2 id="internal-modules"><a class="header" href="#internal-modules">Internal modules</a></h2>
+<p>Dispute coordinator subsystem includes a few internal modules - <code>ordering</code>, <code>participation</code> and
+<code>spam_slots</code>.</p>
+<h3 id="ordering"><a class="header" href="#ordering">Ordering</a></h3>
+<p>Ordering module contains two structs - <code>OrderingProvider</code> and <code>CandidateComparator</code>. The former
+keeps track of included blocks and their ancestors. It also generates <code>CandidateComparator</code>
+instances for candidates.</p>
+<p><code>CandidateComparator</code> wraps the candidate hash and its parent block number:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct CandidateComparator {
+  /// Block number of the relay parent.
+  ///
+  /// Important, so we will be participating in oldest disputes first.
+  ///
+  /// Note: In theory it would make more sense to use the `BlockNumber` of the including
+  /// block, as inclusion time is the actual relevant event when it comes to ordering. The
+  /// problem is, that a candidate can get included multiple times on forks, so the `BlockNumber`
+  /// of the including block is not unique. We could theoretically work around that problem, by
+  /// just using the lowest `BlockNumber` of all available including blocks - the problem is,
+  /// that is not stable. If a new fork appears after the fact, we would start ordering the same
+  /// candidate differently, which would result in the same candidate getting queued twice.
+  relay_parent_block_number: BlockNumber,
+  /// By adding the `CandidateHash`, we can guarantee a unique ordering across candidates.
+  candidate_hash: CandidateHash,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>It also implements <code>PartialEq</code>, <code>Eq</code>, <code>PartialOrd</code> and <code>Ord</code> traits enabling comparison operations
+with the comparators.</p>
+<p><code>Comparator</code> is used inside <code>Participation</code> module as a key for saving <code>ParticipationRequest</code>. It
+provides the ordering required to process the most important requests first (check the next section
+for details).</p>
+<h3 id="participation"><a class="header" href="#participation">Participation</a></h3>
+<p>This module keeps track of the disputes that the node participates in. At most there are
+<code>MAX_PARALLEL_PARTICIPATIONS</code> parallel participations in the subsystem. The internal state of the
+module is:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Participation {
+  /// Participations currently being processed.
+  running_participations: HashSet&lt;CandidateHash&gt;,
+  /// Priority and best effort queues.
+  queue: Queues,
+  /// Sender to be passed to worker tasks.
+  worker_sender: WorkerMessageSender,
+  /// Some recent block for retrieving validation code from chain.
+  recent_block: Option&lt;(BlockNumber, Hash)&gt;,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>New candidates are processed immediately if the number of running participations is less than
+<code>MAX_PARALLEL_PARTICIPATIONS</code> or queued for processing otherwise. <code>Participation</code> uses another
+internal module <code>Queues</code> which provides prioritisation of the disputes. It guarantees that important
+disputes will be processed first. The actual decision how important is a given dispute is performed
+by the <code>ordering</code> module.</p>
+<p>The actual participation is performed by <code>fn participate()</code>. First it sends
+<code>AvailabilityRecoveryMessage::RecoverAvailableData</code> to obtain data from the validators. Then gets
+the validation code and stores <code>AvailableData</code> with <code>AvailabilityStoreMessage::StoreAvailableData</code>
+message.  Finally Participation module performs the actual validation and sends the result as
+<code>WorkerMessage</code> to the main subsystem (<code>DisputeCoordinatorSubsystem</code>). <code>Participation</code> generates
+messages which <code>DisputeCoordinatorSubsystem</code> consumes. You can find more information how these
+events are processed in the next section.</p>
+<h3 id="spamslots"><a class="header" href="#spamslots">SpamSlots</a></h3>
+<p><code>struct SpamSlots</code> aims to protect the validator from malicious peers generating erroneous disputes
+with the purpose of overloading the validator with unnecessary work.</p>
+<p>How the spam protection works? Each peer validator has got a spam slot for unconfirmed disputes with
+fixed size (<code>MAX_SPAM_VOTES</code>). Each unconfirmed dispute is added to one such slot until all slots
+for the given validator are filled up. At this point statements from this validator for unconfirmed
+disputes are ignored.</p>
+<p>What unconfirmed dispute means? Quote from the source code provides an excellent explanation:</p>
+<blockquote>
+<p>Node has not seen the candidate be included on any chain, it has not cast a
+vote itself on that dispute, the dispute has not yet reached more than a third of
+validator's votes and the including relay chain block has not yet been finalized.</p>
+</blockquote>
+<p><code>SpamSlots</code> has got this internal state:</p>
+<pre><pre class="playground"><code class="language-rust">
+<span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct SpamSlots {
+  /// Counts per validator and session.
+  ///
+  /// Must not exceed `MAX_SPAM_VOTES`.
+  slots: HashMap&lt;(SessionIndex, ValidatorIndex), SpamCount&gt;,
+
+  /// All unconfirmed candidates we are aware of right now.
+  unconfirmed: UnconfirmedDisputes,
+}
+<span class="boring">}
+</span></code></pre></pre>
+<p>It's worth noting that <code>SpamSlots</code> provides an interface for adding entries (<code>fn add_unconfirmed()</code>)
+and removing them (<code>fn clear()</code>). The actual spam protection logic resides in the main subsystem, in
+<code>fn handle_import_statements()</code>. It is invoked during <code>DisputeCoordinatorMessage::ImportStatements</code>
+message handling (there is a dedicated section for it below). Spam slots are indexed by session id
+and validator index. For each such pair there is a limit of active disputes. If this limit is
+reached - the import is ignored.</p>
+<p>Spam protection is performed only on invalid vote statements where the concerned candidate is not
+included on any chain, not confirmed, not local and the votes hasn't reached the byzantine
+threshold. This check is performed by <code>Ordering</code> module.</p>
+<p>Spam slots are cleared when the session window advances so that the <code>SpamSlots</code> state doesn't grow
+indefinitely.</p>
 <h2 id="protocol-10"><a class="header" href="#protocol-10">Protocol</a></h2>
 <p>Input: <a href="node/disputes/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage</code></a></p>
 <p>Output:</p>
@@ -4349,102 +4466,95 @@ struct RecentDisputes {
 <li><a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage</code></a></li>
 </ul>
 <h2 id="functionality-10"><a class="header" href="#functionality-10">Functionality</a></h2>
-<p>This assumes a constant <code>DISPUTE_WINDOW: SessionWindowSize</code>. This should correspond to at least 1 day.</p>
+<p>This assumes a constant <code>DISPUTE_WINDOW: SessionWindowSize</code>. This should correspond to at least 1
+day.</p>
 <p>Ephemeral in-memory state:</p>
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
-    keystore: KeyStore,
-    highest_session: SessionIndex,
+  keystore: Arc&lt;LocalKeystore&gt;,
+  rolling_session_window: RollingSessionWindow,
+  highest_session: SessionIndex,
+  spam_slots: SpamSlots,
+  participation: Participation,
+  ordering_provider: OrderingProvider,
+  participation_receiver: WorkerMessageReceiver,
+  metrics: Metrics,
+  // This tracks only rolling session window failures.
+  // It can be a `Vec` if the need to track more arises.
+  error: Option&lt;SessionsUnavailable&gt;,
+  /// Latest relay blocks that have been successfully scraped.
+  last_scraped_blocks: LruCache&lt;Hash, ()&gt;,
 }
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="on-startup-2"><a class="header" href="#on-startup-2">On startup</a></h3>
-<p>Check DB for recorded votes for non concluded disputes we have not yet
-recorded a local statement for.
-For all of those initiate dispute participation.</p>
-<h3 id="on-overseersignalactiveleavesupdate"><a class="header" href="#on-overseersignalactiveleavesupdate">On <code>OverseerSignal::ActiveLeavesUpdate</code></a></h3>
-<p>For each leaf in the leaves update:</p>
+<p>When the subsystem is initialised it waits for a new leaf (message <code>OverseerSignal::ActiveLeaves</code>).
+The leaf is used to initialise a <code>RollingSessionWindow</code> instance (contains leaf hash and
+<code>DISPUTE_WINDOW</code> which is a constant.</p>
+<p>Next the active disputes are loaded from the DB. The subsystem checks if there are disputes for
+which a local statement is not issued. A list of these is passed to the main loop.</p>
+<h3 id="the-main-loop"><a class="header" href="#the-main-loop">The main loop</a></h3>
+<p>Just after the subsystem initialisation the main loop (<code>fn run_until_error()</code>) runs until
+<code>OverseerSignal::Conclude</code> signal is received. Before executing the actual main loop the leaf and
+the participations, obtained during startup are enqueued for processing. If there is capacity (the
+number of running participations is less than <code>MAX_PARALLEL_PARTICIPATIONS</code>) participation jobs are
+started (<code>func participate</code>). Finally the component waits for messages from Overseer. The behaviour
+on each message is described in the following subsections.</p>
+<h3 id="on-overseersignalactiveleaves"><a class="header" href="#on-overseersignalactiveleaves">On <code>OverseerSignal::ActiveLeaves</code></a></h3>
+<p>Initiates processing via the <code>Participation</code> module and updates the internal state of the subsystem.
+More concretely:</p>
 <ul>
-<li>Fetch the session index for the child of the block with a <a href="node/disputes/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiMessage::SessionIndexForChild</code></a>.</li>
-<li>If the session index is higher than <code>state.highest_session</code>:
-<ul>
-<li>update <code>state.highest_session</code></li>
-<li>remove everything with session index less than <code>state.highest_session - DISPUTE_WINDOW</code> from the <code>&quot;recent-disputes&quot;</code> in the DB.</li>
-<li>Use <code>iter_with_prefix</code> to remove everything from <code>&quot;earliest-session&quot;</code> up to <code>state.highest_session - DISPUTE_WINDOW</code> from the DB under <code>&quot;candidate-votes&quot;</code>.</li>
-<li>Update <code>&quot;earliest-session&quot;</code> to be equal to <code>state.highest_session - DISPUTE_WINDOW</code>.</li>
+<li>Passes the <code>ActiveLeavesUpdate</code> message to the ordering provider.</li>
+<li>Updates the session info cache.</li>
+<li>Updates <code>self.highest_session</code>.</li>
+<li>Prunes old spam slots in case the session window has advanced.</li>
+<li>Scrapes on chain votes.</li>
 </ul>
-</li>
-<li>For each new block, explicitly or implicitly, under the new leaf, scan for a dispute digest which indicates a rollback. If a rollback is detected, use the <code>ChainApi</code> subsystem to blacklist the chain.</li>
-<li>For each new block, use the <code>RuntimeApi</code> to obtain a <code>ScrapedOnChainVotes</code> and handle them as if they were provided by means of a incoming <code>DisputeCoordinatorMessage::ImportStatement</code> message.
-<ul>
-<li>In the case of a concluded dispute, there are some cases that do not guarantee the presence of a <code>CandidateReceipt</code>, where handling has to be defered <a href="https://github.com/paritytech/polkadot/issues/4011">https://github.com/paritytech/polkadot/issues/4011</a>.</li>
-</ul>
-</li>
-</ul>
+<h3 id="on-muxedmessageparticipation"><a class="header" href="#on-muxedmessageparticipation">On <code>MuxedMessage::Participation</code></a></h3>
+<p>This message is sent from <code>Participatuion</code> module and indicates a processed dispute participation.
+It's the result of the processing job initiated with <code>OverseerSignal::ActiveLeaves</code>. The subsystem
+issues a <code>DisputeMessage</code> with the result.</p>
 <h3 id="on-overseersignalconclude"><a class="header" href="#on-overseersignalconclude">On <code>OverseerSignal::Conclude</code></a></h3>
 <p>Exit gracefully.</p>
 <h3 id="on-overseersignalblockfinalized"><a class="header" href="#on-overseersignalblockfinalized">On <code>OverseerSignal::BlockFinalized</code></a></h3>
-<p>Do nothing.</p>
-<h3 id="on-disputecoordinatormessageimportstatement"><a class="header" href="#on-disputecoordinatormessageimportstatement">On <code>DisputeCoordinatorMessage::ImportStatement</code></a></h3>
-<ol>
-<li>Deconstruct into parts <code>{ candidate_hash, candidate_receipt, session, statements }</code>.</li>
-<li>If the session is earlier than <code>state.highest_session - DISPUTE_WINDOW</code>,
-respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
-<li>Load from underlying DB by querying <code>(&quot;candidate-votes&quot;, session, candidate_hash)</code>.  If that does not exist, create fresh with the given
-candidate receipt.</li>
-<li>If candidate votes is empty and the statements only contain dispute-specific
-votes, respond with <code>ImportStatementsResult::InvalidImport</code> and return.</li>
-<li>Otherwise, if there is already an entry from the validator in the respective
-<code>valid</code> or <code>invalid</code> field of the <code>CandidateVotes</code>,  respond with
-<code>ImportStatementsResult::ValidImport</code> and return.</li>
-<li>Add an entry to the respective <code>valid</code> or <code>invalid</code> list of the
-<code>CandidateVotes</code> for each statement in <code>statements</code>.</li>
-<li>If the both <code>valid</code> and <code>invalid</code> lists now became non-zero length where
-previously one or both had zero length, the candidate is now freshly
-disputed.</li>
-<li>If the candidate is not freshly disputed as determined by 7, continue with
-10. If it is freshly disputed now, load <code>&quot;recent-disputes&quot;</code> and add the
-candidate hash and session index. Then, if we have local statements with
-regards to that candidate,  also continue with 10. Otherwise proceed with 9.</li>
-<li>Issue a
-[<code>DisputeParticipationMessage::Participate</code>][DisputeParticipationMessage].
-Wait for response on the <code>report_availability</code> oneshot. If available, continue
-with 10. If not send back <code>ImportStatementsResult::InvalidImport</code> and return.</li>
-<li>Write the <code>CandidateVotes</code> to the underyling DB.</li>
-<li>Send back <code>ImportStatementsResult::ValidImport</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;valid&quot; direction,
-according to the <code>SessionInfo</code> of the dispute candidate's session, the
-<code>DisputeStatus</code> should be set to <code>ConcludedPositive(now)</code> unless it was
-already <code>ConcludedNegative</code>.</li>
-<li>If the dispute now has supermajority votes in the &quot;invalid&quot; direction,
-the <code>DisputeStatus</code> should be set to <code>ConcludedNegative(now)</code>. If it
-was <code>ConcludedPositive</code> before, the timestamp <code>now</code> should be copied
-from the previous status. It will be pruned after some time and all chains
-containing the disputed block will be reverted by the runtime and
-chain-selection subsystem.</li>
-<li>Write <code>&quot;recent-disputes&quot;</code></li>
-</ol>
+<p>Performs cleanup of the finalized candidate.</p>
+<h3 id="on-disputecoordinatormessageimportstatements"><a class="header" href="#on-disputecoordinatormessageimportstatements">On <code>DisputeCoordinatorMessage::ImportStatements</code></a></h3>
+<p>Import statements by validators are processed in <code>fn handle_import_statements()</code>. The function has
+got three main responsibilities:</p>
+<ul>
+<li>Initiate participation in disputes.</li>
+<li>Persist all fresh votes in the database. Fresh votes in this context means votes that are not
+already processed by the node.</li>
+<li>Spam protection on all invalid (<code>DisputeStatement::Invalid</code>) votes. Please check the SpamSlots
+section for details on how spam protection works.</li>
+</ul>
+<h3 id="on-disputecoordinatormessagerecentdisputes"><a class="header" href="#on-disputecoordinatormessagerecentdisputes">On <code>DisputeCoordinatorMessage::RecentDisputes</code></a></h3>
+<p>Returns all recent disputes saved in the DB.</p>
 <h3 id="on-disputecoordinatormessageactivedisputes"><a class="header" href="#on-disputecoordinatormessageactivedisputes">On <code>DisputeCoordinatorMessage::ActiveDisputes</code></a></h3>
-<ul>
-<li>Load <code>&quot;recent-disputes&quot;</code> and filter out any disputes which have been concluded for over 5 minutes. Return the filtered data</li>
-</ul>
+<p>Returns all recent disputes concluded within the last <code>ACTIVE_DURATION_SECS</code> .</p>
 <h3 id="on-disputecoordinatormessagequerycandidatevotes"><a class="header" href="#on-disputecoordinatormessagequerycandidatevotes">On <code>DisputeCoordinatorMessage::QueryCandidateVotes</code></a></h3>
-<ul>
-<li>Load <code>&quot;candidate-votes&quot;</code> for every <code>(SessionIndex, CandidateHash)</code> in the query and return data within each <code>CandidateVote</code>.
-If a particular <code>candidate-vote</code> is missing, that particular request is omitted from the response.</li>
-</ul>
+<p>Loads <code>candidate-votes</code> for every <code>(SessionIndex, CandidateHash)</code> in the input query and returns
+data within each <code>CandidateVote</code>. If a particular <code>candidate-vote</code> is missing, that particular
+request is omitted from the response.</p>
 <h3 id="on-disputecoordinatormessageissuelocalstatement"><a class="header" href="#on-disputecoordinatormessageissuelocalstatement">On <code>DisputeCoordinatorMessage::IssueLocalStatement</code></a></h3>
+<p>Executes <code>fn issue_local_statement()</code> which performs the following operations:</p>
 <ul>
 <li>Deconstruct into parts <code>{ session_index, candidate_hash, candidate_receipt, is_valid }</code>.</li>
-<li>Construct a <a href="node/disputes/../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the parameterization of this routine.</li>
-<li>Sign the statement with each key in the <code>SessionInfo</code>'s list of parachain validation keys which is present in the keystore, except those whose indices appear in <code>voted_indices</code>. This will typically just be one key, but this does provide some future-proofing for situations where the same node may run on behalf multiple validators. At the time of writing, this is not a use-case we support as other subsystems do not invariably provide this guarantee.</li>
+<li>Construct a <a href="node/disputes/../../types/disputes.html#disputestatement"><code>DisputeStatement</code></a> based on <code>Valid</code> or <code>Invalid</code>, depending on the
+parameterization of this routine.</li>
+<li>Sign the statement with each key in the <code>SessionInfo</code>'s list of parachain validation keys which is
+present in the keystore, except those whose indices appear in <code>voted_indices</code>. This will typically
+just be one key, but this does provide some future-proofing for situations where the same node may
+run on behalf multiple validators. At the time of writing, this is not a use-case we support as
+other subsystems do not invariably   provide this guarantee.</li>
 <li>Write statement to DB.</li>
-<li>Send a <code>DisputeDistributionMessage::SendDispute</code> message to get the vote
-distributed to other validators.</li>
+<li>Send a <code>DisputeDistributionMessage::SendDispute</code> message to get the vote distributed to other
+validators.</li>
 </ul>
 <h3 id="on-disputecoordinatormessagedetermineundisputedchain"><a class="header" href="#on-disputecoordinatormessagedetermineundisputedchain">On <code>DisputeCoordinatorMessage::DetermineUndisputedChain</code></a></h3>
+<p>Executes <code>fn determine_undisputed_chain()</code> which performs the following:</p>
 <ul>
 <li>Load <code>&quot;recent-disputes&quot;</code>.</li>
 <li>Deconstruct into parts <code>{ base_number, block_descriptions, rx }</code></li>
@@ -4454,7 +4564,8 @@ distributed to other validators.</li>
 <li>If there is a dispute which is active or concluded negative, exit the loop.</li>
 </ol>
 </li>
-<li>For the highest index <code>i</code> reached in the <code>block_descriptions</code>, send <code>(base_number + i + 1, block_hash)</code> on the channel, unless <code>i</code> is 0, in which case <code>None</code> should be sent. The <code>block_hash</code> is determined by inspecting <code>block_descriptions[i]</code>.</li>
+<li>For the highest index <code>i</code> reached in the <code>block_descriptions</code>, send <code>(base_number + i + 1, block_hash)</code> on the channel, unless <code>i</code> is 0, in which case <code>None</code> should be sent. The
+<code>block_hash</code> is determined by inspecting <code>block_descriptions[i]</code>.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="dispute-distribution-1"><a class="header" href="#dispute-distribution-1">Dispute Distribution</a></h1>
 <p>Dispute distribution is responsible for ensuring all concerned validators will
