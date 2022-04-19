@@ -290,7 +290,24 @@ enum ObservedRole {
 <pre><pre class="playground"><code class="language-rust">
 <span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>enum NetworkBridgeEvent&lt;M&gt; {
+</span>struct NewGossipTopology {
+	/// The session index this topology corresponds to.
+	session: SessionIndex,
+	/// Neighbors in the 'X' dimension of the grid.
+	our_neighbors_x: HashMap&lt;AuthorityDiscoveryId, TopologyPeerInfo&gt;,
+	/// Neighbors in the 'Y' dimension of the grid.
+	our_neighbors_y: HashMap&lt;AuthorityDiscoveryId, TopologyPeerInfo&gt;,
+}
+
+struct TopologyPeerInfo {
+	/// The validator's known peer IDs.
+	peer_ids: Vec&lt;PeerId&gt;,
+	/// The index of the validator in the discovery keys of the corresponding
+	/// `SessionInfo`. This can extend _beyond_ the set of active parachain validators.
+	validator_index: ValidatorIndex,
+}
+
+enum NetworkBridgeEvent&lt;M&gt; {
 	/// A peer with given ID is now connected.
 	PeerConnected(PeerId, ObservedRole, Option&lt;HashSet&lt;AuthorityDiscoveryId&gt;&gt;),
 	/// A peer with given ID is now disconnected.
@@ -302,7 +319,7 @@ enum ObservedRole {
 	///
 	/// Note, that the distribution subsystems need to handle the last
 	/// view update of the newly added gossip peers manually.
-	NewGossipTopology(HashSet&lt;PeerId&gt;),
+	NewGossipTopology(NewGossipTopology),
 	/// We received a message from the given peer.
 	PeerMessage(PeerId, M),
 	/// The given peer has updated its description of its view.
