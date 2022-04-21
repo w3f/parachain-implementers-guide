@@ -158,10 +158,10 @@
 <p>Input: <a href="../../types/overseer-protocol.html#network-bridge-message"><code>NetworkBridgeMessage</code></a></p>
 <p>Output:</p>
 <ul>
-<li><a href="../../types/overseer-protocol.html#approval-distribution-message"><code>ApprovalDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
-<li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdateV1</code></li>
+<li><a href="../../types/overseer-protocol.html#approval-distribution-message"><code>ApprovalDistributionMessage</code></a><code>::NetworkBridgeUpdate</code></li>
+<li><a href="../../types/overseer-protocol.html#bitfield-distribution-message"><code>BitfieldDistributionMessage</code></a><code>::NetworkBridgeUpdate</code></li>
+<li><a href="../../types/overseer-protocol.html#collator-protocol-message"><code>CollatorProtocolMessage</code></a><code>::NetworkBridgeUpdate</code></li>
+<li><a href="../../types/overseer-protocol.html#statement-distribution-message"><code>StatementDistributionMessage</code></a><code>::NetworkBridgeUpdate</code></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
@@ -229,20 +229,20 @@ type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
 </ul>
 <h3 id="newgossiptopology"><a class="header" href="#newgossiptopology"><code>NewGossipTopology</code></a></h3>
 <ul>
-<li>Map all <code>AuthorityDiscoveryId</code>s to <code>PeerId</code>s and issue a corresponding <code>NetworkBridgeUpdateV1</code>
+<li>Map all <code>AuthorityDiscoveryId</code>s to <code>PeerId</code>s and issue a corresponding <code>NetworkBridgeUpdate</code>
 to all validation subsystems.</li>
 </ul>
 <h2 id="event-handlers"><a class="header" href="#event-handlers">Event Handlers</a></h2>
 <p>Network bridge event handlers are the intended recipients of particular network protocol messages. These are each a variant of a message to be sent via the overseer.</p>
 <h3 id="validation-v1"><a class="header" href="#validation-v1">Validation V1</a></h3>
 <ul>
-<li><code>ApprovalDistributionV1Message -&gt; ApprovalDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>BitfieldDistributionV1Message -&gt; BitfieldDistributionMessage::NetworkBridgeUpdateV1</code></li>
-<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>ApprovalDistributionV1Message -&gt; ApprovalDistributionMessage::NetworkBridgeUpdate</code></li>
+<li><code>BitfieldDistributionV1Message -&gt; BitfieldDistributionMessage::NetworkBridgeUpdate</code></li>
+<li><code>StatementDistributionV1Message -&gt; StatementDistributionMessage::NetworkBridgeUpdate</code></li>
 </ul>
 <h3 id="collation-v1"><a class="header" href="#collation-v1">Collation V1</a></h3>
 <ul>
-<li><code>CollatorProtocolV1Message -&gt; CollatorProtocolMessage::NetworkBridgeUpdateV1</code></li>
+<li><code>CollatorProtocolV1Message -&gt; CollatorProtocolMessage::NetworkBridgeUpdate</code></li>
 </ul>
 
                     </main>

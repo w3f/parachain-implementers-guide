@@ -309,7 +309,7 @@ struct TopologyPeerInfo {
 
 enum NetworkBridgeEvent&lt;M&gt; {
 	/// A peer with given ID is now connected.
-	PeerConnected(PeerId, ObservedRole, Option&lt;HashSet&lt;AuthorityDiscoveryId&gt;&gt;),
+	PeerConnected(PeerId, ObservedRole, ProtocolVersion, Option&lt;HashSet&lt;AuthorityDiscoveryId&gt;&gt;),
 	/// A peer with given ID is now disconnected.
 	PeerDisconnected(PeerId),
 	/// Our neighbors in the new gossip topology.

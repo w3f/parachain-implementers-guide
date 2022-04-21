@@ -334,7 +334,7 @@ enum ApprovalDistributionMessage {
     /// the message.
     DistributeApproval(IndirectSignedApprovalVote),
     /// An update from the network bridge.
-    NetworkBridgeUpdateV1(NetworkBridgeEvent&lt;ApprovalDistributionV1Message&gt;),
+    NetworkBridgeUpdate(NetworkBridgeEvent&lt;ApprovalDistributionV1Message&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -424,7 +424,7 @@ This is a network protocol that receives messages of type <a href="network.html#
     /// The bitfield distribution subsystem will assume this is indeed correctly signed.
     DistributeBitfield(relay_parent, SignedAvailabilityBitfield),
     /// Receive a network bridge update.
-    NetworkBridgeUpdateV1(NetworkBridgeEvent&lt;BitfieldDistributionV1Message&gt;),
+    NetworkBridgeUpdate(NetworkBridgeEvent&lt;BitfieldDistributionV1Message&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -782,7 +782,7 @@ mod generic {
     /// The PoV should correctly hash to the PoV hash mentioned in the CandidateDescriptor
     DistributePoV(Hash, CandidateDescriptor, PoV),
     /// An update from the network bridge.
-    NetworkBridgeUpdateV1(NetworkBridgeEvent&lt;PoVDistributionV1Message&gt;),
+    NetworkBridgeUpdate(NetworkBridgeEvent&lt;PoVDistributionV1Message&gt;),
 }
 <span class="boring">}
 </span></code></pre></pre>
@@ -886,7 +886,7 @@ It receives updates from the network bridge and signed statements to share with 
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionMessage {
     /// An update from the network bridge.
-    NetworkBridgeUpdateV1(NetworkBridgeEvent&lt;StatementDistributionV1Message&gt;),
+    NetworkBridgeUpdate(NetworkBridgeEvent&lt;StatementDistributionV1Message&gt;),
     /// We have validated a candidate and want to share our judgment with our peers.
     /// The hash is the relay parent.
     ///
