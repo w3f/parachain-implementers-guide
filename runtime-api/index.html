@@ -164,8 +164,7 @@
 <p>More broadly, we have the goal of using Runtime APIs to write Node-side code that fulfills the requirements set by the Runtime. In particular, the constraints set forth by the <a href="../runtime/scheduler.html">Scheduler</a> and <a href="../runtime/inclusion.html">Inclusion</a> modules. These modules are responsible for advancing paras with a two-phase protocol where validators are first chosen to validate and back a candidate and then required to ensure availability of referenced data. In the second phase, validators are meant to attest to those para-candidates that they have their availability chunk for. As the Node-side code needs to generate the inputs into these two phases, the runtime API needs to transmit information from the runtime that is aware of the Availability Cores model instantiated by the Scheduler and Inclusion modules.</p>
 <p>Node-side code is also responsible for detecting and reporting misbehavior performed by other validators, and the set of Runtime APIs needs to provide methods for observing live disputes and submitting reports as transactions.</p>
 <p>The next sections will contain information on specific runtime APIs. The format is this:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Fetch the value of the runtime API at the block.
 ///
@@ -179,8 +178,7 @@ fn some_runtime_api(at: Block, arg1: Type1, arg2: Type2, ...) -&gt; ReturnValue;
 </span></code></pre></pre>
 <p>Certain runtime APIs concerning the state of a para require the caller to provide an <code>OccupiedCoreAssumption</code>. This indicates how the result of the runtime API should be computed if there is a candidate from the para occupying an availability core in the <a href="../runtime/inclusion.html">Inclusion Module</a>.</p>
 <p>The choices of assumption are whether the candidate occupying that core should be assumed to have been made available and included or timed out and discarded, along with a third option to assert that the core was not occupied. This choice affects everything from the parent head-data, the validation code, and the state of message-queues. Typically, users will take the assumption that either the core was free or that the occupying candidate was included, as timeouts are expected only in adversarial circumstances and even so, only in a small minority of blocks directly following validator set rotations.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// An assumption being made about the state of an occupied core.
 enum OccupiedCoreAssumption {

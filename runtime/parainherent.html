@@ -153,15 +153,13 @@
 <li>And we don't accept parablocks that have open disputes or disputes that have concluded against the candidate. It's important to import dispute statements before backing, but this is already the case as disputes are imported before processing bitfields.</li>
 </ol>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Whether the para inherent was included or not.
 Included: Option&lt;()&gt;,
 <span class="boring">}
 </span></code></pre></pre>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Scraped on chain votes to be used in disputes off-chain.
 OnChainVotes: Option&lt;ScrapedOnChainVotes&gt;,

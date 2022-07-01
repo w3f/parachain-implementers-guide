@@ -144,8 +144,7 @@
                     <main>
                         <h1 id="disputes"><a class="header" href="#disputes">Disputes</a></h1>
 <h2 id="disputestatementset"><a class="header" href="#disputestatementset"><code>DisputeStatementSet</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A set of statements about a specific candidate.
 struct DisputeStatementSet {
@@ -156,8 +155,7 @@ struct DisputeStatementSet {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="disputestatement"><a class="header" href="#disputestatement"><code>DisputeStatement</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about a candidate, to be used within some dispute resolution process.
 ///
@@ -173,8 +171,7 @@ enum DisputeStatement {
 </span></code></pre></pre>
 <h2 id="dispute-statement-kinds"><a class="header" href="#dispute-statement-kinds">Dispute Statement Kinds</a></h2>
 <p>Kinds of dispute statements. Each of these can be combined with a candidate hash, session index, validator public key, and validator signature to reproduce and check the original statement.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidDisputeStatementKind {
     Explicit,
@@ -189,8 +186,7 @@ enum InvalidDisputeStatementKind {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement"><code>ExplicitDisputeStatement</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ExplicitDisputeStatement {
     valid: bool,
@@ -201,15 +197,13 @@ enum InvalidDisputeStatementKind {
 </span></code></pre></pre>
 <h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></h2>
 <p>Sets of statements for many (zero or more) disputes.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type MultiDisputeStatementSet = Vec&lt;DisputeStatementSet&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="disputestate"><a class="header" href="#disputestate"><code>DisputeState</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct DisputeState {
     validators_for: Bitfield, // one bit per validator.
@@ -220,8 +214,7 @@ enum InvalidDisputeStatementKind {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="scrapedonchainvotes"><a class="header" href="#scrapedonchainvotes"><code>ScrapedOnChainVotes</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Type for transcending recorded on-chain
 /// dispute relevant votes and conclusions to

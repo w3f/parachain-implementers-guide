@@ -159,8 +159,7 @@ candidate), the dispute coordinator will make sure the local node will participa
 lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;candidate-votes&quot;, SessionIndex, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
 &quot;recent-disputes&quot; -&gt; RecentDisputes
@@ -169,8 +168,7 @@ lexicographical order where the key starts with <code>prefix</code>.</li>
 </span></code></pre></pre>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateVotes</code> struct.
 This draws on the <a href="../../types/disputes.html">dispute statement types</a></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Tracked votes on candidates, for the purposes of dispute resolution.
 pub struct CandidateVotes {
@@ -214,8 +212,7 @@ pub enum DisputeStatus {
 keeps track of included blocks and their ancestors. It also generates <code>CandidateComparator</code>
 instances for candidates.</p>
 <p><code>CandidateComparator</code> wraps the candidate hash and its parent block number:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct CandidateComparator {
   /// Block number of the relay parent.
@@ -244,8 +241,7 @@ for details).</p>
 <p>This module keeps track of the disputes that the node participates in. At most there are
 <code>MAX_PARALLEL_PARTICIPATIONS</code> parallel participations in the subsystem. The internal state of the
 module is:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct Participation {
   /// Participations currently being processed.
@@ -285,8 +281,7 @@ vote itself on that dispute, the dispute has not yet reached more than a third o
 validator's votes and the including relay chain block has not yet been finalized.</p>
 </blockquote>
 <p><code>SpamSlots</code> has got this internal state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SpamSlots {
   /// Counts per validator and session.
@@ -320,8 +315,7 @@ indefinitely.</p>
 <p>This assumes a constant <code>DISPUTE_WINDOW: SessionWindowSize</code>. This should correspond to at least 1
 day.</p>
 <p>Ephemeral in-memory state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
   keystore: Arc&lt;LocalKeystore&gt;,

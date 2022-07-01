@@ -176,8 +176,7 @@
 <li>To be fast to clear entries outdated by finality</li>
 </ol>
 <p>Structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct TrancheEntry {
     tranche: DelayTranche,
@@ -242,8 +241,7 @@ BlockHash =&gt; BlockEntry
 CandidateHash =&gt; CandidateEntry
 </code></pre>
 <h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>const APPROVAL_SESSIONS: SessionIndex = 6;
 
@@ -252,8 +250,7 @@ const APPROVAL_DELAY: Tick = 2;
 <span class="boring">}
 </span></code></pre></pre>
 <p>In-memory state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ApprovalVoteRequest {
   validator_index: ValidatorIndex,
@@ -467,8 +464,7 @@ struct State {
 <p>These routines are pure functions which only depend on the environmental state. The expectation is that this determination is re-run every time we attempt to update an approval entry: either when we trigger a wakeup to advance the state machine based on a no-show or our own broadcast, or when we receive further assignments or approvals from the network.</p>
 <p>Thus it may be that at some point in time, we consider that tranches 0..X is required to be considered, but as we receive more information, we might require fewer tranches. Or votes that we perceived to be missing and require replacement are filled in and change our view.</p>
 <p>Requires <code>(approval_entry, approvals_received, tranche_now, block_tick, no_show_duration, needed_approvals)</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RequiredTranches {
   // All validators appear to be required, based on tranches already taken and remaining no-shows.

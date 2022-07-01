@@ -147,8 +147,7 @@
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
 <h2 id="validity-attestation"><a class="header" href="#validity-attestation">Validity Attestation</a></h2>
 <p>An attestation of validity for a candidate, used as part of a backing. Both the <code>Seconded</code> and <code>Valid</code> statements are considered attestations of validity. This structure is only useful where the candidate referenced is apparent.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidityAttestation {
   /// Implicit validity attestation by issuing.
@@ -185,8 +184,7 @@ impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;
 <p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
 <h2 id="statement-type"><a class="header" href="#statement-type">Statement Type</a></h2>
 <p>The <a href="../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about the validity of a parachain candidate.
 enum Statement {
@@ -218,8 +216,7 @@ enum CompactStatement {
 <p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
 <h2 id="signed-statement-type"><a class="header" href="#signed-statement-type">Signed Statement Type</a></h2>
 <p>A statement which has been <a href="#signed-wrapper">cryptographically signed</a> by a validator.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A signed statement, containing the committed candidate receipt in the `Seconded` variant.
 pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
@@ -231,8 +228,7 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2 id="backed-candidate"><a class="header" href="#backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct BackedCandidate {
   candidate: CommittedCandidateReceipt,

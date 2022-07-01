@@ -146,8 +146,7 @@
 <p>A module responsible for Downward Message Processing (DMP). See <a href="../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Storage layout required for implementation of DMP.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The downward messages addressed for a certain para.
 DownwardMessageQueues: map ParaId =&gt; Vec&lt;InboundDownwardMessage&gt;;

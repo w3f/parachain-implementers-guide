@@ -199,8 +199,7 @@
 <li>Issue a <a href="../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::SigningContext</code></a> message to get a context that will later be used upon signing.</li>
 </ul>
 <h3 id="on-receiving-new-candidate-backing-message"><a class="header" href="#on-receiving-new-candidate-backing-message">On Receiving New Candidate Backing Message</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>match msg {
   GetBackedCandidates(hashes, tx) =&gt; {
@@ -228,8 +227,7 @@
 <code>Invalid</code> statements that conflict with already witnessed <code>Seconded</code> and <code>Valid</code> statements for the given candidate, statements that are double-votes, self-contradictions and so on, should result in issuing a <a href="../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a><code>::MisbehaviorReport</code> message for each newly detected case of this kind.</p>
 <p>On each incoming statement, <a href="../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::ImportStatement</code></a> should be issued.</p>
 <h3 id="validating-candidates"><a class="header" href="#validating-candidates">Validating Candidates.</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn spawn_validation_work(candidate, parachain head, validation function) {
   asynchronously {

@@ -149,8 +149,7 @@
 <p>One of the main units of information on which PVF pre-checking voting is build is the <code>PvfCheckStatement</code>.</p>
 <p>This is a statement by the validator who ran the pre-checking process for a PVF. A PVF is identified by the <code>ValidationCodeHash</code>.</p>
 <p>The statement is valid only during a single session, specified in the <code>session_index</code>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PvfCheckStatement {
     /// `true` if the subject passed pre-checking and `false` otherwise.

@@ -144,8 +144,7 @@
                     <main>
                         <h1 id="validator-groups"><a class="header" href="#validator-groups">Validator Groups</a></h1>
 <p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set and this is assumed to be as-of the child of the block whose state is being queried.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A helper data-type for tracking validator-group rotations.
 struct GroupRotationInfo {

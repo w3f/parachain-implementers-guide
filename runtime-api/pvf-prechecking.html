@@ -150,8 +150,7 @@
 <p>The first runtime API is designed to fetch all PVFs that require pre-checking voting. The PVFs are
 identified by their code hashes. As soon as the PVF gains required support, the runtime API will
 not return the PVF anymore.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn pvfs_require_precheck() -&gt; Vec&lt;ValidationCodeHash&gt;;
 <span class="boring">}
@@ -160,8 +159,7 @@ not return the PVF anymore.</p>
 The voting process uses unsigned transactions. The <a href="../types/pvf-prechecking.html"><code>PvfCheckStatement</code></a> is circulated through the network via gossip similar to a normal transaction. At some point the validator
 will include the statement in the block, where it will be processed by the runtime. If that was the
 last vote before gaining the super-majority, this PVF will not be returned by <code>pvfs_require_precheck</code> anymore.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn submit_pvf_check_statement(stmt: PvfCheckStatement, signature: ValidatorSignature);
 <span class="boring">}

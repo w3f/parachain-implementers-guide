@@ -168,8 +168,7 @@
 <p>In order to regain the property that the validator set of a block is predictable by its parent block, we delay session changes' application to Parachains by 1 block. This means that if there is a session change at block X, that session change will be stored and applied during initialization of direct descendants of X. This principal side effect of this change is that the Parachains runtime can disagree with session or consensus modules about which session it currently is. Misbehavior reporting routines in particular will be affected by this, although not severely. The parachains runtime might believe it is the last block of the session while the system is really in the first block of the next session. In such cases, a historical validator-set membership proof will need to accompany any misbehavior report, although they typically do not need to during current-session misbehavior reports.</p>
 <p>So the other role of the initializer module is to forward session change notifications to modules in the initialization order. Session change is also the point at which the <a href="configuration.html">Configuration Module</a> updates the configuration. Most of the other modules will handle changes in the configuration during their session change operation, so the initializer should provide both the old and new configuration to all the other
 modules alongside the session change notification. This means that a session change notification should consist of the following data:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SessionChangeNotification {
  // The new validators in the session.

@@ -146,8 +146,7 @@
 <p>The collation generation subsystem is executed on collator nodes and produces candidates to be distributed to validators. If configured to produce collations for a para, it produces collations and then feeds them to the <a href="collator-protocol.html">Collator Protocol</a> subsystem, which handles the networking.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <code>CollationGenerationMessage</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollationGenerationMessage {
   Initialize(CollationGenerationConfig),
@@ -158,8 +157,7 @@
 <p>Output: <code>CollationDistributionMessage</code></p>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>The process of generating a collation for a parachain is very parachain-specific. As such, the details of how to do so are left beyond the scope of this description. The subsystem should be implemented as an abstract wrapper, which is aware of this configuration:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The output of a collator.
 ///

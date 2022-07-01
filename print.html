@@ -688,8 +688,7 @@ new PVF pre-checking vote will be started. Instead, the operation just subscribe
 <p>In order to regain the property that the validator set of a block is predictable by its parent block, we delay session changes' application to Parachains by 1 block. This means that if there is a session change at block X, that session change will be stored and applied during initialization of direct descendants of X. This principal side effect of this change is that the Parachains runtime can disagree with session or consensus modules about which session it currently is. Misbehavior reporting routines in particular will be affected by this, although not severely. The parachains runtime might believe it is the last block of the session while the system is really in the first block of the next session. In such cases, a historical validator-set membership proof will need to accompany any misbehavior report, although they typically do not need to during current-session misbehavior reports.</p>
 <p>So the other role of the initializer module is to forward session change notifications to modules in the initialization order. Session change is also the point at which the <a href="runtime/configuration.html">Configuration Module</a> updates the configuration. Most of the other modules will handle changes in the configuration during their session change operation, so the initializer should provide both the old and new configuration to all the other
 modules alongside the session change notification. This means that a session change notification should consist of the following data:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SessionChangeNotification {
  // The new validators in the session.
@@ -713,8 +712,7 @@ modules alongside the session change notification. This means that a session cha
 <div style="break-before: page; page-break-before: always;"></div><h1 id="initializer-module"><a class="header" href="#initializer-module">Initializer Module</a></h1>
 <p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described in the overview of the runtime: accepting and forwarding session change notifications.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>HasInitialized: bool;
 // buffered session changes along with the block number at which they should be applied.
@@ -751,8 +749,7 @@ BufferedSessionChanges: Vec&lt;(BlockNumber, ValidatorSet, ValidatorSet)&gt;;
 <p>The configuration that we will be tracking is the <a href="runtime/../types/runtime.html#host-configuration"><code>HostConfiguration</code></a> struct.</p>
 <h2 id="storage-1"><a class="header" href="#storage-1">Storage</a></h2>
 <p>The configuration module is responsible for two main pieces of storage.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The current configuration to be used.
 Configuration: HostConfiguration;
@@ -773,8 +770,7 @@ BypassConsistencyCheck: bool;
 </li>
 </ul>
 <h2 id="routines"><a class="header" href="#routines">Routines</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum InconsistentErrror {
   // ...
@@ -816,8 +812,7 @@ dependency on any other modules in the Parachains Runtime.</p>
 <p>For the moment, it is used exclusively to track the current session index across the Parachains
 Runtime system, and when it should be allowed to schedule future changes to Paras or Configurations.</p>
 <h2 id="constants"><a class="header" href="#constants">Constants</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// `SESSION_DELAY` is used to delay any changes to Paras registration or configurations.
 // Wait until the session index is 2 larger then the current index to apply any changes,
@@ -826,8 +821,7 @@ pub(crate) const SESSION_DELAY: SessionIndex = 2;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="storage-2"><a class="header" href="#storage-2">Storage</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The current session index within the Parachains Runtime system.
 CurrentSessionIndex: SessionIndex;
@@ -886,8 +880,7 @@ Parachains Runtime system would be safe to apply.</li>
 <p>The storage of this module is designed around tracking <a href="runtime/../types/disputes.html#disputestate"><code>DisputeState</code>s</a>, updating them with votes, and tracking blocks included by this branch of the relay chain. It also contains a <code>Frozen</code> parameter designed to freeze the state of all parachains.</p>
 <h2 id="storage-3"><a class="header" href="#storage-3">Storage</a></h2>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>LastPrunedSession: Option&lt;SessionIndex&gt;,
 
@@ -1010,8 +1003,7 @@ code and its pruning.</li>
 </ul>
 <h2 id="storage-4"><a class="header" href="#storage-4">Storage</a></h2>
 <h3 id="utility-structs"><a class="header" href="#utility-structs">Utility Structs</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// the two key times necessary to track for every code replacement.
 pub struct ReplacementTimes {
@@ -1129,8 +1121,7 @@ the para using the <code>ParaLifecycle</code> enum.</p>
 happen due to PVF pre-checking voting concluding late.</p>
 <p>During the transition period, the para object is still considered in its existing state.</p>
 <h3 id="storage-layout"><a class="header" href="#storage-layout">Storage Layout</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All currently active PVF pre-checking votes.
 ///
@@ -1310,8 +1301,7 @@ or live parachain.</li>
 <p>Parathread claims, when scheduled onto a free core, may not result in a block pending availability. This may be due to collator error, networking timeout, or censorship by the validator group. In this case, the claims should be retried a certain number of times to give the collator a fair shot.</p>
 <h2 id="storage-5"><a class="header" href="#storage-5">Storage</a></h2>
 <p>Utility structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// A claim on authoring the next block for a given parathread.
 struct ParathreadClaim(ParaId, CollatorId);
@@ -1359,8 +1349,7 @@ enum FreedReason {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All the validator groups. One for each core. Indices are into the `ActiveValidators` storage.
 ValidatorGroups: Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;;
@@ -1467,8 +1456,7 @@ Scheduled: Vec&lt;CoreAssignment&gt;, // sorted ascending by CoreIndex.
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
 <h2 id="storage-6"><a class="header" href="#storage-6">Storage</a></h2>
 <p>Helper structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct AvailabilityBitfield {
   bitfield: BitVec, // one bit per core.
@@ -1488,8 +1476,7 @@ struct CandidatePendingAvailability {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The latest bitfield for each validator, referred to by index.
 bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
@@ -1582,8 +1569,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 </li>
 <li>
 <p><code>collect_pending</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>  fn collect_pending(f: impl Fn(CoreIndex, BlockNumber) -&gt; bool) -&gt; Vec&lt;CoreIndex&gt; {
     // sweep through all paras pending availability. if the predicate returns true, when given the core index and
@@ -1617,15 +1603,13 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 <li>And we don't accept parablocks that have open disputes or disputes that have concluded against the candidate. It's important to import dispute statements before backing, but this is already the case as disputes are imported before processing bitfields.</li>
 </ol>
 <h2 id="storage-7"><a class="header" href="#storage-7">Storage</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Whether the para inherent was included or not.
 Included: Option&lt;()&gt;,
 <span class="boring">}
 </span></code></pre></pre>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Scraped on chain votes to be used in disputes off-chain.
 OnChainVotes: Option&lt;ScrapedOnChainVotes&gt;,
@@ -1711,8 +1695,7 @@ OnChainVotes: Option&lt;ScrapedOnChainVotes&gt;,
 <p>A module responsible for Downward Message Processing (DMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-8"><a class="header" href="#storage-8">Storage</a></h2>
 <p>Storage layout required for implementation of DMP.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The downward messages addressed for a certain para.
 DownwardMessageQueues: map ParaId =&gt; Vec&lt;InboundDownwardMessage&gt;;
@@ -1767,8 +1750,7 @@ DownwardMessageQueueHeads: map ParaId =&gt; Hash;
 <p>A module responsible for Upward Message Passing (UMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-9"><a class="header" href="#storage-9">Storage</a></h2>
 <p>Storage related to UMP</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The messages waiting to be handled by the relay-chain originating from a certain parachain.
 ///
@@ -1863,8 +1845,7 @@ dispatching any of individual upward messages returns an error.</p>
 <p>A module responsible for Horizontally Relay-routed Message Passing (HRMP). See <a href="runtime/../messaging.html">Messaging Overview</a> for more details.</p>
 <h2 id="storage-10"><a class="header" href="#storage-10">Storage</a></h2>
 <p>HRMP related structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A description of a request to open an HRMP channel.
 struct HrmpOpenChannelRequest {
@@ -1910,8 +1891,7 @@ struct HrmpChannel {
 <span class="boring">}
 </span></code></pre></pre>
 <p>HRMP related storage layout</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The set of pending HRMP open channel requests.
 ///
@@ -2211,8 +2191,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 <p>For disputes and approvals, we need access to information about validator sets from prior sessions. We also often want easy access to the same information about the current session's validator set. This module aggregates and stores this information in a rolling window while providing easy APIs for access.</p>
 <h2 id="storage-11"><a class="header" href="#storage-11">Storage</a></h2>
 <p>Helper structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SessionInfo {
     /// Validators in canonical ordering.
@@ -2263,8 +2242,7 @@ with the value found in the configuration <code>config.hrmp_recipient_deposit</c
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The earliest session for which previous session info is stored.
 EarliestStoredSession: SessionIndex,
@@ -2304,8 +2282,7 @@ Sessions: map SessionIndex =&gt; Option&lt;SessionInfo&gt;,
 <p>More broadly, we have the goal of using Runtime APIs to write Node-side code that fulfills the requirements set by the Runtime. In particular, the constraints set forth by the <a href="runtime-api/../runtime/scheduler.html">Scheduler</a> and <a href="runtime-api/../runtime/inclusion.html">Inclusion</a> modules. These modules are responsible for advancing paras with a two-phase protocol where validators are first chosen to validate and back a candidate and then required to ensure availability of referenced data. In the second phase, validators are meant to attest to those para-candidates that they have their availability chunk for. As the Node-side code needs to generate the inputs into these two phases, the runtime API needs to transmit information from the runtime that is aware of the Availability Cores model instantiated by the Scheduler and Inclusion modules.</p>
 <p>Node-side code is also responsible for detecting and reporting misbehavior performed by other validators, and the set of Runtime APIs needs to provide methods for observing live disputes and submitting reports as transactions.</p>
 <p>The next sections will contain information on specific runtime APIs. The format is this:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Fetch the value of the runtime API at the block.
 ///
@@ -2319,8 +2296,7 @@ fn some_runtime_api(at: Block, arg1: Type1, arg2: Type2, ...) -&gt; ReturnValue;
 </span></code></pre></pre>
 <p>Certain runtime APIs concerning the state of a para require the caller to provide an <code>OccupiedCoreAssumption</code>. This indicates how the result of the runtime API should be computed if there is a candidate from the para occupying an availability core in the <a href="runtime-api/../runtime/inclusion.html">Inclusion Module</a>.</p>
 <p>The choices of assumption are whether the candidate occupying that core should be assumed to have been made available and included or timed out and discarded, along with a third option to assert that the core was not occupied. This choice affects everything from the parent head-data, the validation code, and the state of message-queues. Typically, users will take the assumption that either the core was free or that the occupying candidate was included, as timeouts are expected only in adversarial circumstances and even so, only in a small minority of blocks directly following validator set rotations.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// An assumption being made about the state of an occupied core.
 enum OccupiedCoreAssumption {
@@ -2335,16 +2311,14 @@ enum OccupiedCoreAssumption {
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="validators"><a class="header" href="#validators">Validators</a></h1>
 <p>Yields the validator-set at the state of a given block. This validator set is always the one responsible for backing parachains in the child of the provided block.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn validators(at: Block) -&gt; Vec&lt;ValidatorId&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="validator-groups-1"><a class="header" href="#validator-groups-1">Validator Groups</a></h1>
 <p>Yields the validator groups used during the current session. The validators in the groups are referred to by their index into the validator-set and this is assumed to be as-of the child of the block whose state is being queried.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A helper data-type for tracking validator-group rotations.
 struct GroupRotationInfo {
@@ -2376,15 +2350,13 @@ fn validator_groups(at: Block) -&gt; (Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;, Grou
 <div style="break-before: page; page-break-before: always;"></div><h1 id="availability-cores-1"><a class="header" href="#availability-cores-1">Availability Cores</a></h1>
 <p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block. </p>
 <p>See also the <a href="runtime-api/../runtime/scheduler.html">Scheduler Module</a> for a high-level description of what an availability core is and why it exists.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn availability_cores(at: Block) -&gt; Vec&lt;CoreState&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <p>This is all the information that a validator needs about scheduling for the current block. It includes all information on <a href="runtime-api/../runtime/scheduler.html">Scheduler</a> core-assignments and <a href="runtime-api/../runtime/inclusion.html">Inclusion</a> state of blocks occupying availability cores. It includes data necessary to determine not only which paras are assigned now, but which cores are likely to become freed after processing bitfields, and exactly which bitfields would be necessary to make them so.  The implementation of this runtime API should invoke <code>Scheduler::clear</code> and <code>Scheduler::schedule(Vec::new(), current_block_number + 1)</code> to ensure that scheduling is accurate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct OccupiedCore {
     // NOTE: this has no ParaId as it can be deduced from the candidate descriptor.
@@ -2435,8 +2407,7 @@ enum CoreState {
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="persisted-validation-data"><a class="header" href="#persisted-validation-data">Persisted Validation Data</a></h1>
 <p>Yields the <a href="runtime-api/../types/candidate.html#persistedvalidationdata"><code>PersistedValidationData</code></a> for the given <a href="runtime-api/../types/candidate.html#paraid"><code>ParaId</code></a> along with an assumption that should be used if the para currently occupies a core:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Returns the persisted validation data for the given para and occupied core assumption.
 ///
@@ -2449,8 +2420,7 @@ fn persisted_validation_data(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Op
 <p>Get the session index that is expected at the child of a block.</p>
 <p>In the <a href="runtime-api/../runtime/initializer.html"><code>Initializer</code></a> module, session changes are buffered by one block. The session index of the child of any relay block is always predictable by that block's state.</p>
 <p>This session index can be used to derive a <a href="runtime-api/../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Returns the session index expected at a child of the block.
 fn session_index_for_child(at: Block) -&gt; SessionIndex;
@@ -2458,15 +2428,13 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="validation-code"><a class="header" href="#validation-code">Validation Code</a></h1>
 <p>Fetch the validation code used by a para, making the given <code>OccupiedCoreAssumption</code>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn validation_code(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;ValidationCode&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <p>Fetch the validation code (past, present or future) by its hash.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn validation_code_by_hash(at: Block, ValidationCodeHash) -&gt; Option&lt;ValidationCode&gt;;
 <span class="boring">}
@@ -2475,24 +2443,21 @@ fn session_index_for_child(at: Block) -&gt; SessionIndex;
 <blockquote>
 <p>⚠️ This API was introduced in <code>ParachainHost</code> v2.</p>
 </blockquote>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn validation_code_hash(at: Block, ParaId, OccupiedCoreAssumption) -&gt; Option&lt;ValidationCodeHash&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="candidate-pending-availability"><a class="header" href="#candidate-pending-availability">Candidate Pending Availability</a></h1>
 <p>Get the receipt of a candidate pending availability. This returns <code>Some</code> for any paras assigned to occupied cores in <code>availability_cores</code> and <code>None</code> otherwise.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn candidate_pending_availability(at: Block, ParaId) -&gt; Option&lt;CommittedCandidateReceipt&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="candidate-events"><a class="header" href="#candidate-events">Candidate Events</a></h1>
 <p>Yields a vector of events concerning candidates that occurred within the given block.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateEvent {
 	/// This candidate receipt was backed in the most recent block.
@@ -2508,8 +2473,7 @@ fn candidate_events(at: Block) -&gt; Vec&lt;CandidateEvent&gt;;
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="disputes-info"><a class="header" href="#disputes-info">Disputes Info</a></h1>
 <p>Get information about all disputes known by the chain as well as information about which validators the disputes subsystem will accept disputes from. These disputes may be either live or concluded. The <a href="runtime-api/../types/disputes.html#disputestate"><code>DisputeState</code></a> can be used to determine whether the dispute still accepts votes, as well as which validators' votes may be included.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct Dispute {
     session: SessionIndex,
@@ -2533,8 +2497,7 @@ fn disputes_info() -&gt; DisputesInfo;
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="candidates-included"><a class="header" href="#candidates-included">Candidates Included</a></h1>
 <p>This runtime API is for checking which candidates have been included within the chain, locally.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Input and output have the same length.
 fn candidates_included(Vec&lt;(SessionIndex, CandidateHash)&gt;) -&gt; Vec&lt;bool&gt;;
@@ -2548,8 +2511,7 @@ fn candidates_included(Vec&lt;(SessionIndex, CandidateHash)&gt;) -&gt; Vec&lt;bo
 <p>The first runtime API is designed to fetch all PVFs that require pre-checking voting. The PVFs are
 identified by their code hashes. As soon as the PVF gains required support, the runtime API will
 not return the PVF anymore.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn pvfs_require_precheck() -&gt; Vec&lt;ValidationCodeHash&gt;;
 <span class="boring">}
@@ -2558,8 +2520,7 @@ not return the PVF anymore.</p>
 The voting process uses unsigned transactions. The <a href="runtime-api/../types/pvf-prechecking.html"><code>PvfCheckStatement</code></a> is circulated through the network via gossip similar to a normal transaction. At some point the validator
 will include the statement in the block, where it will be processed by the runtime. If that was the
 last vote before gaining the super-majority, this PVF will not be returned by <code>pvfs_require_precheck</code> anymore.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn submit_pvf_check_statement(stmt: PvfCheckStatement, signature: ValidatorSignature);
 <span class="boring">}
@@ -2967,8 +2928,7 @@ The subsystem which provides us with viable leaves is the <a href="node/utility/
 <p>The collation generation subsystem is executed on collator nodes and produces candidates to be distributed to validators. If configured to produce collations for a para, it produces collations and then feeds them to the <a href="node/collators/collator-protocol.html">Collator Protocol</a> subsystem, which handles the networking.</p>
 <h2 id="protocol"><a class="header" href="#protocol">Protocol</a></h2>
 <p>Input: <code>CollationGenerationMessage</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollationGenerationMessage {
   Initialize(CollationGenerationConfig),
@@ -2979,8 +2939,7 @@ The subsystem which provides us with viable leaves is the <a href="node/utility/
 <p>Output: <code>CollationDistributionMessage</code></p>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>The process of generating a collation for a parachain is very parachain-specific. As such, the details of how to do so are left beyond the scope of this description. The subsystem should be implemented as an abstract wrapper, which is aware of this configuration:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The output of a collator.
 ///
@@ -3205,8 +3164,7 @@ pub struct CollationGenerationConfig {
 <li>Issue a <a href="node/backing/../../types/overseer-protocol.html#runtime-api-message"><code>RuntimeApiRequest::SigningContext</code></a> message to get a context that will later be used upon signing.</li>
 </ul>
 <h3 id="on-receiving-new-candidate-backing-message"><a class="header" href="#on-receiving-new-candidate-backing-message">On Receiving New Candidate Backing Message</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>match msg {
   GetBackedCandidates(hashes, tx) =&gt; {
@@ -3234,8 +3192,7 @@ pub struct CollationGenerationConfig {
 <code>Invalid</code> statements that conflict with already witnessed <code>Seconded</code> and <code>Valid</code> statements for the given candidate, statements that are double-votes, self-contradictions and so on, should result in issuing a <a href="node/backing/../../types/overseer-protocol.html#provisioner-message"><code>ProvisionerMessage</code></a><code>::MisbehaviorReport</code> message for each newly detected case of this kind.</p>
 <p>On each incoming statement, <a href="node/backing/../../types/overseer-protocol.html#dispute-coordinator-message"><code>DisputeCoordinatorMessage::ImportStatement</code></a> should be issued.</p>
 <h3 id="validating-candidates"><a class="header" href="#validating-candidates">Validating Candidates.</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn spawn_validation_work(candidate, parachain head, validation function) {
   asynchronously {
@@ -3434,8 +3391,7 @@ happens in the <code>responder</code> module.</p>
 </ul>
 <h2 id="functionality-5"><a class="header" href="#functionality-5">Functionality</a></h2>
 <p>We hold a state which tracks the currently ongoing recovery tasks, as well as which request IDs correspond to which task. A recovery task is a structure encapsulating all recovery tasks with the network necessary to recover the available data in respect to one candidate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
     /// Each recovery is implemented as an independent async task, and the handles only supply information about the result.
@@ -3511,8 +3467,7 @@ struct RecoveryTask {
 </ol>
 <p>Launch the source as a background task running <code>run(recovery_task)</code>.</p>
 <h4 id="runrecovery_task---resultavailabledata-recoeryerror"><a class="header" href="#runrecovery_task---resultavailabledata-recoeryerror"><code>run(recovery_task) -&gt; Result&lt;AvailableData, RecoeryError&gt;</code></a></h4>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// How many parallel requests to have going at once.
 const N_PARALLEL: usize = 50;
@@ -3659,8 +3614,7 @@ If not running as a validator, do nothing.</p>
 <li>To be fast to clear entries outdated by finality</li>
 </ol>
 <p>Structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct TrancheEntry {
     tranche: DelayTranche,
@@ -3725,8 +3679,7 @@ BlockHash =&gt; BlockEntry
 CandidateHash =&gt; CandidateEntry
 </code></pre>
 <h2 id="logic"><a class="header" href="#logic">Logic</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>const APPROVAL_SESSIONS: SessionIndex = 6;
 
@@ -3735,8 +3688,7 @@ const APPROVAL_DELAY: Tick = 2;
 <span class="boring">}
 </span></code></pre></pre>
 <p>In-memory state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ApprovalVoteRequest {
   validator_index: ValidatorIndex,
@@ -3950,8 +3902,7 @@ struct State {
 <p>These routines are pure functions which only depend on the environmental state. The expectation is that this determination is re-run every time we attempt to update an approval entry: either when we trigger a wakeup to advance the state machine based on a no-show or our own broadcast, or when we receive further assignments or approvals from the network.</p>
 <p>Thus it may be that at some point in time, we consider that tranches 0..X is required to be considered, but as we receive more information, we might require fewer tranches. Or votes that we perceived to be missing and require replacement are filled in and change our view.</p>
 <p>Requires <code>(approval_entry, approvals_received, tranche_now, block_tick, no_show_duration, needed_approvals)</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RequiredTranches {
   // All validators appear to be required, based on tranches already taken and remaining no-shows.
@@ -4066,8 +4017,7 @@ Aggression Level 2: All peers send all messages to all their row and column neig
 <li><code>NetworkBridgeMessage::SendValidationMessage::ApprovalDistribution</code></li>
 </ul>
 <h2 id="functionality-9"><a class="header" href="#functionality-9">Functionality</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type BlockScopedCandidate = (Hash, CandidateHash);
 
@@ -4177,8 +4127,7 @@ Ensure a vector is present in <code>pending_known</code> for each hash in the vi
 <h4 id="overseersignalblockfinalized-1"><a class="header" href="#overseersignalblockfinalized-1"><code>OverseerSignal::BlockFinalized</code></a></h4>
 <p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
 <h3 id="utility"><a class="header" href="#utility">Utility</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum MessageSource {
   Peer(PeerId),
@@ -4315,8 +4264,7 @@ candidate), the dispute coordinator will make sure the local node will participa
 lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;candidate-votes&quot;, SessionIndex, CandidateHash) -&gt; Option&lt;CandidateVotes&gt;
 &quot;recent-disputes&quot; -&gt; RecentDisputes
@@ -4325,8 +4273,7 @@ lexicographical order where the key starts with <code>prefix</code>.</li>
 </span></code></pre></pre>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateVotes</code> struct.
 This draws on the <a href="node/disputes/../../types/disputes.html">dispute statement types</a></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Tracked votes on candidates, for the purposes of dispute resolution.
 pub struct CandidateVotes {
@@ -4370,8 +4317,7 @@ pub enum DisputeStatus {
 keeps track of included blocks and their ancestors. It also generates <code>CandidateComparator</code>
 instances for candidates.</p>
 <p><code>CandidateComparator</code> wraps the candidate hash and its parent block number:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct CandidateComparator {
   /// Block number of the relay parent.
@@ -4400,8 +4346,7 @@ for details).</p>
 <p>This module keeps track of the disputes that the node participates in. At most there are
 <code>MAX_PARALLEL_PARTICIPATIONS</code> parallel participations in the subsystem. The internal state of the
 module is:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct Participation {
   /// Participations currently being processed.
@@ -4441,8 +4386,7 @@ vote itself on that dispute, the dispute has not yet reached more than a third o
 validator's votes and the including relay chain block has not yet been finalized.</p>
 </blockquote>
 <p><code>SpamSlots</code> has got this internal state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub struct SpamSlots {
   /// Counts per validator and session.
@@ -4476,8 +4420,7 @@ indefinitely.</p>
 <p>This assumes a constant <code>DISPUTE_WINDOW: SessionWindowSize</code>. This should correspond to at least 1
 day.</p>
 <p>Ephemeral in-memory state:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
   keystore: Arc&lt;LocalKeystore&gt;,
@@ -4600,8 +4543,7 @@ be aware of a dispute and have the relevant votes.</p>
 <h4 id="disputes-1"><a class="header" href="#disputes-1">Disputes</a></h4>
 <p>Protocol: <code>&quot;/polkadot/send_dispute/1&quot;</code></p>
 <p>Request:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct DisputeRequest {
   /// The candidate being disputed.
@@ -4645,8 +4587,7 @@ pub struct ValidDisputeVote {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Response:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeResponse {
   Confirmed
@@ -4655,8 +4596,7 @@ pub struct ValidDisputeVote {
 </span></code></pre></pre>
 <h4 id="vote-recovery"><a class="header" href="#vote-recovery">Vote Recovery</a></h4>
 <p>Protocol: <code>&quot;/polkadot/req_votes/1&quot;</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct IHaveVotesRequest {
   candidate_hash: CandidateHash,
@@ -4668,8 +4608,7 @@ pub struct ValidDisputeVote {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Response:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct VotesResponse {
   /// All votes we have, but the requester was missing.
@@ -4910,8 +4849,7 @@ no real harm done: There was no serious attack to begin with.</p>
 <li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
 (&quot;chunk&quot;, CandidateHash, u32) -&gt; Option&lt;ErasureChunk&gt;
@@ -4923,8 +4861,7 @@ no real harm done: There was no serious attack to begin with.</p>
 </span></code></pre></pre>
 <p>Timestamps are the wall-clock seconds since Unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateMeta</code> struct</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct CandidateMeta {
   state: State,
@@ -5260,8 +5197,7 @@ to be run very often.</li>
 </ul>
 <h2 id="functionality-15"><a class="header" href="#functionality-15">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum WireMessage&lt;M&gt; {
 	ProtocolMessage(M),
@@ -5270,8 +5206,7 @@ to be run very often.</li>
 <span class="boring">}
 </span></code></pre></pre>
 <p>and instantiates this type twice, once using the <a href="node/utility/../../types/network.html#validation-v1"><code>ValidationProtocolV1</code></a> message type, and once with the <a href="node/utility/../../types/network.html#collation-v1"><code>CollationProtocolV1</code></a> message type.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type ValidationV1Message = WireMessage&lt;ValidationProtocolV1&gt;;
 type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;
@@ -5448,8 +5383,7 @@ Candidates are the fundamental datatype for advancing parachains and parathreads
 <p>This section will describe the base candidate type, its components, and variants that contain extra data.</p>
 <h2 id="para-id"><a class="header" href="#para-id">Para Id</a></h2>
 <p>A unique 32-bit identifier referring to a specific para (chain or thread). The relay-chain runtime guarantees that <code>ParaId</code>s are unique for the duration of any session, but recycling and reuse over a longer period of time is permitted.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ParaId(u32);
 <span class="boring">}
@@ -5457,8 +5391,7 @@ Candidates are the fundamental datatype for advancing parachains and parathreads
 <h2 id="candidate-receipt"><a class="header" href="#candidate-receipt">Candidate Receipt</a></h2>
 <p>Much info in a <a href="types/candidate.html#full-candidate-receipt"><code>FullCandidateReceipt</code></a> is duplicated from the relay-chain state. When the corresponding relay-chain state is considered widely available, the Candidate Receipt should be favored over the <code>FullCandidateReceipt</code>.</p>
 <p>Examples of situations where the state is readily available includes within the scope of work done by subsystems working on a given relay-parent, or within the logic of the runtime importing a backed candidate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A candidate-receipt.
 struct CandidateReceipt {
@@ -5472,8 +5405,7 @@ struct CandidateReceipt {
 <h2 id="full-candidate-receipt"><a class="header" href="#full-candidate-receipt">Full Candidate Receipt</a></h2>
 <p>This is the full receipt type. The <code>PersistedValidationData</code> are technically redundant with the <code>inner.relay_parent</code>, which uniquely describes the block in the blockchain from whose state these values are derived. The <a href="types/candidate.html#candidate-receipt"><code>CandidateReceipt</code></a> variant is often used instead for this reason.</p>
 <p>However, the Full Candidate Receipt type is useful as a means of avoiding the implicit dependency on availability of old blockchain state. In situations such as availability and approval, having the full description of the candidate within a self-contained struct is convenient.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All data pertaining to the execution of a para candidate.
 struct FullCandidateReceipt {
@@ -5485,8 +5417,7 @@ struct FullCandidateReceipt {
 <h2 id="committed-candidate-receipt"><a class="header" href="#committed-candidate-receipt">Committed Candidate Receipt</a></h2>
 <p>This is a variant of the candidate receipt which includes the commitments of the candidate receipt alongside the descriptor. This should be favored over the <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a> in situations where the candidate is not going to be executed but the actual data committed to is important. This is often the case in the backing phase.</p>
 <p>The hash of the committed candidate receipt will be the same as the corresponding <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>, because it is computed by first hashing the encoding of the commitments to form a plain <a href="types/candidate.html#candidate-receipt"><code>Candidate Receipt</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A candidate-receipt with commitments directly included.
 struct CommittedCandidateReceipt {
@@ -5499,8 +5430,7 @@ struct CommittedCandidateReceipt {
 </span></code></pre></pre>
 <h2 id="candidate-descriptor"><a class="header" href="#candidate-descriptor">Candidate Descriptor</a></h2>
 <p>This struct is pure description of the candidate, in a lightweight format.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A unique descriptor of the candidate receipt.
 struct CandidateDescriptor {
@@ -5534,8 +5464,7 @@ struct CandidateDescriptor {
 <p>Furthermore, the validation data acts as a way to authorize the additional data the collator needs to pass to the validation function. For example, the validation function can check whether the incoming messages (e.g. downward messages) were actually sent by using the data provided in the validation data using so called MQC heads.</p>
 <p>Since the commitments of the validation function are checked by the relay-chain, secondary checkers can rely on the invariant that the relay-chain only includes para-blocks for which these checks have already been done. As such, there is no need for the validation data used to inform validators and collators about the checks the relay-chain will perform to be persisted by the availability system.</p>
 <p>The <code>PersistedValidationData</code> should be relatively lightweight primarily because it is constructed during inclusion for each candidate and therefore lies on the critical path of inclusion.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PersistedValidationData {
 	/// The parent head-data.
@@ -5558,16 +5487,14 @@ struct CandidateDescriptor {
 </span></code></pre></pre>
 <h2 id="headdata"><a class="header" href="#headdata"><code>HeadData</code></a></h2>
 <p>Head data is a type-safe abstraction around bytes (<code>Vec&lt;u8&gt;</code>) for the purposes of representing heads of parachains or parathreads.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct HeadData(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="candidate-commitments"><a class="header" href="#candidate-commitments">Candidate Commitments</a></h2>
 <p>The execution and validation of parachain or parathread candidates produces a number of values which either must be committed to on the relay chain or committed to the state of the relay chain.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Commitments made in a `CandidateReceipt`. Many of these are outputs of validation.
 #[derive(PartialEq, Eq, Clone, Encode, Decode)]
@@ -5590,8 +5517,7 @@ struct CandidateCommitments {
 </span></code></pre></pre>
 <h2 id="signing-context"><a class="header" href="#signing-context">Signing Context</a></h2>
 <p>This struct provides context to signatures by combining with various payloads to localize the signature to a particular session index and relay-chain hash. Having these fields included in the signature makes misbehavior attribution much simpler.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SigningContext {
 	/// The relay-chain block hash this signature is in the context of.
@@ -5606,8 +5532,7 @@ struct CandidateCommitments {
 <p>These types describe the data used in the backing phase. Some are sent over the wire within subsystems, and some are simply included in the relay-chain block.</p>
 <h2 id="validity-attestation"><a class="header" href="#validity-attestation">Validity Attestation</a></h2>
 <p>An attestation of validity for a candidate, used as part of a backing. Both the <code>Seconded</code> and <code>Valid</code> statements are considered attestations of validity. This structure is only useful where the candidate referenced is apparent.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidityAttestation {
   /// Implicit validity attestation by issuing.
@@ -5644,8 +5569,7 @@ impl&lt;Payload: EncodeAs&lt;RealPayload&gt;, RealPayload: Encode&gt; Signed&lt;
 <p><code>EncodeAs</code> is a helper trait with a blanket impl which ensures that any <code>T</code> can <code>EncodeAs&lt;T&gt;</code>. Therefore, for the generic case where <code>RealPayload = Payload</code>, it changes nothing. However, we  <code>impl EncodeAs&lt;CompactStatement&gt; for Statement</code>, which helps efficiency.</p>
 <h2 id="statement-type"><a class="header" href="#statement-type">Statement Type</a></h2>
 <p>The <a href="types/../node/backing/candidate-backing.html">Candidate Backing subsystem</a> issues and signs these after candidate validation.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about the validity of a parachain candidate.
 enum Statement {
@@ -5677,8 +5601,7 @@ enum CompactStatement {
 <p><code>CompactStatement</code> exists because a <code>CandidateReceipt</code> includes <code>HeadData</code>, which does not have a bounded size.</p>
 <h2 id="signed-statement-type"><a class="header" href="#signed-statement-type">Signed Statement Type</a></h2>
 <p>A statement which has been <a href="types/backing.html#signed-wrapper">cryptographically signed</a> by a validator.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A signed statement, containing the committed candidate receipt in the `Seconded` variant.
 pub type SignedFullStatement = Signed&lt;Statement, CompactStatement&gt;;
@@ -5690,8 +5613,7 @@ pub type SignedStatement = Signed&lt;CompactStatement&gt;;
 <p>Munging the signed <code>Statement</code> into a <code>CompactStatement</code> before signing allows the candidate receipt itself to be omitted when checking a signature on a <code>Seconded</code> statement.</p>
 <h2 id="backed-candidate"><a class="header" href="#backed-candidate">Backed Candidate</a></h2>
 <p>An <a href="types/candidate.html#committed-candidate-receipt"><code>CommittedCandidateReceipt</code></a> along with all data necessary to prove its backing. This is submitted to the relay-chain to process and move along the candidate to the pending-availability stage.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct BackedCandidate {
   candidate: CommittedCandidateReceipt,
@@ -5712,8 +5634,7 @@ struct BackedCandidates(Vec&lt;BackedCandidate&gt;); // sorted by para-id.
 candidates for the duration of a challenge period. This is done via an erasure-coding of the data to keep available.</p>
 <h2 id="signed-availability-bitfield"><a class="header" href="#signed-availability-bitfield">Signed Availability Bitfield</a></h2>
 <p>A bitfield <a href="types/backing.html#signed-wrapper">signed</a> by a particular validator about the availability of pending candidates.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type SignedAvailabilityBitfield = Signed&lt;Bitvec&gt;;
 
@@ -5730,16 +5651,14 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <p>In other words, it is the transpose of <a href="types/../runtime-api/availability-cores.html"><code>OccupiedCore::availability</code></a>.</p>
 <h2 id="proof-of-validity"><a class="header" href="#proof-of-validity">Proof-of-Validity</a></h2>
 <p>Often referred to as PoV, this is a type-safe wrapper around bytes (<code>Vec&lt;u8&gt;</code>) when referring to data that acts as a stateless-client proof of validity of a candidate, when used as input to the validation function of the para.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PoV(Vec&lt;u8&gt;);
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="available-data"><a class="header" href="#available-data">Available Data</a></h2>
 <p>This is the data we want to keep available for each <a href="types/candidate.html">candidate</a> included in the relay chain. This is the PoV of the block, as well as the <a href="types/candidate.html#persistedvalidationdata"><code>PersistedValidationData</code></a></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct AvailableData {
     /// The Proof-of-Validation of the candidate.
@@ -5754,8 +5673,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 </blockquote>
 <h2 id="erasure-chunk"><a class="header" href="#erasure-chunk">Erasure Chunk</a></h2>
 <p>The <a href="types/availability.html#availabledata"><code>AvailableData</code></a> is split up into an erasure-coding as part of the availability process. Each validator gets a chunk. This describes one of those chunks, along with its proof against a merkle root hash, which should be apparent from context, and is the <code>erasure_root</code> field of a <a href="types/candidate.html#candidatedescriptor"><code>CandidateDescriptor</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ErasureChunk {
     /// The erasure-encoded chunk of data belonging to the candidate block.
@@ -5771,8 +5689,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
 <h2 id="overseer-signal"><a class="header" href="#overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
   /// Signal about a change in active leaves.
@@ -5792,8 +5709,7 @@ struct Bitfields(Vec&lt;(SignedAvailabilityBitfield)&gt;), // bitfields sorted b
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
 <h2 id="active-leaves-update"><a class="header" href="#active-leaves-update">Active Leaves Update</a></h2>
 <p>Indicates a change in active leaves. Activated leaves should have jobs, whereas deactivated leaves should lead to winding-down of work based on those leaves.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum LeafStatus {
     // A leaf is fresh when it's the first time the leaf has been encountered.
@@ -5813,8 +5729,7 @@ struct ActiveLeavesUpdate {
 </span></code></pre></pre>
 <h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
 <p>A message type tying together all message types that are used across Subsystems.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AllMessages {
     CandidateValidation(CandidateValidationMessage),
@@ -5842,8 +5757,7 @@ struct ActiveLeavesUpdate {
 </span></code></pre></pre>
 <h2 id="approval-voting-message"><a class="header" href="#approval-voting-message">Approval Voting Message</a></h2>
 <p>Messages received by the approval voting subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AssignmentCheckResult {
     // The vote was accepted and should be propagated onwards.
@@ -5924,8 +5838,7 @@ enum ApprovalVotingMessage {
 </span></code></pre></pre>
 <h2 id="approval-distribution-message"><a class="header" href="#approval-distribution-message">Approval Distribution Message</a></h2>
 <p>Messages received by the approval distribution subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Metadata about a block which is now live in the approval protocol.
 struct BlockApprovalMeta {
@@ -5966,8 +5879,7 @@ enum ApprovalDistributionMessage {
 <h2 id="availability-distribution-message"><a class="header" href="#availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
 <p>This is a network protocol that receives messages of type <a href="types/network.html#availability-distribution-v1"><code>AvailabilityDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionMessage {
       /// Incoming network request for an availability chunk.
@@ -5996,8 +5908,7 @@ enum ApprovalDistributionMessage {
 </span></code></pre></pre>
 <h2 id="availability-recovery-message"><a class="header" href="#availability-recovery-message">Availability Recovery Message</a></h2>
 <p>Messages received by the availability recovery subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RecoveryError {
     Invalid,
@@ -6016,8 +5927,7 @@ enum AvailabilityRecoveryMessage {
 </span></code></pre></pre>
 <h2 id="availability-store-message"><a class="header" href="#availability-store-message">Availability Store Message</a></h2>
 <p>Messages to and from the availability store.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
     /// Query the `AvailableData` of a candidate by hash.
@@ -6041,8 +5951,7 @@ enum AvailabilityRecoveryMessage {
 <h2 id="bitfield-distribution-message"><a class="header" href="#bitfield-distribution-message">Bitfield Distribution Message</a></h2>
 <p>Messages received by the bitfield distribution subsystem.
 This is a network protocol that receives messages of type <a href="types/network.html#bitfield-distribution-v1"><code>BitfieldDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum BitfieldDistributionMessage {
     /// Distribute a bitfield signed by a validator to other validators.
@@ -6055,16 +5964,14 @@ This is a network protocol that receives messages of type <a href="types/network
 </span></code></pre></pre>
 <h2 id="bitfield-signing-message"><a class="header" href="#bitfield-signing-message">Bitfield Signing Message</a></h2>
 <p>Currently, the bitfield signing subsystem receives no specific messages.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 enum BitfieldSigningMessage { }
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="candidate-backing-message"><a class="header" href="#candidate-backing-message">Candidate Backing Message</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateBackingMessage {
   /// Requests a set of backable candidates that could be backed in a child of the given
@@ -6082,8 +5989,7 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2 id="chain-api-message"><a class="header" href="#chain-api-message">Chain API Message</a></h2>
 <p>The Chain API subsystem is responsible for providing an interface to chain data.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ChainApiMessage {
     /// Get the block number by hash.
@@ -6121,8 +6027,7 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2 id="chain-selection-message"><a class="header" href="#chain-selection-message">Chain Selection Message</a></h2>
 <p>Messages received by the <a href="types/../node/utility/chain-selection.html">Chain Selection subsystem</a></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ChainSelectionMessage {
     /// Signal to the chain selection subsystem that a specific block has been approved.
@@ -6139,8 +6044,7 @@ enum BitfieldSigningMessage { }
 <h2 id="collator-protocol-message"><a class="header" href="#collator-protocol-message">Collator Protocol Message</a></h2>
 <p>Messages received by the <a href="types/../node/collators/collator-protocol.html">Collator Protocol subsystem</a></p>
 <p>This is a network protocol that receives messages of type <a href="types/network.html#collator-protocol-v1"><code>CollatorProtocolV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollatorProtocolMessage {
     /// Signal to the collator protocol that it should connect to validators with the expectation
@@ -6170,8 +6074,7 @@ enum BitfieldSigningMessage { }
 <h2 id="dispute-coordinator-message"><a class="header" href="#dispute-coordinator-message">Dispute Coordinator Message</a></h2>
 <p>Messages received by the <a href="types/../node/disputes/dispute-coordinator.html">Dispute Coordinator subsystem</a></p>
 <p>This subsystem coordinates participation in disputes, tracks live disputes, and observed statements of validators from subsystems.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeCoordinatorMessage {
     /// Import a statement by a validator about a candidate.
@@ -6243,8 +6146,7 @@ pub enum ImportStatementsResult {
 <p>Messages received by the <a href="types/../node/disputes/dispute-distribution.html">Dispute Distribution
 subsystem</a>. This subsystem is
 responsible of distributing explicit dispute statements.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeDistributionMessage {
 
@@ -6269,8 +6171,7 @@ responsible of distributing explicit dispute statements.</p>
 <h2 id="network-bridge-message"><a class="header" href="#network-bridge-message">Network Bridge Message</a></h2>
 <p>Messages received by the network bridge. This subsystem is invoked by others to manipulate access
 to the low-level networking code.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Peer-sets handled by the network bridge.
 enum PeerSet {
@@ -6331,8 +6232,7 @@ enum NetworkBridgeMessage {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="misbehavior-report"><a class="header" href="#misbehavior-report">Misbehavior Report</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub type Misbehavior = generic::Misbehavior&lt;
     CommittedCandidateReceipt,
@@ -6394,8 +6294,7 @@ mod generic {
 </span></code></pre></pre>
 <h2 id="pov-distribution-message"><a class="header" href="#pov-distribution-message">PoV Distribution Message</a></h2>
 <p>This is a network protocol that receives messages of type <a href="types/network.html#pov-distribution-v1"><code>PoVDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum PoVDistributionMessage {
     /// Fetch a PoV from the network.
@@ -6412,8 +6311,7 @@ mod generic {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="provisioner-message"><a class="header" href="#provisioner-message">Provisioner Message</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// This data becomes intrinsics or extrinsics which should be included in a future relay chain block.
 enum ProvisionableData {
@@ -6447,8 +6345,7 @@ enum ProvisionerMessage {
 <blockquote>
 <p>To do: link to the Runtime API section. Not possible currently because of https://github.com/Michael-F-Bryan/mdbook-linkcheck/issues/25. Once v0.7.1 is released it will work.</p>
 </blockquote>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RuntimeApiRequest {
     /// Get the version of the runtime API at the given parent hash, if any.
@@ -6506,8 +6403,7 @@ enum RuntimeApiMessage {
 <p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
 <p>This is a network protocol that receives messages of type <a href="types/network.html#statement-distribution-v1"><code>StatementDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionMessage {
     /// An update from the network bridge.
@@ -6523,8 +6419,7 @@ It receives updates from the network bridge and signed statements to share with 
 </span></code></pre></pre>
 <h2 id="validation-request-type"><a class="header" href="#validation-request-type">Validation Request Type</a></h2>
 <p>Various modules request that the <a href="types/../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message. It returns <a href="types/candidate.html#validationoutputs"><code>ValidationOutputs</code></a> for successful validation.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span>
 <span class="boring">fn main() {
 </span>/// The outcome of the candidate-validation's PVF pre-check request.
@@ -6616,8 +6511,7 @@ pub enum CandidateValidationMessage {
 </span></code></pre></pre>
 <h2 id="pvf-pre-checker-message"><a class="header" href="#pvf-pre-checker-message">PVF Pre-checker Message</a></h2>
 <p>Currently, the PVF pre-checker subsystem receives no specific messages.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 pub enum PvfCheckerMessage { }
@@ -6627,8 +6521,7 @@ pub enum PvfCheckerMessage { }
 <p>Types used within the runtime exclusively and pervasively.</p>
 <h2 id="host-configuration"><a class="header" href="#host-configuration">Host Configuration</a></h2>
 <p>The internal-to-runtime configuration of the parachain host. This is expected to be altered only by governance procedures.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct HostConfiguration {
 	/// The minimum period, in blocks, between which parachains can update their validation code.
@@ -6744,8 +6637,7 @@ pub enum PvfCheckerMessage { }
 <li><a href="types/disputes.html#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></li>
 <li><code>Header</code></li>
 </ol>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ParaInherentData {
 	bitfields: Bitfields,
@@ -6758,8 +6650,7 @@ pub enum PvfCheckerMessage { }
 <div style="break-before: page; page-break-before: always;"></div><h1 id="chain"><a class="header" href="#chain">Chain</a></h1>
 <p>Types pertaining to the relay-chain - events, structures, etc.</p>
 <h2 id="block-import-event"><a class="header" href="#block-import-event">Block Import Event</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Indicates that a new block has been added to the blockchain.
 struct BlockImportEvent {
@@ -6774,8 +6665,7 @@ struct BlockImportEvent {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="block-finalization-event"><a class="header" href="#block-finalization-event">Block Finalization Event</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Indicates that a new block has been finalized.
 struct BlockFinalizationEvent {
@@ -6847,8 +6737,7 @@ struct InboundHrmpMessage {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="network-types"><a class="header" href="#network-types">Network Types</a></h1>
 <p>These types are those that are actually sent over the network to subsystems.</p>
 <h2 id="universal-types"><a class="header" href="#universal-types">Universal Types</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type RequestId = u64;
 type ProtocolVersion = u32;
@@ -6868,8 +6757,7 @@ enum ObservedRole {
 </span></code></pre></pre>
 <h2 id="v1-network-subsystem-message-types"><a class="header" href="#v1-network-subsystem-message-types">V1 Network Subsystem Message Types</a></h2>
 <h3 id="approval-distribution-v1"><a class="header" href="#approval-distribution-v1">Approval Distribution V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ApprovalDistributionV1Message {
 	/// Assignments for candidates in recent, unfinalized blocks.
@@ -6883,8 +6771,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="availability-distribution-v1"><a class="header" href="#availability-distribution-v1">Availability Distribution V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionV1Message {
 	/// An erasure chunk for a given candidate hash.
@@ -6893,8 +6780,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="availability-recovery-v1"><a class="header" href="#availability-recovery-v1">Availability Recovery V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityRecoveryV1Message {
 	/// Request a chunk for a given candidate hash and validator index.
@@ -6912,8 +6798,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="bitfield-distribution-v1"><a class="header" href="#bitfield-distribution-v1">Bitfield Distribution V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum BitfieldDistributionV1Message {
 	/// A signed availability bitfield for a given relay-parent hash.
@@ -6922,8 +6807,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="pov-distribution-v1"><a class="header" href="#pov-distribution-v1">PoV Distribution V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum PoVDistributionV1Message {
 	/// Notification that we are awaiting the given PoVs (by hash) against a
@@ -6936,8 +6820,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="statement-distribution-v1"><a class="header" href="#statement-distribution-v1">Statement Distribution V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionV1Message {
 	/// A signed full statement under a given relay-parent.
@@ -6946,8 +6829,7 @@ enum ObservedRole {
 <span class="boring">}
 </span></code></pre></pre>
 <h3 id="collator-protocol-v1"><a class="header" href="#collator-protocol-v1">Collator Protocol V1</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollatorProtocolV1Message {
 	/// Declare the intent to advertise collations under a collator ID and `Para`, attaching a
@@ -6964,8 +6846,7 @@ enum ObservedRole {
 <h2 id="v1-wire-protocols"><a class="header" href="#v1-wire-protocols">V1 Wire Protocols</a></h2>
 <h3 id="validation-v1-1"><a class="header" href="#validation-v1-1">Validation V1</a></h3>
 <p>These are the messages for the protocol on the validation peer-set.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidationProtocolV1 {
 	ApprovalDistribution(ApprovalDistributionV1Message),
@@ -6979,8 +6860,7 @@ enum ObservedRole {
 </span></code></pre></pre>
 <h3 id="collation-v1-1"><a class="header" href="#collation-v1-1">Collation V1</a></h3>
 <p>These are the messages for the protocol on the collation peer-set</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollationProtocolV1 {
 	CollatorProtocol(CollatorProtocolV1Message),
@@ -6989,8 +6869,7 @@ enum ObservedRole {
 </span></code></pre></pre>
 <h2 id="network-bridge-event"><a class="header" href="#network-bridge-event">Network Bridge Event</a></h2>
 <p>These updates are posted from the <a href="types/../node/utility/network-bridge.html">Network Bridge Subsystem</a> to other subsystems based on registered listeners.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct NewGossipTopology {
 	/// The session index this topology corresponds to.
@@ -7037,8 +6916,7 @@ enum NetworkBridgeEvent&lt;M&gt; {
 <h2 id="assignmentcert"><a class="header" href="#assignmentcert"><code>AssignmentCert</code></a></h2>
 <p>An <code>AssignmentCert</code>, short for Assignment Certificate, is a piece of data provided by a validator to prove that they have been selected to perform secondary approval checks on an included candidate.</p>
 <p>These certificates can be checked in the context of a specific block, candidate, and validator assignment VRF key. The block state will also provide further context about the availability core states at that block.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AssignmentCertKind {
     RelayVRFModulo {
@@ -7062,8 +6940,7 @@ struct AssignmentCert {
 </blockquote>
 <h2 id="indirectassignmentcert"><a class="header" href="#indirectassignmentcert"><code>IndirectAssignmentCert</code></a></h2>
 <p>An assignment cert which refers to the candidate under which the assignment is relevant by block hash.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct IndirectAssignmentCert {
     // A block hash where the candidate appears.
@@ -7075,16 +6952,14 @@ struct AssignmentCert {
 </span></code></pre></pre>
 <h2 id="approvalvote"><a class="header" href="#approvalvote"><code>ApprovalVote</code></a></h2>
 <p>A vote of approval on a candidate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ApprovalVote(Hash);
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="signedapprovalvote"><a class="header" href="#signedapprovalvote"><code>SignedApprovalVote</code></a></h2>
 <p>An approval vote signed with a validator's key. This should be verifiable under the <code>ValidatorId</code> corresponding to the <code>ValidatorIndex</code> of the session, which should be implicit from context.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SignedApprovalVote {
     vote: ApprovalVote,
@@ -7096,8 +6971,7 @@ struct AssignmentCert {
 <h2 id="indirectsignedapprovalvote"><a class="header" href="#indirectsignedapprovalvote"><code>IndirectSignedApprovalVote</code></a></h2>
 <p>A signed approval vote which references the candidate indirectly via the block. If there exists a look-up to the candidate hash from the block hash and candidate index, then this can be transformed into a <code>SignedApprovalVote</code>.</p>
 <p>Although this vote references the candidate by a specific block hash and candidate index, the signature is computed on the actual <code>SignedApprovalVote</code> payload.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct IndirectSignedApprovalVote {
     // A block hash where the candidate appears.
@@ -7111,8 +6985,7 @@ struct AssignmentCert {
 </span></code></pre></pre>
 <h2 id="checkedassignmentcert"><a class="header" href="#checkedassignmentcert"><code>CheckedAssignmentCert</code></a></h2>
 <p>An assignment cert which has checked both the VRF and the validity of the implied assignment according to the selection criteria rules of the protocol. This type should be declared in such a way as to be instantiatable only when the checks have actually been done. Fields should be accessible via getters, not direct struct access.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct CheckedAssignmentCert {
     cert: AssignmentCert,
@@ -7124,16 +6997,14 @@ struct AssignmentCert {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="delaytranche"><a class="header" href="#delaytranche"><code>DelayTranche</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type DelayTranche = u32;
 <span class="boring">}
 </span></code></pre></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="disputes-2"><a class="header" href="#disputes-2">Disputes</a></h1>
 <h2 id="disputestatementset"><a class="header" href="#disputestatementset"><code>DisputeStatementSet</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A set of statements about a specific candidate.
 struct DisputeStatementSet {
@@ -7144,8 +7015,7 @@ struct DisputeStatementSet {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="disputestatement"><a class="header" href="#disputestatement"><code>DisputeStatement</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// A statement about a candidate, to be used within some dispute resolution process.
 ///
@@ -7161,8 +7031,7 @@ enum DisputeStatement {
 </span></code></pre></pre>
 <h2 id="dispute-statement-kinds"><a class="header" href="#dispute-statement-kinds">Dispute Statement Kinds</a></h2>
 <p>Kinds of dispute statements. Each of these can be combined with a candidate hash, session index, validator public key, and validator signature to reproduce and check the original statement.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ValidDisputeStatementKind {
     Explicit,
@@ -7177,8 +7046,7 @@ enum InvalidDisputeStatementKind {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="explicitdisputestatement"><a class="header" href="#explicitdisputestatement"><code>ExplicitDisputeStatement</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct ExplicitDisputeStatement {
     valid: bool,
@@ -7189,15 +7057,13 @@ enum InvalidDisputeStatementKind {
 </span></code></pre></pre>
 <h2 id="multidisputestatementset"><a class="header" href="#multidisputestatementset"><code>MultiDisputeStatementSet</code></a></h2>
 <p>Sets of statements for many (zero or more) disputes.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type MultiDisputeStatementSet = Vec&lt;DisputeStatementSet&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="disputestate"><a class="header" href="#disputestate"><code>DisputeState</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct DisputeState {
     validators_for: Bitfield, // one bit per validator.
@@ -7208,8 +7074,7 @@ enum InvalidDisputeStatementKind {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="scrapedonchainvotes"><a class="header" href="#scrapedonchainvotes"><code>ScrapedOnChainVotes</code></a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Type for transcending recorded on-chain
 /// dispute relevant votes and conclusions to
@@ -7232,8 +7097,7 @@ struct ScrapedOnChainVotes {
 <p>One of the main units of information on which PVF pre-checking voting is build is the <code>PvfCheckStatement</code>.</p>
 <p>This is a statement by the validator who ran the pre-checking process for a PVF. A PVF is identified by the <code>ValidationCodeHash</code>.</p>
 <p>The statement is valid only during a single session, specified in the <code>session_index</code>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct PvfCheckStatement {
     /// `true` if the subject passed pre-checking and `false` otherwise.

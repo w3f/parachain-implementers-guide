@@ -145,8 +145,7 @@
                         <h1 id="initializer-module"><a class="header" href="#initializer-module">Initializer Module</a></h1>
 <p>This module is responsible for initializing the other modules in a deterministic order. It also has one other purpose as described in the overview of the runtime: accepting and forwarding session change notifications.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>HasInitialized: bool;
 // buffered session changes along with the block number at which they should be applied.

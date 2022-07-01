@@ -146,8 +146,7 @@
 <p>The inclusion module is responsible for inclusion and availability of scheduled parachains and parathreads.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Helper structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct AvailabilityBitfield {
   bitfield: BitVec, // one bit per core.
@@ -167,8 +166,7 @@ struct CandidatePendingAvailability {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The latest bitfield for each validator, referred to by index.
 bitfields: map ValidatorIndex =&gt; AvailabilityBitfield;
@@ -261,8 +259,7 @@ PendingAvailabilityCommitments: map ParaId =&gt; CandidateCommitments;
 </li>
 <li>
 <p><code>collect_pending</code>:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>  fn collect_pending(f: impl Fn(CoreIndex, BlockNumber) -&gt; bool) -&gt; Vec&lt;CoreIndex&gt; {
     // sweep through all paras pending availability. if the predicate returns true, when given the core index and

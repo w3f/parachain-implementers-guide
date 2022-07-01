@@ -178,8 +178,7 @@
 <p>Parathread claims, when scheduled onto a free core, may not result in a block pending availability. This may be due to collator error, networking timeout, or censorship by the validator group. In this case, the claims should be retried a certain number of times to give the collator a fair shot.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Utility structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// A claim on authoring the next block for a given parathread.
 struct ParathreadClaim(ParaId, CollatorId);
@@ -227,8 +226,7 @@ enum FreedReason {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// All the validator groups. One for each core. Indices are into the `ActiveValidators` storage.
 ValidatorGroups: Vec&lt;Vec&lt;ValidatorIndex&gt;&gt;;

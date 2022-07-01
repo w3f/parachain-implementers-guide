@@ -166,8 +166,7 @@
 <li><code>iter_with_prefix(prefix) -&gt; Iterator&lt;(key, value)&gt;</code> - gives all keys and values in lexicographical order where the key starts with <code>prefix</code>.</li>
 </ul>
 <p>We use this database to encode the following schema:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>(&quot;available&quot;, CandidateHash) -&gt; Option&lt;AvailableData&gt;
 (&quot;chunk&quot;, CandidateHash, u32) -&gt; Option&lt;ErasureChunk&gt;
@@ -179,8 +178,7 @@
 </span></code></pre></pre>
 <p>Timestamps are the wall-clock seconds since Unix epoch. Timestamps and block numbers are both encoded as big-endian so lexicographic order is ascending.</p>
 <p>The meta information that we track per-candidate is defined as the <code>CandidateMeta</code> struct</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct CandidateMeta {
   state: State,

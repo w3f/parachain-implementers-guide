@@ -183,8 +183,7 @@ Aggression Level 2: All peers send all messages to all their row and column neig
 <li><code>NetworkBridgeMessage::SendValidationMessage::ApprovalDistribution</code></li>
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type BlockScopedCandidate = (Hash, CandidateHash);
 
@@ -294,8 +293,7 @@ Ensure a vector is present in <code>pending_known</code> for each hash in the vi
 <h4 id="overseersignalblockfinalized"><a class="header" href="#overseersignalblockfinalized"><code>OverseerSignal::BlockFinalized</code></a></h4>
 <p>Prune all lists from <code>blocks_by_number</code> with number less than or equal to <code>finalized_number</code>. Prune all the <code>BlockEntry</code>s referenced by those lists.</p>
 <h3 id="utility"><a class="header" href="#utility">Utility</a></h3>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum MessageSource {
   Peer(PeerId),

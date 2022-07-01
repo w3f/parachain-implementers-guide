@@ -165,8 +165,7 @@
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>This network bridge sends messages of these types over the network.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum WireMessage&lt;M&gt; {
 	ProtocolMessage(M),
@@ -175,8 +174,7 @@
 <span class="boring">}
 </span></code></pre></pre>
 <p>and instantiates this type twice, once using the <a href="../../types/network.html#validation-v1"><code>ValidationProtocolV1</code></a> message type, and once with the <a href="../../types/network.html#collation-v1"><code>CollationProtocolV1</code></a> message type.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>type ValidationV1Message = WireMessage&lt;ValidationProtocolV1&gt;;
 type CollationV1Message = WireMessage&lt;CollationProtocolV1&gt;;

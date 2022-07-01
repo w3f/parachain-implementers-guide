@@ -146,8 +146,7 @@
 <p>Get the session index that is expected at the child of a block.</p>
 <p>In the <a href="../runtime/initializer.html"><code>Initializer</code></a> module, session changes are buffered by one block. The session index of the child of any relay block is always predictable by that block's state.</p>
 <p>This session index can be used to derive a <a href="../types/candidate.html#signing-context"><code>SigningContext</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Returns the session index expected at a child of the block.
 fn session_index_for_child(at: Block) -&gt; SessionIndex;

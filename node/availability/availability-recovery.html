@@ -160,8 +160,7 @@
 </ul>
 <h2 id="functionality"><a class="header" href="#functionality">Functionality</a></h2>
 <p>We hold a state which tracks the currently ongoing recovery tasks, as well as which request IDs correspond to which task. A recovery task is a structure encapsulating all recovery tasks with the network necessary to recover the available data in respect to one candidate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct State {
     /// Each recovery is implemented as an independent async task, and the handles only supply information about the result.
@@ -237,8 +236,7 @@ struct RecoveryTask {
 </ol>
 <p>Launch the source as a background task running <code>run(recovery_task)</code>.</p>
 <h4 id="runrecovery_task---resultavailabledata-recoeryerror"><a class="header" href="#runrecovery_task---resultavailabledata-recoeryerror"><code>run(recovery_task) -&gt; Result&lt;AvailableData, RecoeryError&gt;</code></a></h4>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>// How many parallel requests to have going at once.
 const N_PARALLEL: usize = 50;

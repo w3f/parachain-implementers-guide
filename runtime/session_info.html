@@ -146,8 +146,7 @@
 <p>For disputes and approvals, we need access to information about validator sets from prior sessions. We also often want easy access to the same information about the current session's validator set. This module aggregates and stores this information in a rolling window while providing easy APIs for access.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Helper structs:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct SessionInfo {
     /// Validators in canonical ordering.
@@ -198,8 +197,7 @@
 <span class="boring">}
 </span></code></pre></pre>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// The earliest session for which previous session info is stored.
 EarliestStoredSession: SessionIndex,

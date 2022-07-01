@@ -166,8 +166,7 @@
 <p>The storage of this module is designed around tracking <a href="../types/disputes.html#disputestate"><code>DisputeState</code>s</a>, updating them with votes, and tracking blocks included by this branch of the relay chain. It also contains a <code>Frozen</code> parameter designed to freeze the state of all parachains.</p>
 <h2 id="storage"><a class="header" href="#storage">Storage</a></h2>
 <p>Storage Layout:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>LastPrunedSession: Option&lt;SessionIndex&gt;,
 

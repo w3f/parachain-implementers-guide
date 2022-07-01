@@ -146,8 +146,7 @@
 <p>This chapter contains message types sent to and from the overseer, and the underlying subsystem message types that are transmitted using these.</p>
 <h2 id="overseer-signal"><a class="header" href="#overseer-signal">Overseer Signal</a></h2>
 <p>Signals from the overseer to a subsystem to request change in execution that has to be obeyed by the subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum OverseerSignal {
   /// Signal about a change in active leaves.
@@ -167,8 +166,7 @@
 <p>Either way, there will be some top-level type encapsulating messages from the overseer to each subsystem.</p>
 <h2 id="active-leaves-update"><a class="header" href="#active-leaves-update">Active Leaves Update</a></h2>
 <p>Indicates a change in active leaves. Activated leaves should have jobs, whereas deactivated leaves should lead to winding-down of work based on those leaves.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum LeafStatus {
     // A leaf is fresh when it's the first time the leaf has been encountered.
@@ -188,8 +186,7 @@ struct ActiveLeavesUpdate {
 </span></code></pre></pre>
 <h2 id="all-messages"><a class="header" href="#all-messages">All Messages</a></h2>
 <p>A message type tying together all message types that are used across Subsystems.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AllMessages {
     CandidateValidation(CandidateValidationMessage),
@@ -217,8 +214,7 @@ struct ActiveLeavesUpdate {
 </span></code></pre></pre>
 <h2 id="approval-voting-message"><a class="header" href="#approval-voting-message">Approval Voting Message</a></h2>
 <p>Messages received by the approval voting subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AssignmentCheckResult {
     // The vote was accepted and should be propagated onwards.
@@ -299,8 +295,7 @@ enum ApprovalVotingMessage {
 </span></code></pre></pre>
 <h2 id="approval-distribution-message"><a class="header" href="#approval-distribution-message">Approval Distribution Message</a></h2>
 <p>Messages received by the approval distribution subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Metadata about a block which is now live in the approval protocol.
 struct BlockApprovalMeta {
@@ -341,8 +336,7 @@ enum ApprovalDistributionMessage {
 <h2 id="availability-distribution-message"><a class="header" href="#availability-distribution-message">Availability Distribution Message</a></h2>
 <p>Messages received by the availability distribution subsystem.</p>
 <p>This is a network protocol that receives messages of type <a href="network.html#availability-distribution-v1"><code>AvailabilityDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityDistributionMessage {
       /// Incoming network request for an availability chunk.
@@ -371,8 +365,7 @@ enum ApprovalDistributionMessage {
 </span></code></pre></pre>
 <h2 id="availability-recovery-message"><a class="header" href="#availability-recovery-message">Availability Recovery Message</a></h2>
 <p>Messages received by the availability recovery subsystem.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RecoveryError {
     Invalid,
@@ -391,8 +384,7 @@ enum AvailabilityRecoveryMessage {
 </span></code></pre></pre>
 <h2 id="availability-store-message"><a class="header" href="#availability-store-message">Availability Store Message</a></h2>
 <p>Messages to and from the availability store.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum AvailabilityStoreMessage {
     /// Query the `AvailableData` of a candidate by hash.
@@ -416,8 +408,7 @@ enum AvailabilityRecoveryMessage {
 <h2 id="bitfield-distribution-message"><a class="header" href="#bitfield-distribution-message">Bitfield Distribution Message</a></h2>
 <p>Messages received by the bitfield distribution subsystem.
 This is a network protocol that receives messages of type <a href="network.html#bitfield-distribution-v1"><code>BitfieldDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum BitfieldDistributionMessage {
     /// Distribute a bitfield signed by a validator to other validators.
@@ -430,16 +421,14 @@ This is a network protocol that receives messages of type <a href="network.html#
 </span></code></pre></pre>
 <h2 id="bitfield-signing-message"><a class="header" href="#bitfield-signing-message">Bitfield Signing Message</a></h2>
 <p>Currently, the bitfield signing subsystem receives no specific messages.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 enum BitfieldSigningMessage { }
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="candidate-backing-message"><a class="header" href="#candidate-backing-message">Candidate Backing Message</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CandidateBackingMessage {
   /// Requests a set of backable candidates that could be backed in a child of the given
@@ -457,8 +446,7 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2 id="chain-api-message"><a class="header" href="#chain-api-message">Chain API Message</a></h2>
 <p>The Chain API subsystem is responsible for providing an interface to chain data.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ChainApiMessage {
     /// Get the block number by hash.
@@ -496,8 +484,7 @@ enum BitfieldSigningMessage { }
 </span></code></pre></pre>
 <h2 id="chain-selection-message"><a class="header" href="#chain-selection-message">Chain Selection Message</a></h2>
 <p>Messages received by the <a href="../node/utility/chain-selection.html">Chain Selection subsystem</a></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum ChainSelectionMessage {
     /// Signal to the chain selection subsystem that a specific block has been approved.
@@ -514,8 +501,7 @@ enum BitfieldSigningMessage { }
 <h2 id="collator-protocol-message"><a class="header" href="#collator-protocol-message">Collator Protocol Message</a></h2>
 <p>Messages received by the <a href="../node/collators/collator-protocol.html">Collator Protocol subsystem</a></p>
 <p>This is a network protocol that receives messages of type <a href="network.html#collator-protocol-v1"><code>CollatorProtocolV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum CollatorProtocolMessage {
     /// Signal to the collator protocol that it should connect to validators with the expectation
@@ -545,8 +531,7 @@ enum BitfieldSigningMessage { }
 <h2 id="dispute-coordinator-message"><a class="header" href="#dispute-coordinator-message">Dispute Coordinator Message</a></h2>
 <p>Messages received by the <a href="../node/disputes/dispute-coordinator.html">Dispute Coordinator subsystem</a></p>
 <p>This subsystem coordinates participation in disputes, tracks live disputes, and observed statements of validators from subsystems.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeCoordinatorMessage {
     /// Import a statement by a validator about a candidate.
@@ -618,8 +603,7 @@ pub enum ImportStatementsResult {
 <p>Messages received by the <a href="../node/disputes/dispute-distribution.html">Dispute Distribution
 subsystem</a>. This subsystem is
 responsible of distributing explicit dispute statements.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeDistributionMessage {
 
@@ -644,8 +628,7 @@ responsible of distributing explicit dispute statements.</p>
 <h2 id="network-bridge-message"><a class="header" href="#network-bridge-message">Network Bridge Message</a></h2>
 <p>Messages received by the network bridge. This subsystem is invoked by others to manipulate access
 to the low-level networking code.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Peer-sets handled by the network bridge.
 enum PeerSet {
@@ -706,8 +689,7 @@ enum NetworkBridgeMessage {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="misbehavior-report"><a class="header" href="#misbehavior-report">Misbehavior Report</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>pub type Misbehavior = generic::Misbehavior&lt;
     CommittedCandidateReceipt,
@@ -769,8 +751,7 @@ mod generic {
 </span></code></pre></pre>
 <h2 id="pov-distribution-message"><a class="header" href="#pov-distribution-message">PoV Distribution Message</a></h2>
 <p>This is a network protocol that receives messages of type <a href="network.html#pov-distribution-v1"><code>PoVDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum PoVDistributionMessage {
     /// Fetch a PoV from the network.
@@ -787,8 +768,7 @@ mod generic {
 <span class="boring">}
 </span></code></pre></pre>
 <h2 id="provisioner-message"><a class="header" href="#provisioner-message">Provisioner Message</a></h2>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// This data becomes intrinsics or extrinsics which should be included in a future relay chain block.
 enum ProvisionableData {
@@ -822,8 +802,7 @@ enum ProvisionerMessage {
 <blockquote>
 <p>To do: link to the Runtime API section. Not possible currently because of https://github.com/Michael-F-Bryan/mdbook-linkcheck/issues/25. Once v0.7.1 is released it will work.</p>
 </blockquote>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum RuntimeApiRequest {
     /// Get the version of the runtime API at the given parent hash, if any.
@@ -881,8 +860,7 @@ enum RuntimeApiMessage {
 <p>The Statement Distribution subsystem distributes signed statements and candidates from validators to other validators. It does this by distributing full statements, which embed the candidate receipt, as opposed to compact statements which don't.
 It receives updates from the network bridge and signed statements to share with other validators.</p>
 <p>This is a network protocol that receives messages of type <a href="network.html#statement-distribution-v1"><code>StatementDistributionV1Message</code></a>.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum StatementDistributionMessage {
     /// An update from the network bridge.
@@ -898,8 +876,7 @@ It receives updates from the network bridge and signed statements to share with 
 </span></code></pre></pre>
 <h2 id="validation-request-type"><a class="header" href="#validation-request-type">Validation Request Type</a></h2>
 <p>Various modules request that the <a href="../node/utility/candidate-validation.html">Candidate Validation subsystem</a> validate a block with this message. It returns <a href="candidate.html#validationoutputs"><code>ValidationOutputs</code></a> for successful validation.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span>
 <span class="boring">fn main() {
 </span>/// The outcome of the candidate-validation's PVF pre-check request.
@@ -991,8 +968,7 @@ pub enum CandidateValidationMessage {
 </span></code></pre></pre>
 <h2 id="pvf-pre-checker-message"><a class="header" href="#pvf-pre-checker-message">PVF Pre-checker Message</a></h2>
 <p>Currently, the PVF pre-checker subsystem receives no specific messages.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>/// Non-instantiable message type
 pub enum PvfCheckerMessage { }

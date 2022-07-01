@@ -145,15 +145,13 @@
                         <h1 id="availability-cores"><a class="header" href="#availability-cores">Availability Cores</a></h1>
 <p>Yields information on all availability cores. Cores are either free or occupied. Free cores can have paras assigned to them. Occupied cores don't, but they can become available part-way through a block due to bitfields and then have something scheduled on them. To allow optimistic validation of candidates, the occupied cores are accompanied by information on what is upcoming. This information can be leveraged when validators perceive that there is a high likelihood of a core becoming available based on bitfields seen, and then optimistically validate something that would become scheduled based on that, although there is no guarantee on what the block producer will actually include in the block. </p>
 <p>See also the <a href="../runtime/scheduler.html">Scheduler Module</a> for a high-level description of what an availability core is and why it exists.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>fn availability_cores(at: Block) -&gt; Vec&lt;CoreState&gt;;
 <span class="boring">}
 </span></code></pre></pre>
 <p>This is all the information that a validator needs about scheduling for the current block. It includes all information on <a href="../runtime/scheduler.html">Scheduler</a> core-assignments and <a href="../runtime/inclusion.html">Inclusion</a> state of blocks occupying availability cores. It includes data necessary to determine not only which paras are assigned now, but which cores are likely to become freed after processing bitfields, and exactly which bitfields would be necessary to make them so.  The implementation of this runtime API should invoke <code>Scheduler::clear</code> and <code>Scheduler::schedule(Vec::new(), current_block_number + 1)</code> to ensure that scheduling is accurate.</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct OccupiedCore {
     // NOTE: this has no ParaId as it can be deduced from the candidate descriptor.

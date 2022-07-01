@@ -168,8 +168,7 @@ be aware of a dispute and have the relevant votes.</p>
 <h4 id="disputes"><a class="header" href="#disputes">Disputes</a></h4>
 <p>Protocol: <code>&quot;/polkadot/send_dispute/1&quot;</code></p>
 <p>Request:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct DisputeRequest {
   /// The candidate being disputed.
@@ -213,8 +212,7 @@ pub struct ValidDisputeVote {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Response:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>enum DisputeResponse {
   Confirmed
@@ -223,8 +221,7 @@ pub struct ValidDisputeVote {
 </span></code></pre></pre>
 <h4 id="vote-recovery"><a class="header" href="#vote-recovery">Vote Recovery</a></h4>
 <p>Protocol: <code>&quot;/polkadot/req_votes/1&quot;</code></p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct IHaveVotesRequest {
   candidate_hash: CandidateHash,
@@ -236,8 +233,7 @@ pub struct ValidDisputeVote {
 <span class="boring">}
 </span></code></pre></pre>
 <p>Response:</p>
-<pre><pre class="playground"><code class="language-rust">
-<span class="boring">#![allow(unused)]
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
 </span>struct VotesResponse {
   /// All votes we have, but the requester was missing.
